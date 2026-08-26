@@ -44,6 +44,13 @@ import {
   type SnapLine,
 } from '@/lib/field-geometry';
 import type { SignFieldDraft } from './wizard-context';
+import {
+  clearSelection,
+  deleteSelectedFields,
+  fieldIdsInMarquee,
+  moveSelectedFields,
+  selectionAfterClick,
+} from './field-canvas-selection';
 
 const SNAP_THRESHOLD = 6; // px
 const NUDGE_PX = 1;
@@ -206,7 +213,7 @@ export function FieldCanvas({
 
   const removeSelected = React.useCallback(() => {
     if (!selectedIds.length) return;
-    onFieldsChange(fields.filter((field) => !selectedIds.includes(field.id)));
+    onFieldsChange(deleteSelectedFields(fields, selectedIds));
     onSelect([]);
   }, [fields, onFieldsChange, onSelect, selectedIds]);
 
@@ -260,6 +267,7 @@ export function FieldCanvas({
         const groupDx = Math.max(-bounds.left, Math.min(pageSize.width - bounds.right, dx));
         const groupDy = Math.max(-bounds.top, Math.min(pageSize.height - bounds.bottom, dy));
         const anchor = g.items.find((item) => item.id === g.id) ?? g.items[0];
+        if (!anchor) return;
         const anchorRect = clampPxRect(
           { ...anchor.startRect, left: anchor.startRect.left + groupDx, top: anchor.startRect.top + groupDy },
           pageSize,
@@ -316,10 +324,7 @@ export function FieldCanvas({
 
   const selectField = React.useCallback(
     (id: string, event: React.PointerEvent): string[] => {
-      if (!event.shiftKey && !event.metaKey && !event.ctrlKey) return [id];
-      return selectedIds.includes(id)
-        ? selectedIds.filter((selectedId) => selectedId !== id)
-        : [...selectedIds, id];
+      return selectionAfterClick(selectedIds, id, event);
     },
     [selectedIds],
   );
@@ -405,36 +410,17 @@ export function FieldCanvas({
       const dx = delta[0];
       const dy = delta[1];
       if (!event.shiftKey && selected.length > 1) {
-        const selectedSet = new Set(selected);
-        const rects = pageFields
-          .filter((candidate) => selectedSet.has(candidate.id))
-          .map((candidate) => ({ field: candidate, rect: normToPx(candidate, pageSize) }));
-        const minLeft = Math.min(...rects.map(({ rect }) => rect.left));
-        const minTop = Math.min(...rects.map(({ rect }) => rect.top));
-        const maxRight = Math.max(...rects.map(({ rect }) => rect.left + rect.width));
-        const maxBottom = Math.max(...rects.map(({ rect }) => rect.top + rect.height));
-        const moveX = Math.max(-minLeft, Math.min(pageSize.width - maxRight, dx));
-        const moveY = Math.max(-minTop, Math.min(pageSize.height - maxBottom, dy));
-        onFieldsChange(
-          fields.map((candidate) => {
-            const item = rects.find(({ field: selectedField }) => selectedField.id === candidate.id);
-            if (!item) return candidate;
-            return {
-              ...candidate,
-              ...clampNormRect(pxToNorm({ ...item.rect, left: item.rect.left + moveX, top: item.rect.top + moveY }, pageSize)),
-            };
-          }),
-        );
+        onFieldsChange(moveSelectedFields(fields, selected, dx, dy, pageSize));
       } else {
         updateField(field.id, clampNormRect(pxToNorm(clampPxRect(next, pageSize), pageSize)));
       }
     },
-    [fields, onFieldsChange, pageFields, pageSize, removeSelected, selectedIds, updateField],
+    [fields, onFieldsChange, pageSize, removeSelected, selectedIds, updateField],
   );
 
   React.useEffect(() => {
     const clearOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onSelect([]);
+      if (event.key === 'Escape') onSelect(clearSelection());
     };
     window.addEventListener('keydown', clearOnEscape);
     return () => window.removeEventListener('keydown', clearOnEscape);
@@ -477,15 +463,17 @@ export function FieldCanvas({
     setMarquee(null);
     try { overlay.releasePointerCapture?.(event.pointerId); } catch { /* capture may already be gone */ }
     if (dragged) {
-      const intersecting = pageFields.filter((field) => {
-        const rect = normToPx(field, pageSize);
-        return rect.left <= area.right && rect.left + rect.width >= area.left && rect.top <= area.bottom && rect.top + rect.height >= area.top;
-      }).map((field) => field.id);
+      const intersecting = fieldIdsInMarquee(pageFields, page, pageSize, {
+        left: area.left,
+        top: area.top,
+        width: area.right - area.left,
+        height: area.bottom - area.top,
+      });
       onSelect(intersecting);
     } else {
-      onSelect([]);
+      onSelect(clearSelection());
     }
-  }, [onSelect, pageFields, pageSize]);
+  }, [onSelect, page, pageFields, pageSize]);
 
   const rectFor = (field: SignFieldDraft): PxRect =>
     liveRects.find((item) => item.id === field.id)?.rect ?? normToPx(field, pageSize);
