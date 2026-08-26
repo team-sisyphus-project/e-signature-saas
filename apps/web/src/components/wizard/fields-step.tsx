@@ -40,7 +40,7 @@ export function FieldsStep() {
 
   const [page, setPage] = React.useState(1);
   const [zoom, setZoom] = React.useState(1);
-  const [selectedId, setSelectedId] = React.useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
   const [pageCount, setPageCount] = React.useState(document?.pageCount ?? 0);
 
   const setFields = React.useCallback(
@@ -60,7 +60,7 @@ export function FieldsStep() {
       });
       const id = nextFieldId();
       setFields([...fields, { id, type, page, ...norm }]);
-      setSelectedId(id);
+      setSelectedIds([id]);
     },
     [fields, page, setFields],
   );
@@ -103,7 +103,7 @@ export function FieldsStep() {
             label="이전 페이지"
             disabled={page <= 1}
             onClick={() => {
-              setSelectedId(null);
+              setSelectedIds([]);
               setPage((p) => Math.max(1, p - 1));
             }}
           >
@@ -116,7 +116,7 @@ export function FieldsStep() {
             label="다음 페이지"
             disabled={page >= total}
             onClick={() => {
-              setSelectedId(null);
+              setSelectedIds([]);
               setPage((p) => Math.min(total, p + 1));
             }}
           >
@@ -153,8 +153,8 @@ export function FieldsStep() {
           zoom={zoom}
           fitWidth={BASE_FIT_WIDTH}
           fields={fields}
-          selectedId={selectedId}
-          onSelect={setSelectedId}
+          selectedIds={selectedIds}
+          onSelect={setSelectedIds}
           onFieldsChange={setFields}
           onPageCount={setPageCount}
           className="max-h-[60vh]"

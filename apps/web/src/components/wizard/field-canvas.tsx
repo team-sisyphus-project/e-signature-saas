@@ -60,8 +60,8 @@ interface FieldCanvasProps {
   /** Available width (px) the page fits into at zoom 1. */
   fitWidth: number;
   fields: SignFieldDraft[];
-  selectedId: string | null;
-  onSelect: (id: string | null) => void;
+  selectedIds: string[];
+  onSelect: (ids: string[]) => void;
   /** Replace the full field list (single source lives in wizard state). */
   onFieldsChange: (fields: SignFieldDraft[]) => void;
   /** Report rendered page count once the document opens. */
@@ -94,7 +94,7 @@ export function FieldCanvas({
   zoom,
   fitWidth,
   fields,
-  selectedId,
+  selectedIds,
   onSelect,
   onFieldsChange,
   onPageCount,
@@ -113,6 +113,8 @@ export function FieldCanvas({
   const [liveRect, setLiveRect] = React.useState<{ id: string; rect: PxRect } | null>(null);
   const [guides, setGuides] = React.useState<SnapLine[]>([]);
   const gestureRef = React.useRef<Gesture | null>(null);
+  const marqueeRef = React.useRef<{ startX: number; startY: number; x: number; y: number } | null>(null);
+  const [marquee, setMarquee] = React.useState<{ left: number; top: number; width: number; height: number } | null>(null);
 
   const onPageCountRef = React.useRef(onPageCount);
   React.useEffect(() => {
@@ -191,10 +193,16 @@ export function FieldCanvas({
   const removeField = React.useCallback(
     (id: string) => {
       onFieldsChange(fields.filter((f) => f.id !== id));
-      if (selectedId === id) onSelect(null);
+      if (selectedIds.includes(id)) onSelect(selectedIds.filter((selectedId) => selectedId !== id));
     },
-    [fields, onFieldsChange, selectedId, onSelect],
+    [fields, onFieldsChange, selectedIds, onSelect],
   );
+
+  const removeSelected = React.useCallback(() => {
+    if (!selectedIds.length) return;
+    onFieldsChange(fields.filter((field) => !selectedIds.includes(field.id)));
+    onSelect([]);
+  }, [fields, onFieldsChange, onSelect, selectedIds]);
 
   // --- placement (HTML5 drag-and-drop from the palette) --------------------
 
@@ -211,7 +219,7 @@ export function FieldCanvas({
       const norm = clampNormRect(pxToNorm(px, pageSize));
       const id = nextFieldId();
       onFieldsChange([...fields, { id, type, page, ...norm }]);
-      onSelect(id);
+      onSelect([id]);
     },
     [fields, onFieldsChange, onSelect, page, pageSize],
   );
@@ -267,24 +275,34 @@ export function FieldCanvas({
     [liveRect, pageSize, updateField],
   );
 
+  const selectField = React.useCallback(
+    (id: string, event: React.PointerEvent): string[] => {
+      if (!event.shiftKey && !event.metaKey && !event.ctrlKey) return [id];
+      return selectedIds.includes(id)
+        ? selectedIds.filter((selectedId) => selectedId !== id)
+        : [...selectedIds, id];
+    },
+    [selectedIds],
+  );
+
   const startMove = React.useCallback(
     (event: React.PointerEvent, field: SignFieldDraft) => {
       if (event.button !== 0) return;
       event.stopPropagation();
-      onSelect(field.id);
+      onSelect(selectField(field.id, event));
       const startRect = normToPx(field, pageSize);
       gestureRef.current = { kind: 'move', id: field.id, startRect, startX: event.clientX, startY: event.clientY };
       setLiveRect({ id: field.id, rect: startRect });
       (event.currentTarget as Element).setPointerCapture?.(event.pointerId);
     },
-    [onSelect, pageSize],
+    [onSelect, pageSize, selectField],
   );
 
   const startResize = React.useCallback(
     (event: React.PointerEvent, field: SignFieldDraft, handle: ResizeHandle) => {
       if (event.button !== 0) return;
       event.stopPropagation();
-      onSelect(field.id);
+      onSelect(selectField(field.id, event));
       const startRect = normToPx(field, pageSize);
       gestureRef.current = {
         kind: 'resize',
@@ -297,7 +315,7 @@ export function FieldCanvas({
       setLiveRect({ id: field.id, rect: startRect });
       (event.currentTarget as Element).setPointerCapture?.(event.pointerId);
     },
-    [onSelect, pageSize],
+    [onSelect, pageSize, selectField],
   );
 
   // --- keyboard assist (move / resize / delete a focused field) ------------
@@ -307,7 +325,7 @@ export function FieldCanvas({
       const step = event.shiftKey ? NUDGE_PX_LARGE : NUDGE_PX;
       if (event.key === 'Delete' || event.key === 'Backspace') {
         event.preventDefault();
-        removeField(field.id);
+        removeSelected();
         return;
       }
       const arrows: Record<string, [number, number]> = {
@@ -329,8 +347,63 @@ export function FieldCanvas({
       }
       updateField(field.id, clampNormRect(pxToNorm(clampPxRect(next, pageSize), pageSize)));
     },
-    [pageSize, removeField, updateField],
+    [pageSize, removeSelected, updateField],
   );
+
+  React.useEffect(() => {
+    const clearOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onSelect([]);
+    };
+    window.addEventListener('keydown', clearOnEscape);
+    return () => window.removeEventListener('keydown', clearOnEscape);
+  }, [onSelect]);
+
+  const startMarquee = React.useCallback((event: React.PointerEvent) => {
+    if (event.button !== 0) return;
+    const overlay = overlayRef.current;
+    if (!overlay) return;
+    const bounds = overlay.getBoundingClientRect();
+    const x = event.clientX - bounds.left;
+    const y = event.clientY - bounds.top;
+    marqueeRef.current = { startX: x, startY: y, x, y };
+    setMarquee(null);
+    overlay.setPointerCapture?.(event.pointerId);
+  }, []);
+
+  const onMarqueePointerMove = React.useCallback((event: React.PointerEvent) => {
+    const start = marqueeRef.current;
+    const overlay = overlayRef.current;
+    if (!start || !overlay) return;
+    const bounds = overlay.getBoundingClientRect();
+    const x = Math.max(0, Math.min(pageSize.width, event.clientX - bounds.left));
+    const y = Math.max(0, Math.min(pageSize.height, event.clientY - bounds.top));
+    marqueeRef.current = { ...start, x, y };
+    const next = { left: Math.min(start.startX, x), top: Math.min(start.startY, y), width: Math.abs(x - start.startX), height: Math.abs(y - start.startY) };
+    setMarquee(next);
+  }, [pageSize]);
+
+  const endMarquee = React.useCallback((event: React.PointerEvent) => {
+    const start = marqueeRef.current;
+    const overlay = overlayRef.current;
+    if (!start || !overlay) return;
+    const bounds = overlay.getBoundingClientRect();
+    const x = Math.max(0, Math.min(pageSize.width, event.clientX - bounds.left));
+    const y = Math.max(0, Math.min(pageSize.height, event.clientY - bounds.top));
+    const area = { left: Math.min(start.startX, x), top: Math.min(start.startY, y), right: Math.max(start.startX, x), bottom: Math.max(start.startY, y) };
+    const dragged = Math.abs(x - start.startX) > 3 || Math.abs(y - start.startY) > 3;
+    marqueeRef.current = null;
+    setMarquee(null);
+    try { overlay.releasePointerCapture?.(event.pointerId); } catch { /* capture may already be gone */ }
+    if (dragged) {
+      const intersecting = pageFields.filter((field) => {
+        const rect = normToPx(field, pageSize);
+        return rect.left <= area.right && rect.left + rect.width >= area.left && rect.top <= area.bottom && rect.top + rect.height >= area.top;
+      }).map((field) => field.id);
+      onSelect(intersecting);
+    } else {
+      onSelect([]);
+    }
+  }, [onSelect, pageFields, pageSize]);
 
   const rectFor = (field: SignFieldDraft): PxRect =>
     liveRect && liveRect.id === field.id ? liveRect.rect : normToPx(field, pageSize);
@@ -370,7 +443,9 @@ export function FieldCanvas({
             e.dataTransfer.dropEffect = 'copy';
           }}
           onDrop={onDrop}
-          onPointerDown={() => onSelect(null)}
+          onPointerDown={startMarquee}
+          onPointerMove={onMarqueePointerMove}
+          onPointerUp={endMarquee}
         >
           {/* Snap guides */}
           {guides.map((g, i) =>
@@ -391,9 +466,17 @@ export function FieldCanvas({
             ),
           )}
 
+          {marquee ? (
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute border border-primary bg-primary/10"
+              style={{ left: marquee.left, top: marquee.top, width: marquee.width, height: marquee.height }}
+            />
+          ) : null}
+
           {pageFields.map((field) => {
             const rect = rectFor(field);
-            const selected = selectedId === field.id;
+            const selected = selectedIds.includes(field.id);
             const hovered = hoverId === field.id;
             const dragging = liveRect?.id === field.id;
             return (
