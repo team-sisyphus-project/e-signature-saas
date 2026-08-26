@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { Button, Modal, Toast } from '@/components/primitives';
+import { Button, Input, Modal, Toast } from '@/components/primitives';
 import { mockDocuments } from '@/lib/mock-data';
 import { t } from '@/lib/i18n';
 
@@ -19,7 +19,7 @@ export default function HomePage() {
       <main className="content" id="documents"><section className="hero"><div><p className="eyebrow">{t.dashboard.eyebrow}</p><h1>{t.dashboard.title}</h1><p>{t.dashboard.description}</p></div><Button onClick={() => setNewDocumentOpen(true)}>＋ {t.dashboard.newDocument}</Button></section>
       <section aria-labelledby="recent-heading"><div className="section-heading"><h2 id="recent-heading">{t.dashboard.recent}</h2><button className="text-link" onClick={() => setNotice(true)}>{t.dashboard.viewAll} →</button></div><div className="document-list">{mockDocuments.map((doc) => <article className="document-card" key={doc.id}><div><h3 className="doc-title">{doc.title}</h3><div className="doc-meta"><span>{doc.type}</span><span>·</span><span>{t.document.owner} {doc.owner}</span><span>·</span><span>{doc.updated}</span><span className={`status status-${doc.status}`}>{statusLabels[doc.status]}</span></div><div className="progress" aria-label={`진행률 ${doc.progress}%`}><span style={{ width: `${doc.progress}%` }} /></div></div><Button variant="secondary">{t.document.open}</Button></article>)}</div></section></main>
     </div>
-    {newDocumentOpen && <Modal title={t.dashboard.newDocument} onClose={() => setNewDocumentOpen(false)}><p>새 계약 문서의 이름을 입력하세요.</p><input className="primitive-input" placeholder="예: 2026 파트너십 계약" autoFocus /><div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)', marginTop: 'var(--space-6)' }}><Button variant="secondary" onClick={() => setNewDocumentOpen(false)}>취소</Button><Button onClick={() => { setNewDocumentOpen(false); setNotice(true); }}>문서 만들기</Button></div></Modal>}
+    {newDocumentOpen && <Modal title={t.dashboard.newDocument} onClose={() => setNewDocumentOpen(false)}><p>새 계약 문서의 이름을 입력하세요.</p><Input placeholder="예: 2026 파트너십 계약" autoFocus /><div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)', marginTop: 'var(--space-6)' }}><Button variant="secondary" onClick={() => setNewDocumentOpen(false)}>취소</Button><Button onClick={() => { setNewDocumentOpen(false); setNotice(true); }}>문서 만들기</Button></div></Modal>}
     {notice && <Toast message="목 데이터 화면입니다. 다음 단계에서 연결할 수 있어요." />}
   </div>;
 }
