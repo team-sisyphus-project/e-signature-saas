@@ -78,7 +78,13 @@ export function nextFieldId(): string {
 
 /** Active pointer gesture transient state (px space, current page). */
 type Gesture =
-  | { kind: 'move'; id: string; startRect: PxRect; startX: number; startY: number }
+  | {
+      kind: 'move';
+      id: string;
+      items: { id: string; startRect: PxRect }[];
+      startX: number;
+      startY: number;
+    }
   | {
       kind: 'resize';
       id: string;
@@ -110,7 +116,7 @@ export function FieldCanvas({
   const [pageSize, setPageSize] = React.useState<PageSize>({ width: fitWidth, height: fitWidth * 1.414 });
   const [hoverId, setHoverId] = React.useState<string | null>(null);
   // Live gesture rect + guides, kept local so dragging re-renders cheaply.
-  const [liveRect, setLiveRect] = React.useState<{ id: string; rect: PxRect } | null>(null);
+  const [liveRects, setLiveRects] = React.useState<{ id: string; rect: PxRect }[]>([]);
   const [guides, setGuides] = React.useState<SnapLine[]>([]);
   const gestureRef = React.useRef<Gesture | null>(null);
   const marqueeRef = React.useRef<{ startX: number; startY: number; x: number; y: number } | null>(null);
@@ -226,9 +232,11 @@ export function FieldCanvas({
 
   // --- move / resize (pointer events with capture) -------------------------
 
-  const peerRects = React.useCallback(
-    (excludeId: string): PxRect[] =>
-      pageFields.filter((f) => f.id !== excludeId).map((f) => normToPx(f, pageSize)),
+  const peerRectsForSelection = React.useCallback(
+    (items: { id: string }[]): PxRect[] => {
+      const selected = new Set(items.map((item) => item.id));
+      return pageFields.filter((f) => !selected.has(f.id)).map((f) => normToPx(f, pageSize));
+    },
     [pageFields, pageSize],
   );
 
@@ -240,39 +248,70 @@ export function FieldCanvas({
       const dy = event.clientY - g.startY;
 
       if (g.kind === 'move') {
-        let moved: PxRect = { ...g.startRect, left: g.startRect.left + dx, top: g.startRect.top + dy };
-        moved = clampPxRect(moved, pageSize);
-        const snapped = snapMove(moved, pageSize, peerRects(g.id), SNAP_THRESHOLD);
-        const final = clampPxRect(snapped.rect, pageSize);
+        const bounds = g.items.reduce(
+          (acc, item) => ({
+            left: Math.min(acc.left, item.startRect.left),
+            top: Math.min(acc.top, item.startRect.top),
+            right: Math.max(acc.right, item.startRect.left + item.startRect.width),
+            bottom: Math.max(acc.bottom, item.startRect.top + item.startRect.height),
+          }),
+          { left: Infinity, top: Infinity, right: -Infinity, bottom: -Infinity },
+        );
+        const groupDx = Math.max(-bounds.left, Math.min(pageSize.width - bounds.right, dx));
+        const groupDy = Math.max(-bounds.top, Math.min(pageSize.height - bounds.bottom, dy));
+        const anchor = g.items.find((item) => item.id === g.id) ?? g.items[0];
+        const anchorRect = clampPxRect(
+          { ...anchor.startRect, left: anchor.startRect.left + groupDx, top: anchor.startRect.top + groupDy },
+          pageSize,
+        );
+        const snapped = snapMove(anchorRect, pageSize, peerRectsForSelection(g.items), SNAP_THRESHOLD);
+        const snapDx = snapped.rect.left - anchor.startRect.left;
+        const snapDy = snapped.rect.top - anchor.startRect.top;
+        const finalDx = Math.max(-bounds.left, Math.min(pageSize.width - bounds.right, snapDx));
+        const finalDy = Math.max(-bounds.top, Math.min(pageSize.height - bounds.bottom, snapDy));
         setGuides(snapped.guides);
-        setLiveRect({ id: g.id, rect: final });
+        setLiveRects(
+          g.items.map((item) => ({
+            id: item.id,
+            rect: clampPxRect(
+              { ...item.startRect, left: item.startRect.left + finalDx, top: item.startRect.top + finalDy },
+              pageSize,
+            ),
+          })),
+        );
       } else {
         const resized = clampPxRect(resizePxRect(g.startRect, g.handle, dx, dy), pageSize);
-        setLiveRect({ id: g.id, rect: resized });
+        setLiveRects([{ id: g.id, rect: resized }]);
         setGuides([]);
       }
     },
-    [pageSize, peerRects],
+    [pageSize, peerRectsForSelection],
   );
 
   const endGesture = React.useCallback(
     (event: React.PointerEvent) => {
       const g = gestureRef.current;
       if (!g) return;
-      const live = liveRect;
+      const live = liveRects;
       gestureRef.current = null;
       setGuides([]);
-      setLiveRect(null);
+      setLiveRects([]);
       try {
         (event.target as Element).releasePointerCapture?.(event.pointerId);
       } catch {
         /* capture may already be gone */
       }
-      if (live && live.id === g.id) {
-        updateField(g.id, clampNormRect(pxToNorm(live.rect, pageSize)));
+      if (live.length) {
+        const liveById = new Map(live.map((item) => [item.id, item.rect]));
+        onFieldsChange(
+          fields.map((field) => {
+            const rect = liveById.get(field.id);
+            return rect ? { ...field, ...clampNormRect(pxToNorm(rect, pageSize)) } : field;
+          }),
+        );
       }
     },
-    [liveRect, pageSize, updateField],
+    [fields, liveRects, onFieldsChange, pageSize],
   );
 
   const selectField = React.useCallback(
@@ -289,13 +328,30 @@ export function FieldCanvas({
     (event: React.PointerEvent, field: SignFieldDraft) => {
       if (event.button !== 0) return;
       event.stopPropagation();
-      onSelect(selectField(field.id, event));
-      const startRect = normToPx(field, pageSize);
-      gestureRef.current = { kind: 'move', id: field.id, startRect, startX: event.clientX, startY: event.clientY };
-      setLiveRect({ id: field.id, rect: startRect });
+      // Keep a multi-selection intact when starting a drag from one of its
+      // members. A modifier click still toggles membership as usual.
+      const hasModifier = event.shiftKey || event.metaKey || event.ctrlKey;
+      const nextSelection =
+        !hasModifier && selectedIds.includes(field.id) && selectedIds.length > 1
+          ? selectedIds
+          : selectField(field.id, event);
+      onSelect(nextSelection);
+      // A modifier-click on an already selected field removes it; it should
+      // not also start a drag gesture for the field that was just removed.
+      if (!nextSelection.includes(field.id)) {
+        gestureRef.current = null;
+        setLiveRects([]);
+        return;
+      }
+      const selectedOnPage = new Set(nextSelection);
+      const items = pageFields
+        .filter((candidate) => selectedOnPage.has(candidate.id))
+        .map((candidate) => ({ id: candidate.id, startRect: normToPx(candidate, pageSize) }));
+      gestureRef.current = { kind: 'move', id: field.id, items, startX: event.clientX, startY: event.clientY };
+      setLiveRects(items.map((item) => ({ id: item.id, rect: item.startRect })));
       (event.currentTarget as Element).setPointerCapture?.(event.pointerId);
     },
-    [onSelect, pageSize, selectField],
+    [onSelect, pageFields, pageSize, selectField, selectedIds],
   );
 
   const startResize = React.useCallback(
@@ -312,7 +368,7 @@ export function FieldCanvas({
         startX: event.clientX,
         startY: event.clientY,
       };
-      setLiveRect({ id: field.id, rect: startRect });
+      setLiveRects([{ id: field.id, rect: startRect }]);
       (event.currentTarget as Element).setPointerCapture?.(event.pointerId);
     },
     [onSelect, pageSize, selectField],
@@ -345,9 +401,35 @@ export function FieldCanvas({
       } else {
         next = { ...base, left: base.left + delta[0], top: base.top + delta[1] };
       }
-      updateField(field.id, clampNormRect(pxToNorm(clampPxRect(next, pageSize), pageSize)));
+      const selected = selectedIds.includes(field.id) ? selectedIds : [field.id];
+      const dx = delta[0];
+      const dy = delta[1];
+      if (!event.shiftKey && selected.length > 1) {
+        const selectedSet = new Set(selected);
+        const rects = pageFields
+          .filter((candidate) => selectedSet.has(candidate.id))
+          .map((candidate) => ({ field: candidate, rect: normToPx(candidate, pageSize) }));
+        const minLeft = Math.min(...rects.map(({ rect }) => rect.left));
+        const minTop = Math.min(...rects.map(({ rect }) => rect.top));
+        const maxRight = Math.max(...rects.map(({ rect }) => rect.left + rect.width));
+        const maxBottom = Math.max(...rects.map(({ rect }) => rect.top + rect.height));
+        const moveX = Math.max(-minLeft, Math.min(pageSize.width - maxRight, dx));
+        const moveY = Math.max(-minTop, Math.min(pageSize.height - maxBottom, dy));
+        onFieldsChange(
+          fields.map((candidate) => {
+            const item = rects.find(({ field: selectedField }) => selectedField.id === candidate.id);
+            if (!item) return candidate;
+            return {
+              ...candidate,
+              ...clampNormRect(pxToNorm({ ...item.rect, left: item.rect.left + moveX, top: item.rect.top + moveY }, pageSize)),
+            };
+          }),
+        );
+      } else {
+        updateField(field.id, clampNormRect(pxToNorm(clampPxRect(next, pageSize), pageSize)));
+      }
     },
-    [pageSize, removeSelected, updateField],
+    [fields, onFieldsChange, pageFields, pageSize, removeSelected, selectedIds, updateField],
   );
 
   React.useEffect(() => {
@@ -406,7 +488,7 @@ export function FieldCanvas({
   }, [onSelect, pageFields, pageSize]);
 
   const rectFor = (field: SignFieldDraft): PxRect =>
-    liveRect && liveRect.id === field.id ? liveRect.rect : normToPx(field, pageSize);
+    liveRects.find((item) => item.id === field.id)?.rect ?? normToPx(field, pageSize);
 
   return (
     <div className={cn('relative w-full overflow-auto', className)}>
@@ -478,7 +560,7 @@ export function FieldCanvas({
             const rect = rectFor(field);
             const selected = selectedIds.includes(field.id);
             const hovered = hoverId === field.id;
-            const dragging = liveRect?.id === field.id;
+            const dragging = liveRects.some((item) => item.id === field.id);
             return (
               <FieldBox
                 key={field.id}
@@ -494,7 +576,7 @@ export function FieldCanvas({
                 onPointerMove={onGesturePointerMove}
                 onPointerUp={endGesture}
                 onKeyDown={(e) => onFieldKeyDown(e, field)}
-                onDelete={() => removeField(field.id)}
+                onDelete={() => (selectedIds.length > 1 ? removeSelected() : removeField(field.id))}
               />
             );
           })}
