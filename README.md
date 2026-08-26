@@ -1,6 +1,6 @@
-# 전자계약 SaaS — Monorepo
+# Clause — 문서와 계약
 
-한국형 전자계약 SaaS MVP. Turborepo 기반 모노레포.
+문서와 계약을 읽고 관리하는 뉴트럴 미니멀 웹 프리뷰입니다. 초기 화면은 외부 서비스 없이 목 데이터로 동작합니다.
 
 ## 구성
 
@@ -19,34 +19,23 @@
 - pnpm 9 (`corepack enable` 또는 `npm i -g pnpm@9`)
 - Docker (로컬 Postgres/Redis 용, 선택)
 
-## 시작하기
+## 시작하기 (프리뷰)
 
 ```bash
 # 1. 의존성 설치
 pnpm install
 
-# 2. 환경 변수 준비
-cp .env.example .env
-
-# 3. 로컬 인프라 기동 (Postgres + Redis)
-docker compose up -d
-
-# 4. Prisma 클라이언트 생성 및 마이그레이션
-pnpm db:generate
-pnpm db:migrate
-
-# 5. 개발 서버 동시 기동 (web + api)
+# 2. 개발 서버 기동 — DB, API, 필수 환경 변수 없음
 pnpm dev
 ```
 
 - web: http://localhost:3000
-- api: http://localhost:3001 (health: http://localhost:3001/health)
 
 ## 주요 스크립트 (repo 루트)
 
 | 명령 | 설명 |
 |---|---|
-| `pnpm dev` | turbo로 web/api 동시 기동 |
+| `pnpm dev` | 문서 웹 프리뷰 기동 |
 | `pnpm build` | 전체 빌드 |
 | `pnpm lint` | 전체 린트 |
 | `pnpm typecheck` | 전체 타입 체크 |

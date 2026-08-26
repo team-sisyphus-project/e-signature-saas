@@ -1,49 +1,25 @@
 'use client';
+import { useState } from 'react';
+import { Button, Modal, Toast } from '@/components/primitives';
+import { mockDocuments } from '@/lib/mock-data';
+import { t } from '@/lib/i18n';
 
-import * as React from 'react';
-import { useRouter } from 'next/navigation';
-import { BlobBackground } from '@/components/blob-background';
-import { isAuthenticated } from '@/lib/auth';
-
-/**
- * Root entry gate (`/`).
- *
- * Decides where a visitor belongs the moment the session is readable on the
- * client: authenticated → `/dashboard`, otherwise → `/login`. `replace` keeps
- * `/` out of history so back-navigation never loops through this gate. The
- * branch reuses the single source of truth in `@/lib/auth` rather than
- * re-deriving auth state here.
- */
+const statusLabels = t.status;
 export default function HomePage() {
-  const router = useRouter();
-
-  React.useEffect(() => {
-    router.replace(isAuthenticated() ? '/dashboard' : '/login');
-  }, [router]);
-
-  // A calm, centered splash holds the screen for the brief moment before the
-  // redirect, so the visitor never sees a blank flash (FOUC). The decorative
-  // backdrop is the same one the auth shell uses; the spinner collapses to a
-  // static ring under `prefers-reduced-motion` (handled globally in
-  // `globals.css`).
-  return (
-    <main className="relative flex min-h-[100dvh] items-center justify-center overflow-hidden bg-background px-md py-2xl">
-      <BlobBackground />
-
-      <div role="status" aria-busy="true" className="relative z-10 flex flex-col items-center gap-md">
-        <span className="text-sm font-bold tracking-tight text-primary">전자계약</span>
-        <Spinner />
-        <span className="sr-only">로그인 상태를 확인하고 있어요.</span>
-      </div>
-    </main>
-  );
-}
-
-function Spinner() {
-  return (
-    <svg className="h-8 w-8 animate-spin text-primary" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeOpacity="0.2" strokeWidth="3" />
-      <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-    </svg>
-  );
+  const [newDocumentOpen, setNewDocumentOpen] = useState(false);
+  const [notice, setNotice] = useState(false);
+  return <div className="app-shell">
+    <aside className="sidebar" aria-label="주요 메뉴">
+      <div className="brand"><span className="brand-mark">◈</span>{t.brand}</div>
+      <div className="workspace"><span className="workspace-avatar">A</span><span>Acme 조직</span><span aria-hidden="true">⌄</span></div>
+      <nav className="nav"><a href="#documents" aria-current="page">▤ &nbsp;{t.navigation.documents}</a><a href="#templates">▱ &nbsp;{t.navigation.templates}</a><a href="#members">♙ &nbsp;{t.navigation.members}</a><a href="#settings">⚙ &nbsp;{t.navigation.settings}</a></nav>
+      <p className="sidebar-footer">Acme 조직 · 3명 사용 중</p>
+    </aside>
+    <div className="main"><header className="topbar"><button className="icon-button" aria-label={t.accessibility.notifications}>♧</button><button className="icon-button" aria-label={t.accessibility.theme}>☼</button><span className="avatar" aria-label="민서 김">MK</span></header>
+      <main className="content" id="documents"><section className="hero"><div><p className="eyebrow">{t.dashboard.eyebrow}</p><h1>{t.dashboard.title}</h1><p>{t.dashboard.description}</p></div><Button onClick={() => setNewDocumentOpen(true)}>＋ {t.dashboard.newDocument}</Button></section>
+      <section aria-labelledby="recent-heading"><div className="section-heading"><h2 id="recent-heading">{t.dashboard.recent}</h2><button className="text-link" onClick={() => setNotice(true)}>{t.dashboard.viewAll} →</button></div><div className="document-list">{mockDocuments.map((doc) => <article className="document-card" key={doc.id}><div><h3 className="doc-title">{doc.title}</h3><div className="doc-meta"><span>{doc.type}</span><span>·</span><span>{t.document.owner} {doc.owner}</span><span>·</span><span>{doc.updated}</span><span className={`status status-${doc.status}`}>{statusLabels[doc.status]}</span></div><div className="progress" aria-label={`진행률 ${doc.progress}%`}><span style={{ width: `${doc.progress}%` }} /></div></div><Button variant="secondary">{t.document.open}</Button></article>)}</div></section></main>
+    </div>
+    {newDocumentOpen && <Modal title={t.dashboard.newDocument} onClose={() => setNewDocumentOpen(false)}><p>새 계약 문서의 이름을 입력하세요.</p><input className="primitive-input" placeholder="예: 2026 파트너십 계약" autoFocus /><div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)', marginTop: 'var(--space-6)' }}><Button variant="secondary" onClick={() => setNewDocumentOpen(false)}>취소</Button><Button onClick={() => { setNewDocumentOpen(false); setNotice(true); }}>문서 만들기</Button></div></Modal>}
+    {notice && <Toast message="목 데이터 화면입니다. 다음 단계에서 연결할 수 있어요." />}
+  </div>;
 }
