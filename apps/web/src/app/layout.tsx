@@ -4,7 +4,9 @@ import { brandStyle } from '@/lib/branding';
 import { fetchBrandingServer } from '@/lib/web-branding';
 import { BrandingProvider } from '@/components/branding-provider';
 import { LocaleProvider } from '@/components/locale-provider';
+import { ThemeProvider } from '@/components/theme-provider';
 import { WebTranslationDiagnostics } from '@/components/web-translation-diagnostics';
+import { THEME_NO_FLASH_SCRIPT } from '@/lib/theme';
 
 export const metadata: Metadata = {
   title: '전자계약',
@@ -33,13 +35,18 @@ export default async function RootLayout({
   return (
     <html lang="ko" style={brandStyle(branding.brandColor)}>
       <head>
+        {/* No-flash: resolve the saved theme (cookie + OS) before first paint. Must
+            stay first in <head>, ahead of any style, so the first frame is correct. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_NO_FLASH_SCRIPT }} />
         {branding.faviconUrl ? (
           <link rel="icon" href={branding.faviconUrl} data-branding="" />
         ) : null}
       </head>
       <body>
         <LocaleProvider>
-          <BrandingProvider initial={branding}>{children}</BrandingProvider>
+          <ThemeProvider>
+            <BrandingProvider initial={branding}>{children}</BrandingProvider>
+          </ThemeProvider>
           <WebTranslationDiagnostics />
         </LocaleProvider>
       </body>

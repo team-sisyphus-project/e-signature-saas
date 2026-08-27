@@ -9,6 +9,7 @@
  */
 
 import { apiFetch } from './api';
+import { clearThemeCookie, writeThemeCookie, type ThemePreference } from './theme';
 
 export interface SessionUser {
   id: string;
@@ -16,6 +17,7 @@ export interface SessionUser {
   name: string | null;
   plan: string;
   locale: 'ko' | 'en';
+  themePreference: ThemePreference;
 }
 
 export interface LoginResponse {
@@ -52,6 +54,7 @@ export function setSession(session: LoginResponse): void {
   localStorage.setItem(TOKEN_KEY, session.accessToken);
   localStorage.setItem(USER_KEY, JSON.stringify(session.user));
   writeCookie(session.accessToken);
+  writeThemeCookie(session.user.themePreference);
   notifySessionChange();
 }
 
@@ -60,6 +63,7 @@ export function clearSession(): void {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
   clearCookie();
+  clearThemeCookie();
   notifySessionChange();
 }
 
@@ -92,6 +96,28 @@ export async function updateLocale(locale: SessionUser['locale']): Promise<Sessi
   });
   if (isBrowser()) {
     localStorage.setItem(USER_KEY, JSON.stringify(user));
+    notifySessionChange();
+  }
+  return user;
+}
+
+/**
+ * Persist the member's theme preference and reflect it immediately: update the
+ * stored session user, refresh the `esign_theme` pre-paint mirror, and notify
+ * theme consumers. Parallels `updateLocale` (server is the source of truth, so
+ * the choice survives re-login) plus the cookie mirror the pre-paint script
+ * reads. Throws `ApiError` on failure so the caller can roll back its optimistic
+ * UI.
+ */
+export async function updateTheme(theme: SessionUser['themePreference']): Promise<SessionUser> {
+  const user = await apiFetch<SessionUser>('/auth/theme', {
+    method: 'POST',
+    json: { theme },
+    token: getToken() ?? undefined,
+  });
+  if (isBrowser()) {
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+    writeThemeCookie(user.themePreference);
     notifySessionChange();
   }
   return user;
