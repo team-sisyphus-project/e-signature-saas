@@ -44,6 +44,10 @@
     --color-background: var(--grey-100);
     --color-surface: #ffffff;
     --color-surface-muted: var(--grey-50);
+    /* Neutral interaction state layer (hover/pressed on a surface). grey-100
+       matches today's raw `hover:bg-grey-100` behavior in light; the token lets
+       the dark theme lighten-on-hover instead of matching the page background. */
+    --surface-hover: var(--grey-100); /* #f2f4f6 */
     --color-foreground: var(--grey-900);
     --color-foreground-muted: var(--grey-700);
     /* grey-600 (not 500) so secondary/hint text clears AA (≈4.6:1) on surface. */
@@ -90,6 +94,76 @@
     --duration-base: 250ms;
     --duration-slow: 400ms;
     --duration-slower: 600ms;
+  }
+
+  /*
+   * — Dark palette (second theme; does NOT replace the light Base) —
+   *
+   * Activated by `data-theme="dark"` on the <html>/<:root> element. Theme
+   * resolution / switching / persistence is out of scope here — this block only
+   * supplies the dark *values* for every semantic color token.
+   *
+   * Every pair was chosen by computing its WCAG contrast so it clears AA:
+   * 4.5:1 for text, 3:1 for large-text / UI boundaries. Ratios annotated inline
+   * (measured against the dark `background` #16181c or `surface` #1e2127 as
+   * noted). Structural dividers / neutral state layers (`border`,
+   * `surface-muted`, `surface-hover`) are intentionally sub-3:1 deltas — the
+   * same decorative treatment the light Base gives them (light `border` vs
+   * surface is ≈1.2:1); `border-strong` is the AA-grade emphasis boundary.
+   */
+  :root[data-theme='dark'] {
+    /* — Brand hook (sender override point, dark defaults) —
+       Kept deep enough that white button text clears AA (#fff on primary
+       ≈4.67:1) while still separating from the page bg (≈3.81:1 vs #16181c).
+       Interaction states deepen (same direction as light) to preserve white
+       text through hover/pressed. */
+    --brand-primary: #256bf5;
+    --brand-primary-hover: #1e5fe0; /* #fff ≈5.57:1 */
+    --brand-primary-pressed: #1a54c8; /* #fff ≈6.67:1 */
+    --brand-primary-foreground: #ffffff; /* on primary ≈4.67:1 */
+    --brand-primary-subtle: #16233d; /* foreground text ≈13.8:1 */
+
+    /* — Semantic surfaces & text — */
+    --color-background: #16181c;
+    --color-surface: #1e2127; /* foreground ≈13.6:1 */
+    --color-surface-muted: #24272e; /* foreground ≈12.6:1; neutral fill */
+    --surface-hover: #2b2f37; /* lightened state layer; foreground ≈11.3:1 */
+    --color-foreground: #eaecef; /* on surface ≈13.6:1 / on bg ≈15.0:1 */
+    --color-foreground-muted: #aeb6c0; /* on surface ≈7.9:1 */
+    --color-foreground-subtle: #949eaa; /* on surface ≈5.9:1 (hint text) */
+    --color-border: #2f343d; /* structural hairline divider (decorative) */
+    --color-border-strong: #6e7684; /* emphasis boundary ≈3.5:1 vs surface */
+
+    /* — Primary (inherits the dark brand hook) — */
+    --color-primary: var(--brand-primary);
+    --color-primary-hover: var(--brand-primary-hover);
+    --color-primary-pressed: var(--brand-primary-pressed);
+    --color-primary-foreground: var(--brand-primary-foreground);
+    --color-primary-subtle: var(--brand-primary-subtle);
+
+    /* — Status —
+       Bright status hues on the dark canvas (each ≥3:1 as a UI fill vs bg) with
+       dark on-color foregrounds so text clears AA — the standard dark-mode
+       inversion. `*-subtle` are dark tints that carry either their own status
+       color as text (≥4.5:1) or neutral foreground (≥11:1). */
+    --color-success: #2fd196; /* ≈9.0:1 vs bg */
+    --color-success-foreground: #06231a; /* on success ≈8.5:1 */
+    --color-success-subtle: #10362a; /* success text ≈6.8:1 */
+    --color-danger: #ff6b74; /* ≈6.4:1 vs bg */
+    --color-danger-foreground: #2a0b0e; /* on danger ≈6.6:1 */
+    --color-danger-subtle: #3a1417; /* danger text ≈5.9:1 */
+    --color-warning: #ffab2e; /* ≈9.4:1 vs bg */
+    --color-warning-foreground: #2a1a02; /* on warning ≈8.9:1 */
+    --color-warning-subtle: #33240a; /* warning text ≈8.0:1 */
+
+    /* — Interaction — */
+    --color-ring: var(--brand-primary); /* ≈3.5:1 vs surface */
+    --color-overlay: rgba(8, 10, 14, 0.66);
+    /* Focus halos bumped to 40% (from light's 32%) so the translucent ring
+       stays visible over the darker surfaces. Still resolves `--brand-primary`
+       in the consumer's context, so a sender's brand override re-tints it. */
+    --color-focus: color-mix(in srgb, var(--brand-primary) 40%, transparent);
+    --color-focus-danger: color-mix(in srgb, var(--color-danger) 40%, transparent);
   }
 
   html {

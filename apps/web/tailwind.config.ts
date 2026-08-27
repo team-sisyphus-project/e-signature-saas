@@ -46,6 +46,7 @@ const config: Config = {
         surface: {
           DEFAULT: 'var(--color-surface)',
           muted: 'var(--color-surface-muted)',
+          hover: 'var(--surface-hover)',
         },
         foreground: {
           DEFAULT: 'var(--color-foreground)',
