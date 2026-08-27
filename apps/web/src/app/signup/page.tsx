@@ -197,7 +197,7 @@ export default function SignupPage() {
                 revalidate(e.target.value, password, passwordConfirm, agreed);
               }}
               onBlur={() => {
-                setTouched((t) => ({ ...t, email: true }));
+                setTouched((prev) => ({ ...prev, email: true }));
                 setFieldErrors(validate(email, password, passwordConfirm, agreed, t));
               }}
             />
@@ -228,7 +228,7 @@ export default function SignupPage() {
                 revalidate(email, e.target.value, passwordConfirm, agreed);
               }}
               onBlur={() => {
-                setTouched((t) => ({ ...t, password: true }));
+                setTouched((prev) => ({ ...prev, password: true }));
                 setFieldErrors(validate(email, password, passwordConfirm, agreed, t));
               }}
             />
@@ -258,7 +258,7 @@ export default function SignupPage() {
                 revalidate(email, password, e.target.value, agreed);
               }}
               onBlur={() => {
-                setTouched((t) => ({ ...t, passwordConfirm: true }));
+                setTouched((prev) => ({ ...prev, passwordConfirm: true }));
                 setFieldErrors(validate(email, password, passwordConfirm, agreed, t));
               }}
             />

@@ -12,7 +12,7 @@
 
 import * as React from 'react';
 import { Button } from '@repo/ui';
-import { ApiError } from '@/lib/api';
+import { apiErrorMessage } from '@/lib/api';
 import { brandStyle } from '@/lib/branding';
 import { type SigningMeta } from '@/lib/signing';
 import { useTranslation } from '@/components/locale-provider';
@@ -40,11 +40,7 @@ export function VerifyScreen({ meta }: { meta: SigningMeta }) {
         await verify(value);
         // Success: the provider advances to `viewing` and this screen unmounts.
       } catch (err) {
-        setError(
-          err instanceof ApiError
-            ? err.message
-            : t('signer.genericError'),
-        );
+        setError(apiErrorMessage(t, err, 'signer.genericError'));
         setCode('');
         setShakeNonce((n) => n + 1);
         setSubmitting(false);

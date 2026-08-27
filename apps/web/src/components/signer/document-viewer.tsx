@@ -187,7 +187,8 @@ export function DocumentViewer() {
     try {
       await complete();
     } catch (err) {
-      setCompleteError(err instanceof ApiError ? err.message : true);
+      const serverMessage = err instanceof ApiError ? err.serverMessage : null;
+      setCompleteError(serverMessage?.trim() ? serverMessage : true);
       setCompleting(false);
     }
   }, [orderedUnfilled, scrollToField, openField, complete, completing]);

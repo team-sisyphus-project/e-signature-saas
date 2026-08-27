@@ -245,7 +245,8 @@ export function ShareLinkPasswordEditor({
  * specific than our catch-all), otherwise the catalog's.
  */
 function saveFailure(err: unknown): Feedback {
-  return err instanceof ApiError
-    ? { tone: 'error', text: err.message }
+  const serverMessage = err instanceof ApiError ? err.serverMessage : null;
+  return serverMessage?.trim()
+    ? { tone: 'error', text: serverMessage }
     : { tone: 'error', key: 'contracts.linkPasswordSaveError' };
 }

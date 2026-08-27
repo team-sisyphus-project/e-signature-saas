@@ -28,18 +28,18 @@ export const StepIndicator = React.forwardRef<HTMLOListElement, StepIndicatorPro
       aria-label={label}
       {...props}
     >
-      {steps.map((label, index) => {
+      {steps.map((step, index) => {
         const status = index < current ? 'complete' : index === current ? 'current' : 'upcoming';
         const isLast = index === steps.length - 1;
         return (
           <li
-            key={label}
+            key={step}
             className={cn('flex items-center', !isLast && 'flex-1')}
             aria-current={status === 'current' ? 'step' : undefined}
           >
             <div className="flex flex-col items-center gap-2xs">
               <span
-                key={`${label}-${status}`}
+                key={`${step}-${status}`}
                 className={cn(
                   'flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold',
                   'transition-colors duration-base ease-standard',
@@ -69,7 +69,7 @@ export const StepIndicator = React.forwardRef<HTMLOListElement, StepIndicatorPro
                   status === 'upcoming' ? 'text-foreground-subtle' : 'text-foreground',
                 )}
               >
-                {label}
+                {step}
               </span>
             </div>
             {!isLast ? (

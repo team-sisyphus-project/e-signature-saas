@@ -148,6 +148,24 @@ describe('apiErrorMessage', () => {
       'Something went wrong. Please try again shortly.',
     );
   });
+
+  // The contract every render site depends on: `ApiError.message` is a developer
+  // string (`Request failed (network)`) whenever the server sent no copy of its
+  // own, so no screen may read it. Resolving through this helper is the only way
+  // a synthesized failure reaches a reader in their own language.
+  it('never lets the synthesized message shape reach a caller', () => {
+    for (const locale of SUPPORTED_LOCALES) {
+      const { t: translate } = translatorFor(locale);
+      for (const status of [0, 500]) {
+        const error = new ApiError(null, status);
+        expect(error.message).toMatch(/Request failed/);
+        expect(apiErrorMessage(translate, error)).not.toMatch(/Request failed/);
+        expect(apiErrorMessage(translate, error, 'signer.genericError')).not.toMatch(
+          /Request failed/,
+        );
+      }
+    }
+  });
 });
 
 describe('googleFailureMessage', () => {
