@@ -47,7 +47,7 @@ export function ShareLinkDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg" closeLabel={t('common.close')}>
         <DialogHeader>
           <DialogTitle>{t('contracts.linkDialogTitle')}</DialogTitle>
           <DialogDescription>{t('contracts.linkDialogDescription')}</DialogDescription>

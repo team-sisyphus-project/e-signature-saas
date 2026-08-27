@@ -6,9 +6,14 @@
  * we append `/api` here so callers pass clean paths like `/auth/login`.
  *
  * User-facing error copy comes from the server (`apps/api/src/common/messages.ts`),
- * so we surface the server's message verbatim and only fall back to a neutral,
- * Toss-tone Korean line when the network itself fails or the body is unreadable.
+ * so an {@link ApiError} carries that message in {@link ApiError.serverMessage}
+ * — and carries `null` when the failure was synthesized here (network drop,
+ * unreadable body). This module holds no user-facing sentences of its own: it
+ * cannot know the reader's locale, so naming the fallback is the render site's
+ * job via {@link apiErrorMessage}.
  */
+
+import type { WebTranslate, WebTranslationKey } from './web-translations';
 
 /**
  * Server origin for the NestJS API. Exported so callers that build an *absolute*
@@ -19,8 +24,8 @@
 export const API_ORIGIN = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 const API_BASE = `${API_ORIGIN}/api`;
 
-/** Neutral fallback when we can't read a server-provided message. */
-export const GENERIC_ERROR = '문제가 생겼어요. 잠시 후 다시 시도해 주세요.';
+/** Catalog key for the neutral "we have nothing more specific to say" line. */
+export const GENERIC_ERROR_KEY: WebTranslationKey = 'common.genericError';
 
 /**
  * Absolute URL for an API path. Use when fetching outside `apiFetch` — e.g. a
@@ -34,10 +39,22 @@ export function apiUrl(path: string): string {
 export class ApiError extends Error {
   readonly status: number;
 
-  constructor(message: string, status: number) {
-    super(message);
+  /**
+   * The server's user-facing sentence, or `null` when the client synthesized
+   * this failure and no server copy exists.
+   *
+   * Kept separate from `message` on purpose: `message` must stay populated for
+   * stack traces and logs, but rendering it unconditionally is how a
+   * developer-facing string reaches a user. Render sites read this field (via
+   * {@link apiErrorMessage}) and localize the `null` case themselves.
+   */
+  readonly serverMessage: string | null;
+
+  constructor(serverMessage: string | null, status: number) {
+    super(serverMessage ?? `Request failed (${status || 'network'})`);
     this.name = 'ApiError';
     this.status = status;
+    this.serverMessage = serverMessage;
   }
 }
 
@@ -81,12 +98,12 @@ export async function apiDownload(
       },
     });
   } catch {
-    throw new ApiError(GENERIC_ERROR, 0);
+    throw new ApiError(null, 0);
   }
 
   if (!res.ok) {
     const body = await res.json().catch(() => null);
-    throw new ApiError(extractMessage(body) ?? GENERIC_ERROR, res.status);
+    throw new ApiError(extractMessage(body), res.status);
   }
 
   const blob = await res.blob();
@@ -124,14 +141,35 @@ export async function apiFetch<T>(path: string, options: ApiRequestOptions = {})
     });
   } catch {
     // Network / CORS / server-down — never expose the raw error.
-    throw new ApiError(GENERIC_ERROR, 0);
+    throw new ApiError(null, 0);
   }
 
   const body = await res.json().catch(() => null);
 
   if (!res.ok) {
-    throw new ApiError(extractMessage(body) ?? GENERIC_ERROR, res.status);
+    throw new ApiError(extractMessage(body), res.status);
   }
 
   return body as T;
+}
+
+/**
+ * The sentence to show a user for a failed request.
+ *
+ * Prefers the server's own copy — it is authored per locale server-side and is
+ * always more specific than anything the browser could say — and otherwise
+ * resolves `fallbackKey` from the browser catalog. Callers pass a
+ * domain-specific fallback ("We could not load your contracts.") where one
+ * exists; the default is the product-wide neutral line.
+ *
+ * Taking the translator as an argument keeps this usable outside React and
+ * keeps the choice of locale where the locale is actually known.
+ */
+export function apiErrorMessage(
+  t: WebTranslate,
+  error: unknown,
+  fallbackKey: WebTranslationKey = GENERIC_ERROR_KEY,
+): string {
+  const serverMessage = error instanceof ApiError ? error.serverMessage : null;
+  return serverMessage?.trim() ? serverMessage : t(fallbackKey);
 }

@@ -5,10 +5,21 @@ import { fetchBrandingServer } from '@/lib/web-branding';
 import { BrandingProvider } from '@/components/branding-provider';
 import { LocaleProvider } from '@/components/locale-provider';
 import { WebTranslationDiagnostics } from '@/components/web-translation-diagnostics';
+import { DEFAULT_LOCALE } from '@/lib/locale';
+import { translateWeb } from '@/lib/web-translations';
 
+/**
+ * Document metadata and the initial `lang` are emitted before any locale can be
+ * resolved: the user preference lives in the client session and the browser's
+ * `Accept-Language` is not read during static rendering. They therefore ship in
+ * the default locale, and `LocaleProvider` corrects `documentElement.lang` on
+ * mount once the real locale is known. Reading the strings from the catalog
+ * rather than inlining them keeps the tab title on the same rename path as the
+ * wordmark it repeats.
+ */
 export const metadata: Metadata = {
-  title: '전자계약',
-  description: '전자계약 SaaS',
+  title: translateWeb(DEFAULT_LOCALE, 'common.product'),
+  description: translateWeb(DEFAULT_LOCALE, 'common.productTagline'),
 };
 
 export const viewport: Viewport = {
@@ -31,7 +42,7 @@ export default async function RootLayout({
   const branding = await fetchBrandingServer();
 
   return (
-    <html lang="ko" style={brandStyle(branding.brandColor)}>
+    <html lang={DEFAULT_LOCALE} style={brandStyle(branding.brandColor)}>
       <head>
         {branding.faviconUrl ? (
           <link rel="icon" href={branding.faviconUrl} data-branding="" />

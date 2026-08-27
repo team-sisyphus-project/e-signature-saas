@@ -49,7 +49,7 @@ export function DeleteTemplateDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent closeLabel={t('common.close')}>
         <DialogHeader>
           <DialogTitle>
             {template ? t('templates.deleteTitle', { name: template.name }) : ''}

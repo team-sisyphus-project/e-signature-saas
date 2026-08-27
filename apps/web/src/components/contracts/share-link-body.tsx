@@ -28,7 +28,7 @@
 
 import * as React from 'react';
 import { Button, Field, cn } from '@repo/ui';
-import { ApiError } from '@/lib/api';
+import { apiErrorMessage } from '@/lib/api';
 import { PasswordInput } from '@/components/password-input';
 import { useLocale, useTranslation } from '@/components/locale-provider';
 import {
@@ -101,7 +101,7 @@ export function ShareLinkBody({
       setLink(created);
       onCreated?.();
     } catch (err) {
-      setCreateError(err instanceof ApiError ? err.message : t('contracts.linkCreateError'));
+      setCreateError(apiErrorMessage(t, err, 'contracts.linkCreateError'));
     } finally {
       setSubmitting(false);
     }

@@ -314,4 +314,7 @@ export const WIZARD_TRANSLATIONS = {
     en: 'You can load it from My templates next time.',
   },
   confirm: { ko: '확인', en: 'Done' },
+
+  /** Accessible name of the step-progress rail in the wizard shell. */
+  stepIndicatorLabel: { ko: '진행 단계', en: 'Progress' },
 } as const satisfies WebTranslationDomain;

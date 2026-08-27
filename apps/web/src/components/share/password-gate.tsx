@@ -14,7 +14,7 @@
 
 import * as React from 'react';
 import { Button, Field, cn } from '@repo/ui';
-import { ApiError } from '@/lib/api';
+import { apiErrorMessage } from '@/lib/api';
 import { brandStyle } from '@/lib/branding';
 import { PasswordInput } from '@/components/password-input';
 import { BrandingHeader } from '@/components/signer/branding-header';
@@ -46,7 +46,7 @@ export function PasswordGate({ meta }: { meta: ShareMeta }) {
         // Success: the provider advances to `viewing` (or a terminal notice) and
         // this screen unmounts.
       } catch (err) {
-        setError(err instanceof ApiError ? err.message : t('share.gateError'));
+        setError(apiErrorMessage(t, err, 'share.gateError'));
         setPassword('');
         setShakeNonce((n) => n + 1);
         setSubmitting(false);

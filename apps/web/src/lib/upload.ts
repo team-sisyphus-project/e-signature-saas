@@ -11,7 +11,7 @@
  * `DocumentSummary` (a DRAFT document). See documents.controller.ts.
  */
 
-import { ApiError, GENERIC_ERROR } from './api';
+import { ApiError } from './api';
 import type { DocumentSummary } from './documents';
 import type { WebTranslationKey } from './web-translations';
 
@@ -77,17 +77,17 @@ export function uploadPdf(file: File, options: UploadPdfOptions = {}): Promise<D
         try {
           resolve(JSON.parse(xhr.responseText) as DocumentSummary);
         } catch {
-          reject(new ApiError(GENERIC_ERROR, xhr.status));
+          reject(new ApiError(null, xhr.status));
         }
         return;
       }
-      reject(new ApiError(message ?? GENERIC_ERROR, xhr.status));
+      reject(new ApiError(message, xhr.status));
     };
 
     xhr.onerror = () => {
       cleanup();
       // Network / CORS / server-down — never expose the raw error.
-      reject(new ApiError(GENERIC_ERROR, 0));
+      reject(new ApiError(null, 0));
     };
 
     xhr.onabort = () => {

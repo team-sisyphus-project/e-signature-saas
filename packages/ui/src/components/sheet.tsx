@@ -38,12 +38,14 @@ export interface SheetContentProps
   extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> {
   side?: SheetSide;
   hideClose?: boolean;
+  /** Accessible name of the close (×) button; locale-agnostic default, see Dialog. */
+  closeLabel?: string;
 }
 
 export const SheetContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   SheetContentProps
->(({ className, children, side = 'bottom', hideClose = false, ...props }, ref) => (
+>(({ className, children, side = 'bottom', hideClose = false, closeLabel = 'Close', ...props }, ref) => (
   <DialogPortal>
     <DialogOverlay />
     <DialogPrimitive.Content
@@ -64,7 +66,7 @@ export const SheetContent = React.forwardRef<
       {children}
       {!hideClose ? (
         <DialogClose
-          aria-label="닫기"
+          aria-label={closeLabel}
           className={cn(
             'absolute right-md top-md flex h-9 w-9 items-center justify-center rounded-full',
             'text-foreground-subtle transition-colors duration-fast ease-standard',

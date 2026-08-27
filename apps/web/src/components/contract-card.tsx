@@ -8,7 +8,7 @@ import { UrgencyBadge } from '@/components/urgency-badge';
 import { CompletionDownload } from '@/components/completion-download';
 import { downloadOwnerArtifact, type DocumentSummary, type NextAction } from '@/lib/documents';
 import { contractMetaLine, nextActionCopy, urgencyLabel } from '@/lib/todo-copy';
-import { useTranslation } from '@/components/locale-provider';
+import { useLocale } from '@/components/locale-provider';
 import type { WebTranslate } from '@/lib/web-translations';
 
 /**
@@ -40,7 +40,7 @@ export interface ContractCardProps {
 }
 
 export function ContractCard({ document, variant = 'default', highlighted = false }: ContractCardProps) {
-  const t = useTranslation();
+  const { t, locale } = useLocale();
   const compact = variant === 'compact';
   const completed = document.status === 'COMPLETED';
   const href = `/contracts/${document.id}`;
@@ -67,7 +67,7 @@ export function ContractCard({ document, variant = 'default', highlighted = fals
           ready={document.downloadsReady}
           completedAt={document.completedAt}
           statusLabel={document.statusLabel}
-          onDownload={(kind) => downloadOwnerArtifact(document.id, kind, document.title)}
+          onDownload={(kind) => downloadOwnerArtifact(document.id, kind, document.title, locale)}
         />
       </Card>
     );

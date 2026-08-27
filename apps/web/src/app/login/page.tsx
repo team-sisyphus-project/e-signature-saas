@@ -8,17 +8,18 @@ import { BlobBackground } from '@/components/blob-background';
 import { PasswordInput } from '@/components/password-input';
 import { GoogleButton } from '@/components/google-button';
 import { AuthDivider } from '@/components/auth-divider';
-import { ApiError, GENERIC_ERROR } from '@/lib/api';
+import { apiErrorMessage } from '@/lib/api';
 import { isAuthenticated, login, loginWithGoogle } from '@/lib/auth';
-import { GoogleAuthError, useGoogleAuthCode } from '@/lib/google-oauth';
+import { googleFailureMessage, useGoogleAuthCode } from '@/lib/google-oauth';
 import { useTranslation } from '@/components/locale-provider';
+import type { WebTranslate } from '@/lib/web-translations';
 
 /** Pragmatic email shape check — the server is the real authority. */
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type FieldErrors = { email?: string; password?: string };
 
-function validate(email: string, password: string, t: (key: any) => string): FieldErrors {
+function validate(email: string, password: string, t: WebTranslate): FieldErrors {
   const errors: FieldErrors = {};
   const trimmed = email.trim();
   if (!trimmed) {
@@ -85,7 +86,7 @@ export default function LoginPage() {
       await login(email.trim(), password);
       router.replace('/dashboard');
     } catch (error) {
-      setFormError(error instanceof ApiError ? error.message : GENERIC_ERROR);
+      setFormError(apiErrorMessage(t, error));
       setSubmitting(false);
     }
   }
@@ -99,11 +100,7 @@ export default function LoginPage() {
       await loginWithGoogle(code);
       router.replace('/dashboard');
     } catch (error) {
-      setGoogleError(
-        error instanceof ApiError || error instanceof GoogleAuthError
-          ? error.message
-          : GENERIC_ERROR,
-      );
+      setGoogleError(googleFailureMessage(t, error));
       setGoogleLoading(false);
     }
   }
@@ -191,7 +188,7 @@ export default function LoginPage() {
 
         {googleAvailable ? (
           <div className="mt-lg flex flex-col gap-md">
-            <AuthDivider />
+            <AuthDivider label={t('auth.or')} />
             {googleError ? (
               <p
                 role="alert"
@@ -222,3 +219,4 @@ export default function LoginPage() {
     </main>
   );
 }
+

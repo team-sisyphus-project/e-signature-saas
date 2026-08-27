@@ -157,4 +157,13 @@ export const SIGNER_TRANSLATIONS = {
     ko: '서명을 완료하지 못했어요. 잠시 후 다시 시도해 주세요.',
     en: 'We could not complete signing. Please try again shortly.',
   },
+
+  // --- typed-signature fonts ----------------------------------------------
+  /**
+   * Chip labels for the three typed-signature typefaces. `lib/signature.ts`
+   * carries the key beside the CSS stack, so the font table stays copy-free.
+   */
+  sheetFontScript: { ko: '손글씨', en: 'Handwriting' },
+  sheetFontSerif: { ko: '명조', en: 'Serif' },
+  sheetFontSans: { ko: '고딕', en: 'Sans' },
 } as const satisfies WebTranslationDomain;

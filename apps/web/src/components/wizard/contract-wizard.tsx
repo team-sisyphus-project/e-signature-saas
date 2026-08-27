@@ -75,7 +75,11 @@ function WizardShell() {
       </header>
 
       <div className="mx-auto w-full max-w-[760px] px-md pt-lg">
-        <StepIndicator steps={steps.map((key) => t(STEP_LABEL_KEYS[key]))} current={state.step} />
+        <StepIndicator
+          steps={steps.map((key) => t(STEP_LABEL_KEYS[key]))}
+          current={state.step}
+          label={t('wizard.stepIndicatorLabel')}
+        />
       </div>
 
       <main className="mx-auto w-full max-w-[760px] flex-1 px-md py-xl">

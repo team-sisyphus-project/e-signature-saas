@@ -14,10 +14,12 @@
 import { apiDownload, apiFetch } from './api';
 import { getToken } from './auth';
 import {
-  COMPLETION_DOWNLOAD_COPY,
+  COMPLETION_ARTIFACT_KEYS,
   saveBlob,
   type CompletionArtifact,
 } from './completion-download';
+import { DEFAULT_LOCALE, type SupportedLocale } from './locale';
+import { translateWeb } from './web-translations';
 
 export type DocumentStatus = 'DRAFT' | 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 
@@ -153,19 +155,25 @@ export function fetchQuota(): Promise<Quota> {
 
 /**
  * Download a completed contract's artifact as the signed-in owner and hand it to
- * the browser's "save file". Rejects with the server's Toss-tone message (e.g.
- * the artifacts aren't ready yet) so the caller can surface a friendly retry.
+ * the browser's "save file". Rejects with the server's message (e.g. the
+ * artifacts aren't ready yet) so the caller can surface a friendly retry.
+ *
+ * `locale` only names the *fallback* filename, used when the server sends no
+ * `Content-Disposition`: the owner should get "… (Signed contract).pdf" in the
+ * language they are reading the dashboard in.
  */
 export async function downloadOwnerArtifact(
   documentId: string,
   kind: CompletionArtifact,
   fallbackTitle: string,
+  locale: SupportedLocale = DEFAULT_LOCALE,
 ): Promise<void> {
   const { blob, filename } = await apiDownload(
     `/documents/${encodeURIComponent(documentId)}/download/${kind}`,
     { token: getToken() ?? undefined },
   );
-  saveBlob(blob, filename ?? `${fallbackTitle} (${COMPLETION_DOWNLOAD_COPY.items[kind].title}).pdf`);
+  const artifactName = translateWeb(locale, COMPLETION_ARTIFACT_KEYS[kind].title);
+  saveBlob(blob, filename ?? `${fallbackTitle} (${artifactName}).pdf`);
 }
 
 // --- optimistic "just sent" hand-off ---------------------------------------

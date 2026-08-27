@@ -2,63 +2,40 @@
  * Completion-download domain helpers shared by the sender dashboard and the
  * signer completion screen.
  *
- * Single source for the download-area copy (design-spec
- * `components/completion-download/base.md`, voice.md §4) and the small browser
+ * Holds the artifact taxonomy, its catalog keys, and the small browser
  * "save this blob" plumbing, so both surfaces name the two artifacts identically
- * and behave the same. The actual byte fetch lives next to each caller's auth
- * (owner JWT in `documents.ts`, signer session token in `signing.ts`).
+ * and behave the same. The sentences themselves live in the `common` catalog
+ * domain — three domains render this one component, so none of them owns it.
+ * The actual byte fetch lives next to each caller's auth (owner JWT in
+ * `documents.ts`, signer session token in `signing.ts`).
  */
+
+import type { WebTranslationKey } from './web-translations';
 
 /** The two downloadable completion outputs (mirrors the server's union). */
 export type CompletionArtifact = 'signed' | 'certificate';
 
 /**
- * Confirmed copy for the completion download area (Toss voice).
- * Item names mirror voice.md §4 attachment names so the inbox and the dashboard
- * agree. The section title / status label reuse the existing single sources.
+ * Catalog keys for the two downloadable artifacts.
+ *
+ * The names mirror voice.md §4 attachment names so the inbox and the dashboard
+ * agree. Keys rather than sentences: the same rows are rendered on the sender's
+ * dashboard, the contract detail page, and the signer's completion takeover, and
+ * a language switch must relabel all three.
  */
-export const COMPLETION_DOWNLOAD_COPY = {
-  /** Section title. */
-  sectionTitle: '완료 문서',
-  /** Completion notice — `{완료일시}` is `YYYY.MM.DD HH:mm (KST)`. */
-  notice: (completedAtLabel: string): string =>
-    `${completedAtLabel}에 완료됐어요. 참여자 모두에게 메일로도 보내 드렸어요.`,
-  /** Per-artifact name + one-line description. */
-  items: {
-    signed: { title: '최종 계약서', description: '서명이 모두 담긴 완료본이에요.' },
-    certificate: {
-      title: '감사 추적 인증서',
-      description: '계약 이력과 문서 무결성을 증명하는 문서예요.',
-    },
-  } satisfies Record<CompletionArtifact, { title: string; description: string }>,
-  /** Download button label. */
-  cta: '내려받기',
-  /** Shown while post-processing hasn't stored the artifacts yet. */
-  preparing: '완료 문서를 준비하고 있어요. 잠시 후 다시 열어 주세요.',
-  /** Neutral fallback when a download fails for an unknown reason. */
-  error: '내려받지 못했어요. 잠시 후 다시 시도해 주세요.',
-} as const;
-
-/** Completion-download chrome in the locale resolved for the current surface. */
-export function completionDownloadCopyFor(locale: 'ko' | 'en') {
-  if (locale === 'ko') return COMPLETION_DOWNLOAD_COPY;
-
-  return {
-    sectionTitle: 'Completed documents',
-    notice: (completedAtLabel: string) =>
-      `Completed on ${completedAtLabel}. We also emailed it to all participants.`,
-    items: {
-      signed: { title: 'Signed contract', description: 'The completed contract with every signature.' },
-      certificate: {
-        title: 'Audit trail certificate',
-        description: 'A record that verifies the contract history and integrity.',
-      },
-    } satisfies Record<CompletionArtifact, { title: string; description: string }>,
-    cta: 'Download',
-    preparing: 'We are preparing the completed documents. Please check again shortly.',
-    error: 'We could not download the document. Please try again shortly.',
-  };
-}
+export const COMPLETION_ARTIFACT_KEYS = {
+  signed: {
+    title: 'common.completionSigned',
+    description: 'common.completionSignedDescription',
+  },
+  certificate: {
+    title: 'common.completionCertificate',
+    description: 'common.completionCertificateDescription',
+  },
+} as const satisfies Record<
+  CompletionArtifact,
+  { title: WebTranslationKey; description: WebTranslationKey }
+>;
 
 /** Ordered list of artifacts for rendering the two download rows. */
 export const COMPLETION_ARTIFACTS: CompletionArtifact[] = ['signed', 'certificate'];

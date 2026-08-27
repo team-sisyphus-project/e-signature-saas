@@ -1,35 +1,38 @@
 'use client';
 
 /**
- * CompletionDownload — the "완료 문서" download area (design-spec
- * `components/completion-download/base.md`).
+ * CompletionDownload — the completed-document download area.
  *
  * Presentational + self-contained per-row loading/error state; the caller
  * supplies `onDownload(kind)` wired to its own auth (owner JWT on the dashboard,
  * signer session on the completion screen). Reuses the existing StatusBadge and
  * Button — no new visual primitives. Until the artifacts are stored the rows
- * show a skeleton-shimmer placeholder ("준비 중"); once ready they become two
- * download rows (최종 계약서 / 감사 추적 인증서).
+ * show a skeleton-shimmer placeholder; once ready they become one row per
+ * artifact (signed contract / audit trail certificate).
+ *
+ * Every sentence comes from the `common` catalog domain, so the sender's
+ * dashboard and the signer's completion takeover always name the two files the
+ * same way — in whichever language each reader resolved.
  */
 
 import * as React from 'react';
 import { Button, Skeleton, cn } from '@repo/ui';
 import { StatusBadge } from '@/components/status-badge';
-import { ApiError } from '@/lib/api';
+import { apiErrorMessage } from '@/lib/api';
 import {
   COMPLETION_ARTIFACTS,
-  completionDownloadCopyFor,
+  COMPLETION_ARTIFACT_KEYS,
   formatKstDateTime,
   type CompletionArtifact,
 } from '@/lib/completion-download';
-import { useLocale } from '@/components/locale-provider';
+import { useTranslation } from '@/components/locale-provider';
 
 export interface CompletionDownloadProps {
-  /** Whether artifacts are stored and downloadable; false → "준비 중" skeleton. */
+  /** Whether artifacts are stored and downloadable; false → skeleton placeholder. */
   ready: boolean;
   /** ISO completion timestamp for the notice (optional). */
   completedAt?: string | null;
-  /** Korean status label for the badge (single source: server `statusLabel`). */
+  /** Server-supplied status label for the badge; falls back to the catalog. */
   statusLabel?: string;
   /** Show the COMPLETED status badge beside the section title. */
   showBadge?: boolean;
@@ -46,26 +49,25 @@ export function CompletionDownload({
   onDownload,
   className,
 }: CompletionDownloadProps) {
-  const { locale } = useLocale();
-  const copy = completionDownloadCopyFor(locale);
+  const t = useTranslation();
   const completedLabel = formatKstDateTime(completedAt ?? null);
-  const resolvedStatusLabel = statusLabel ?? (locale === 'en' ? 'Completed' : '완료됨');
+  const resolvedStatusLabel = statusLabel ?? t('common.completionStatus');
 
   return (
     <section
       className={cn('flex flex-col gap-sm text-left', className)}
-      aria-label={copy.sectionTitle}
+      aria-label={t('common.completionTitle')}
     >
       <div className="flex items-center justify-between gap-xs">
         <h4 className="text-sm font-bold text-foreground">
-          {copy.sectionTitle}
+          {t('common.completionTitle')}
         </h4>
         {showBadge ? <StatusBadge status="COMPLETED" label={resolvedStatusLabel} /> : null}
       </div>
 
       {completedLabel ? (
         <p className="text-sm text-foreground-subtle">
-          {copy.notice(completedLabel)}
+          {t('common.completionNotice', { completedAt: completedLabel })}
         </p>
       ) : null}
 
@@ -73,12 +75,12 @@ export function CompletionDownload({
         <ul className="flex flex-col gap-sm">
           {COMPLETION_ARTIFACTS.map((kind) => (
             <li key={kind}>
-              <DownloadRow kind={kind} onDownload={onDownload} copy={copy} />
+              <DownloadRow kind={kind} onDownload={onDownload} />
             </li>
           ))}
         </ul>
       ) : (
-        <PreparingPlaceholder copy={copy} />
+        <PreparingPlaceholder />
       )}
     </section>
   );
@@ -87,14 +89,15 @@ export function CompletionDownload({
 function DownloadRow({
   kind,
   onDownload,
-  copy,
 }: {
   kind: CompletionArtifact;
   onDownload: (kind: CompletionArtifact) => Promise<void>;
-  copy: ReturnType<typeof completionDownloadCopyFor>;
 }) {
-  const item = copy.items[kind];
+  const t = useTranslation();
+  const item = COMPLETION_ARTIFACT_KEYS[kind];
   const [loading, setLoading] = React.useState(false);
+  // Holds a resolved sentence only because it may be the server's own copy;
+  // the fallback is resolved through the catalog at the moment of failure.
   const [error, setError] = React.useState<string | null>(null);
 
   const handle = async () => {
@@ -103,7 +106,7 @@ function DownloadRow({
     try {
       await onDownload(kind);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : copy.error);
+      setError(apiErrorMessage(t, err, 'common.completionError'));
     } finally {
       setLoading(false);
     }
@@ -113,8 +116,8 @@ function DownloadRow({
     <div className="flex flex-col gap-2xs rounded-md border border-border bg-surface-muted px-md py-sm">
       <div className="flex items-center justify-between gap-md">
         <div className="flex min-w-0 flex-col gap-2xs">
-          <p className="truncate text-base font-semibold text-foreground">{item.title}</p>
-          <p className="text-sm text-foreground-subtle">{item.description}</p>
+          <p className="truncate text-base font-semibold text-foreground">{t(item.title)}</p>
+          <p className="text-sm text-foreground-subtle">{t(item.description)}</p>
         </div>
         <Button
           variant="secondary"
@@ -123,7 +126,7 @@ function DownloadRow({
           onClick={handle}
           className="shrink-0"
         >
-          {copy.cta}
+          {t('common.completionDownload')}
         </Button>
       </div>
       {error ? (
@@ -136,7 +139,8 @@ function DownloadRow({
 }
 
 /** Skeleton-shimmer placeholder shown while post-processing stores the files. */
-function PreparingPlaceholder({ copy }: { copy: ReturnType<typeof completionDownloadCopyFor> }) {
+function PreparingPlaceholder() {
+  const t = useTranslation();
   return (
     <div className="flex flex-col gap-sm">
       {[0, 1].map((i) => (
@@ -151,7 +155,7 @@ function PreparingPlaceholder({ copy }: { copy: ReturnType<typeof completionDown
           <Skeleton shape="rect" className="h-9 w-20" />
         </div>
       ))}
-      <p className="text-sm text-foreground-subtle">{copy.preparing}</p>
+      <p className="text-sm text-foreground-subtle">{t('common.completionPreparing')}</p>
     </div>
   );
 }

@@ -24,6 +24,7 @@ import {
   openPdf,
   renderPageToCanvas,
   isRenderCancelled,
+  PDF_READ_ERROR_KEY,
   PdfRenderError,
   type PdfDocument,
 } from '@/lib/pdf';
@@ -35,6 +36,7 @@ import {
   type SignFieldType,
 } from '@/lib/field-geometry';
 import { useTranslation } from '@/components/locale-provider';
+import type { WebTranslationKey } from '@/lib/web-translations';
 
 /**
  * The minimal field shape this surface needs: a type, its 1-based page, its
@@ -79,10 +81,10 @@ export function TemplateFieldPreview({
   const [pageCount, setPageCount] = React.useState(0);
   const [page, setPage] = React.useState(1); // 1-based
   const [status, setStatus] = React.useState<Status>('loading');
-  // `null` means "no specific reason" — the render falls back to the catalog's
-  // read-failure sentence. A `PdfRenderError` carries its own message, which is
-  // more useful than the generic line, so it is kept verbatim.
-  const [error, setError] = React.useState<string | null>(null);
+  // Holds a catalog key, never a sentence, so a language switch while the error
+  // is on screen re-renders it. `null` means "no specific reason" and the render
+  // falls back to this screen's own read-failure line.
+  const [error, setError] = React.useState<WebTranslationKey | null>(null);
   const [pageSize, setPageSize] = React.useState<PageSize | null>(null);
   const [width, setWidth] = React.useState(0);
 
@@ -104,7 +106,7 @@ export function TemplateFieldPreview({
       })
       .catch((err: unknown) => {
         if (disposed) return;
-        setError(err instanceof PdfRenderError ? err.message : null);
+        setError(err instanceof PdfRenderError ? PDF_READ_ERROR_KEY : null);
         setStatus('error');
       });
     return () => {
@@ -142,7 +144,7 @@ export function TemplateFieldPreview({
       })
       .catch((err: unknown) => {
         if (cancelled || isRenderCancelled(err)) return;
-        setError(err instanceof PdfRenderError ? err.message : null);
+        setError(err instanceof PdfRenderError ? PDF_READ_ERROR_KEY : null);
         setStatus('error');
       });
     return () => {
@@ -211,7 +213,7 @@ export function TemplateFieldPreview({
         {ready ? null : status === 'error' ? (
           <div className="flex aspect-[1/1.414] w-full flex-col items-center justify-center gap-xs rounded-md border border-border bg-surface-muted px-md text-center">
             <p className="text-sm text-foreground-muted">
-              {error ?? t('templates.previewReadError')}
+              {t(error ?? 'templates.previewReadError')}
             </p>
           </div>
         ) : (

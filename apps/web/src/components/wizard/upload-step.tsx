@@ -15,7 +15,7 @@
 
 import * as React from 'react';
 import { Button, cn } from '@repo/ui';
-import { ApiError } from '@/lib/api';
+import { apiErrorMessage } from '@/lib/api';
 import { getToken } from '@/lib/auth';
 import {
   MAX_UPLOAD_MB,
@@ -70,7 +70,7 @@ export function UploadStep() {
         dispatch({ type: 'SET_DOCUMENT', document, file });
       } catch (err) {
         if (err instanceof DOMException && err.name === 'AbortError') return;
-        setError(err instanceof ApiError ? err.message : t('wizard.genericError'));
+        setError(apiErrorMessage(t, err, 'wizard.genericError'));
       } finally {
         abortRef.current = null;
         setProgress(null);

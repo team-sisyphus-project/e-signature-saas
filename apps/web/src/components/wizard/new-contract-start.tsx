@@ -24,7 +24,7 @@
 import * as React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button, Card, Skeleton } from '@repo/ui';
-import { ApiError } from '@/lib/api';
+import { ApiError, apiErrorMessage } from '@/lib/api';
 import { clearSession } from '@/lib/auth';
 import { createDocumentFromStorageKey } from '@/lib/documents';
 import {
@@ -118,7 +118,7 @@ export function NewContractStart() {
         }
         setView({
           kind: 'prepareError',
-          message: err instanceof ApiError ? err.message : t('wizard.genericError'),
+          message: apiErrorMessage(t, err, 'wizard.genericError'),
         });
       }
     },
@@ -301,7 +301,7 @@ function TemplatePicker({
         router.replace('/login');
         return;
       }
-      setError(err instanceof ApiError ? err.message : t('wizard.genericError'));
+      setError(apiErrorMessage(t, err, 'wizard.genericError'));
     }
   }, [router, t]);
 

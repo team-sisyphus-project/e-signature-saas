@@ -24,7 +24,7 @@ import * as React from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { Button, Confetti, SuccessCheck } from '@repo/ui';
-import { ApiError } from '@/lib/api';
+import { ApiError, apiErrorMessage } from '@/lib/api';
 import { getToken } from '@/lib/auth';
 import { writeSentSignal, type DocumentSummary } from '@/lib/documents';
 import { FIELD_TYPES, fieldTypeLabel, type SignFieldType } from '@/lib/field-geometry';
@@ -88,7 +88,7 @@ export function ReviewStep() {
         router.replace('/login');
         return;
       }
-      setError(err instanceof ApiError ? err.message : t('wizard.genericError'));
+      setError(apiErrorMessage(t, err, 'wizard.genericError'));
       setStatus('error');
     }
   }, [document, fields, isScheduled, recipients, router, scheduledSendAt, t]);
@@ -401,7 +401,7 @@ function SendSuccess({
     >
       <div className="relative flex items-center justify-center">
         <Confetti className="z-0" />
-        <SuccessCheck size={112} className="relative z-10" aria-label={title} />
+        <SuccessCheck size={112} className="relative z-10" label={title} />
       </div>
 
       <div className="flex max-w-[420px] flex-col items-center gap-sm">

@@ -12,7 +12,7 @@
  * refresh) and {@link fetchBrandingServer} for SSR (no-flash initial paint).
  */
 
-import { API_ORIGIN, ApiError, GENERIC_ERROR, apiFetch } from './api';
+import { API_ORIGIN, ApiError, apiFetch } from './api';
 
 /** Public branding payload — mirrors the API's `BrandingResponse`. */
 export interface Branding {
@@ -109,12 +109,12 @@ export async function uploadBrandingAsset(
       body: form,
     });
   } catch {
-    throw new ApiError(GENERIC_ERROR, 0);
+    throw new ApiError(null, 0);
   }
 
   if (!res.ok) {
     const body = await res.json().catch(() => null);
-    throw new ApiError(messageFromBody(body) ?? GENERIC_ERROR, res.status);
+    throw new ApiError(messageFromBody(body), res.status);
   }
 }
 

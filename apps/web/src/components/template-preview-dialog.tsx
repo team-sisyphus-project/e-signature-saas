@@ -29,7 +29,7 @@ import {
   Skeleton,
 } from '@repo/ui';
 import { TemplateFieldPreview } from '@/components/template-field-preview';
-import { ApiError, GENERIC_ERROR } from '@/lib/api';
+import { ApiError, apiErrorMessage } from '@/lib/api';
 import {
   fetchTemplateFile,
   getTemplate,
@@ -88,18 +88,18 @@ export function TemplatePreviewDialog({
           router.replace('/login');
           return;
         }
-        setError(err instanceof ApiError ? err.message : GENERIC_ERROR);
+        setError(apiErrorMessage(t, err));
         setStatus('error');
       });
 
     return () => {
       cancelled = true;
     };
-  }, [open, templateId, reloadKey, router]);
+  }, [open, templateId, reloadKey, router, t]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl" closeLabel={t('common.close')}>
         <DialogHeader>
           <DialogTitle className="truncate pr-9">
             {template ? t('templates.previewTitle', { name: template.name }) : ''}

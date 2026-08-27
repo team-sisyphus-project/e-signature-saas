@@ -21,6 +21,7 @@ import { downloadOwnerArtifact, type DocumentDetail } from '@/lib/documents';
 import { ShareLinksSection } from './share-links-section';
 
 export function ContractDetail({ document }: { document: DocumentDetail }) {
+  const { locale } = useLocale();
   const completed = document.status === 'COMPLETED';
 
   return (
@@ -52,7 +53,7 @@ export function ContractDetail({ document }: { document: DocumentDetail }) {
             completedAt={document.completedAt}
             statusLabel={document.statusLabel}
             showBadge={false}
-            onDownload={(kind) => downloadOwnerArtifact(document.id, kind, document.title)}
+            onDownload={(kind) => downloadOwnerArtifact(document.id, kind, document.title, locale)}
           />
         </Card>
       ) : null}

@@ -19,6 +19,8 @@
  * previews via these family stacks, so no raw color is hardcoded.
  */
 
+import type { WebTranslationKey } from './web-translations';
+
 /** A timestamped pointer sample in CSS pixels relative to the pad. */
 export interface InkPoint {
   x: number;
@@ -107,8 +109,8 @@ export function smoothWidth(prev: number, target: number, smoothing = 0.5): numb
 /** A selectable typed-signature font. */
 export interface SignatureFont {
   id: 'script' | 'serif' | 'sans';
-  /** Short Korean chip label. */
-  label: string;
+  /** Catalog key for the short chip label (`signer.sheetFont*`). */
+  labelKey: WebTranslationKey;
   /**
    * CSS font-family stack. Mirrors the `tailwind.config.ts` fontFamily tokens
    * (`script` / `serif` / `sans`); used both for the live DOM preview (inline
@@ -119,14 +121,17 @@ export interface SignatureFont {
 
 /**
  * The three typed-signature fonts: a Korean-capable handwriting script, a
- * serif (명조), and the app's sans (고딕, Pretendard). Order is the chip order.
+ * serif, and the app's sans (Pretendard). Order is the chip order.
+ *
+ * The table carries a catalog key rather than a word, so the font list stays
+ * copy-free and the chips re-label themselves on a language switch.
  */
 export const SIGNATURE_FONTS: readonly SignatureFont[] = [
-  { id: 'script', label: '손글씨', fontFamily: "'Nanum Pen Script', cursive" },
-  { id: 'serif', label: '명조', fontFamily: "'Nanum Myeongjo', serif" },
+  { id: 'script', labelKey: 'signer.sheetFontScript', fontFamily: "'Nanum Pen Script', cursive" },
+  { id: 'serif', labelKey: 'signer.sheetFontSerif', fontFamily: "'Nanum Myeongjo', serif" },
   {
     id: 'sans',
-    label: '고딕',
+    labelKey: 'signer.sheetFontSans',
     fontFamily:
       "'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif",
   },

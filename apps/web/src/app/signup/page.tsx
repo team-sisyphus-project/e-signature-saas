@@ -8,9 +8,11 @@ import { BlobBackground } from '@/components/blob-background';
 import { PasswordInput } from '@/components/password-input';
 import { GoogleButton } from '@/components/google-button';
 import { AuthDivider } from '@/components/auth-divider';
-import { ApiError, GENERIC_ERROR } from '@/lib/api';
+import { apiErrorMessage } from '@/lib/api';
 import { isAuthenticated, register, loginWithGoogle } from '@/lib/auth';
-import { GoogleAuthError, useGoogleAuthCode } from '@/lib/google-oauth';
+import { googleFailureMessage, useGoogleAuthCode } from '@/lib/google-oauth';
+import { useTranslation } from '@/components/locale-provider';
+import type { WebTranslate } from '@/lib/web-translations';
 
 /** Pragmatic email shape check — the server is the real authority. */
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -33,30 +35,31 @@ function validate(
   password: string,
   passwordConfirm: string,
   agreed: boolean,
+  t: WebTranslate,
 ): FieldErrors {
   const errors: FieldErrors = {};
 
   const trimmed = email.trim();
   if (!trimmed) {
-    errors.email = '이메일을 입력해 주세요.';
+    errors.email = t('auth.emailRequired');
   } else if (!EMAIL_RE.test(trimmed)) {
-    errors.email = '이메일 형식을 다시 확인해 주세요.';
+    errors.email = t('auth.emailInvalid');
   }
 
   if (!password) {
-    errors.password = '비밀번호를 입력해 주세요.';
+    errors.password = t('auth.passwordRequired');
   } else if (password.length < PASSWORD_MIN) {
-    errors.password = `비밀번호는 ${PASSWORD_MIN}자 이상으로 입력해 주세요.`;
+    errors.password = t('auth.passwordTooShort', { min: PASSWORD_MIN });
   }
 
   if (!passwordConfirm) {
-    errors.passwordConfirm = '비밀번호를 한 번 더 입력해 주세요.';
+    errors.passwordConfirm = t('auth.passwordConfirmRequired');
   } else if (password !== passwordConfirm) {
-    errors.passwordConfirm = '비밀번호가 일치하지 않아요. 다시 확인해 주세요.';
+    errors.passwordConfirm = t('auth.passwordMismatch');
   }
 
   if (!agreed) {
-    errors.terms = '약관에 동의해야 가입할 수 있어요.';
+    errors.terms = t('auth.termsRequired');
   }
 
   return errors;
@@ -64,6 +67,7 @@ function validate(
 
 export default function SignupPage() {
   const router = useRouter();
+  const t = useTranslation();
 
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
@@ -103,10 +107,10 @@ export default function SignupPage() {
         // never flash an error before the user has had a chance to type.
         Object.keys(prev).length === 0
           ? prev
-          : validate(nextEmail, nextPassword, nextConfirm, nextAgreed),
+          : validate(nextEmail, nextPassword, nextConfirm, nextAgreed, t),
       );
     },
-    [],
+    [t],
   );
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -114,7 +118,7 @@ export default function SignupPage() {
     setFormError(null);
     setGoogleError(null);
 
-    const errors = validate(email, password, passwordConfirm, agreed);
+    const errors = validate(email, password, passwordConfirm, agreed, t);
     setTouched({ email: true, password: true, passwordConfirm: true, terms: true });
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) return;
@@ -126,7 +130,7 @@ export default function SignupPage() {
       setSucceeded(true);
       window.setTimeout(() => router.replace('/dashboard'), SUCCESS_HANDOFF_MS);
     } catch (error) {
-      setFormError(error instanceof ApiError ? error.message : GENERIC_ERROR);
+      setFormError(apiErrorMessage(t, error));
       setSubmitting(false);
     }
   }
@@ -142,11 +146,7 @@ export default function SignupPage() {
       setSucceeded(true);
       window.setTimeout(() => router.replace('/dashboard'), SUCCESS_HANDOFF_MS);
     } catch (error) {
-      setGoogleError(
-        error instanceof ApiError || error instanceof GoogleAuthError
-          ? error.message
-          : GENERIC_ERROR,
-      );
+      setGoogleError(googleFailureMessage(t, error));
       setGoogleLoading(false);
     }
   }
@@ -156,10 +156,10 @@ export default function SignupPage() {
       <main className="relative flex min-h-[100dvh] items-center justify-center overflow-hidden bg-background px-md py-2xl">
         <BlobBackground />
         <Card className="motion-stagger relative z-10 flex w-full max-w-[420px] flex-col items-center gap-md p-xl text-center shadow-lg sm:p-2xl">
-          <SuccessCheck />
+          <SuccessCheck label={t('auth.signupSuccessTitle')} />
           <div role="status" aria-live="polite" className="flex flex-col gap-xs">
-            <h1 className="text-2xl font-bold text-foreground">가입이 완료되었습니다!</h1>
-            <p className="text-base text-foreground-subtle">대시보드로 이동하고 있어요.</p>
+            <h1 className="text-2xl font-bold text-foreground">{t('auth.signupSuccessTitle')}</h1>
+            <p className="text-base text-foreground-subtle">{t('auth.signupSuccessBody')}</p>
           </div>
         </Card>
       </main>
@@ -172,15 +172,13 @@ export default function SignupPage() {
 
       <Card className="motion-stagger relative z-10 w-full max-w-[420px] p-xl shadow-lg sm:p-2xl">
         <header className="mb-xl flex flex-col gap-xs">
-          <span className="text-sm font-bold tracking-tight text-primary">전자계약</span>
-          <h1 className="text-2xl font-bold text-foreground">시작해 볼까요</h1>
-          <p className="text-base text-foreground-subtle">
-            이메일과 비밀번호로 계정을 만들어 주세요.
-          </p>
+          <span className="text-sm font-bold tracking-tight text-primary">{t('common.product')}</span>
+          <h1 className="text-2xl font-bold text-foreground">{t('auth.signupTitle')}</h1>
+          <p className="text-base text-foreground-subtle">{t('auth.signupHint')}</p>
         </header>
 
         <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-lg">
-          <Field label="이메일" htmlFor="email" error={touched.email ? fieldErrors.email : undefined}>
+          <Field label={t('auth.email')} htmlFor="email" error={touched.email ? fieldErrors.email : undefined}>
             <Input
               id="email"
               name="email"
@@ -200,16 +198,18 @@ export default function SignupPage() {
               }}
               onBlur={() => {
                 setTouched((t) => ({ ...t, email: true }));
-                setFieldErrors(validate(email, password, passwordConfirm, agreed));
+                setFieldErrors(validate(email, password, passwordConfirm, agreed, t));
               }}
             />
           </Field>
 
           <Field
-            label="비밀번호"
+            label={t('auth.password')}
             htmlFor="password"
             hint={
-              touched.password && fieldErrors.password ? undefined : `${PASSWORD_MIN}자 이상 입력해 주세요.`
+              touched.password && fieldErrors.password
+                ? undefined
+                : t('auth.passwordHint', { min: PASSWORD_MIN })
             }
             error={touched.password ? fieldErrors.password : undefined}
           >
@@ -217,7 +217,7 @@ export default function SignupPage() {
               id="password"
               name="password"
               autoComplete="new-password"
-              placeholder="비밀번호"
+              placeholder={t('auth.password')}
               value={password}
               invalid={touched.password && Boolean(fieldErrors.password)}
               aria-describedby={touched.password && fieldErrors.password ? 'password-message' : undefined}
@@ -229,13 +229,13 @@ export default function SignupPage() {
               }}
               onBlur={() => {
                 setTouched((t) => ({ ...t, password: true }));
-                setFieldErrors(validate(email, password, passwordConfirm, agreed));
+                setFieldErrors(validate(email, password, passwordConfirm, agreed, t));
               }}
             />
           </Field>
 
           <Field
-            label="비밀번호 확인"
+            label={t('auth.passwordConfirm')}
             htmlFor="passwordConfirm"
             error={touched.passwordConfirm ? fieldErrors.passwordConfirm : undefined}
           >
@@ -243,7 +243,7 @@ export default function SignupPage() {
               id="passwordConfirm"
               name="passwordConfirm"
               autoComplete="new-password"
-              placeholder="비밀번호를 다시 입력해 주세요"
+              placeholder={t('auth.passwordConfirmPlaceholder')}
               value={passwordConfirm}
               invalid={touched.passwordConfirm && Boolean(fieldErrors.passwordConfirm)}
               aria-describedby={
@@ -259,7 +259,7 @@ export default function SignupPage() {
               }}
               onBlur={() => {
                 setTouched((t) => ({ ...t, passwordConfirm: true }));
-                setFieldErrors(validate(email, password, passwordConfirm, agreed));
+                setFieldErrors(validate(email, password, passwordConfirm, agreed, t));
               }}
             />
           </Field>
@@ -280,8 +280,7 @@ export default function SignupPage() {
                 revalidate(email, password, passwordConfirm, next);
               }}
             >
-              <span className="font-medium text-foreground">이용약관</span> 및{' '}
-              <span className="font-medium text-foreground">개인정보 처리방침</span>에 동의해요.
+              {t('auth.signupTerms')}
             </Checkbox>
             {touched.terms && fieldErrors.terms ? (
               <p id="terms-message" role="alert" className="text-sm text-danger">
@@ -300,13 +299,13 @@ export default function SignupPage() {
           ) : null}
 
           <Button type="submit" size="lg" fullWidth isLoading={submitting} disabled={googleLoading}>
-            {submitting ? '가입 중' : '가입하기'}
+            {submitting ? t('auth.signingUp') : t('auth.signupSubmit')}
           </Button>
         </form>
 
         {googleAvailable ? (
           <div className="mt-lg flex flex-col gap-md">
-            <AuthDivider />
+            <AuthDivider label={t('auth.or')} />
             {googleError ? (
               <p
                 role="alert"
@@ -316,7 +315,7 @@ export default function SignupPage() {
               </p>
             ) : null}
             <GoogleButton
-              label="Google로 시작하기"
+              label={t('auth.googleSignup')}
               isLoading={googleLoading}
               disabled={submitting}
               onClick={handleGoogle}
@@ -325,12 +324,12 @@ export default function SignupPage() {
         ) : null}
 
         <p className="mt-xl text-center text-sm text-foreground-subtle">
-          이미 계정이 있으신가요?{' '}
+          {t('auth.hasAccount')}{' '}
           <Link
             href="/login"
             className="font-semibold text-primary underline-offset-4 hover:underline focus-visible:rounded-xs focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus"
           >
-            로그인
+            {t('auth.login')}
           </Link>
         </p>
       </Card>

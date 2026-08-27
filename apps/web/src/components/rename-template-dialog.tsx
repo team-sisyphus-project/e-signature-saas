@@ -63,7 +63,7 @@ export function RenameTemplateDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent closeLabel={t('common.close')}>
         <form
           onSubmit={(e) => {
             e.preventDefault();

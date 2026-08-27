@@ -10,11 +10,15 @@
  * (grain-1 `POST /auth/google`) exchanges it against the `postmessage` redirect
  * URI and returns the same `{ accessToken, user }` session shape as email login.
  *
- * User-facing copy here mirrors the Toss tone of `messaging/auth`: never blame
- * the user, never leak internals, just point at the next step.
+ * User-facing copy for these failures lives in the `auth` catalog domain, not
+ * here: this module runs outside React and cannot know the reader's locale, so
+ * it carries the *kind* of failure and lets the auth screens name it.
  */
 
 import * as React from 'react';
+
+import { apiErrorMessage } from './api';
+import type { WebTranslate, WebTranslationKey } from './web-translations';
 
 const GIS_SRC = 'https://accounts.google.com/gsi/client';
 /** OIDC scopes — enough for the server to read a verified email + profile. */
@@ -28,30 +32,47 @@ export function isGoogleConfigured(): boolean {
   return GOOGLE_CLIENT_ID.trim().length > 0;
 }
 
-// --- Failure copy (client-side; Toss tone, matches messaging/auth) -----------
+// --- Failure kinds (copy lives in the `auth` catalog domain) -----------------
 
 export type GoogleAuthErrorKind = 'cancelled' | 'popup_blocked' | 'connect';
 
-const GOOGLE_AUTH_MESSAGES: Record<GoogleAuthErrorKind, string> = {
-  cancelled: 'Google 로그인을 취소했어요. 다시 시도해 주세요.',
-  popup_blocked: '팝업이 차단됐어요. 브라우저에서 팝업을 허용한 뒤 다시 시도해 주세요.',
-  connect: 'Google에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.',
+/**
+ * Catalog key per failure kind. The map is exported rather than inlined at the
+ * two auth screens so adding a kind is a compile error until it has copy.
+ */
+export const GOOGLE_AUTH_ERROR_KEYS: Record<GoogleAuthErrorKind, WebTranslationKey> = {
+  cancelled: 'auth.googleCancelled',
+  popup_blocked: 'auth.googlePopupBlocked',
+  connect: 'auth.googleConnectError',
 };
 
 /**
  * A recoverable Google sign-in failure that happens *before* we reach our API
- * (popup dismissed/denied, popup blocked, or the GIS script never loaded). The
- * `message` is already user-facing copy, so callers can surface it verbatim —
- * the same way they surface an `ApiError.message`.
+ * (popup dismissed/denied, popup blocked, or the GIS script never loaded).
+ *
+ * `kind` is the payload; `message` is a developer-facing label for stack traces
+ * and must never be rendered. Screens translate `GOOGLE_AUTH_ERROR_KEYS[kind]`.
  */
 export class GoogleAuthError extends Error {
   readonly kind: GoogleAuthErrorKind;
 
   constructor(kind: GoogleAuthErrorKind) {
-    super(GOOGLE_AUTH_MESSAGES[kind]);
+    super(`Google sign-in failed: ${kind}`);
     this.name = 'GoogleAuthError';
     this.kind = kind;
   }
+}
+
+/**
+ * Copy for a failed social sign-in, whichever half of the flow failed.
+ *
+ * A {@link GoogleAuthError} never reached our API, so it carries a failure
+ * *kind* that maps to catalog copy; anything else came back from our own
+ * endpoint and goes through the same path as the email form.
+ */
+export function googleFailureMessage(t: WebTranslate, error: unknown): string {
+  if (error instanceof GoogleAuthError) return t(GOOGLE_AUTH_ERROR_KEYS[error.kind]);
+  return apiErrorMessage(t, error);
 }
 
 // --- Minimal GIS typings (only what we use) ----------------------------------

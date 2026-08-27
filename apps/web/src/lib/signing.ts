@@ -22,7 +22,7 @@ import { ApiError, apiDownload, apiFetch, apiUrl } from './api';
 import { linkLocaleQuery } from './locale';
 import { translateWeb } from './web-translations';
 import {
-  completionDownloadCopyFor,
+  COMPLETION_ARTIFACT_KEYS,
   saveBlob,
   type CompletionArtifact,
 } from './completion-download';
@@ -232,8 +232,8 @@ export async function downloadSignerArtifact(
   const { blob, filename } = await apiDownload(`${base(accessToken)}/download/${kind}`, {
     token: session,
   });
-  const copy = completionDownloadCopyFor(locale);
-  saveBlob(blob, filename ?? `${fallbackTitle} (${copy.items[kind].title}).pdf`);
+  const artifactName = translateWeb(locale, COMPLETION_ARTIFACT_KEYS[kind].title);
+  saveBlob(blob, filename ?? `${fallbackTitle} (${artifactName}).pdf`);
 }
 
 /**

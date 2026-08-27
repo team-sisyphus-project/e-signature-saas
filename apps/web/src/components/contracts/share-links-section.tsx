@@ -18,7 +18,7 @@
 
 import * as React from 'react';
 import { Button, cn } from '@repo/ui';
-import { ApiError } from '@/lib/api';
+import { apiErrorMessage } from '@/lib/api';
 import { useLocale, useTranslation } from '@/components/locale-provider';
 import {
   copyToClipboard,
@@ -50,7 +50,7 @@ export function ShareLinksSection({ documentId, documentTitle }: ShareLinksSecti
       setLinks(next);
       setLoadError(null);
     } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : t('contracts.linkListError'));
+      setLoadError(apiErrorMessage(t, err, 'contracts.linkListError'));
     }
   }, [documentId, t]);
 
@@ -187,7 +187,7 @@ function ShareLinkRow({
       // need to surface an error if the server rejects (the section rolls back).
       await onRevoke(link);
     } catch (err) {
-      setRevokeError(err instanceof ApiError ? err.message : t('contracts.linkRevokeError'));
+      setRevokeError(apiErrorMessage(t, err, 'contracts.linkRevokeError'));
       setRevoking(false);
     }
   }, [link, onRevoke, revoking, t]);

@@ -59,7 +59,7 @@ export function CompletionScreen() {
     >
       <div className="relative flex items-center justify-center">
         <Confetti className="z-0" />
-        <SuccessCheck size={104} className="relative z-10" aria-label={title} />
+        <SuccessCheck size={104} className="relative z-10" label={title} />
       </div>
 
       <div className="motion-stagger flex w-full max-w-[420px] flex-col items-center gap-sm">

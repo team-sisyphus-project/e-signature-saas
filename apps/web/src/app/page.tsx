@@ -4,6 +4,7 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { BlobBackground } from '@/components/blob-background';
 import { isAuthenticated } from '@/lib/auth';
+import { useTranslation } from '@/components/locale-provider';
 
 /**
  * Root entry gate (`/`).
@@ -16,6 +17,7 @@ import { isAuthenticated } from '@/lib/auth';
  */
 export default function HomePage() {
   const router = useRouter();
+  const t = useTranslation();
 
   React.useEffect(() => {
     router.replace(isAuthenticated() ? '/dashboard' : '/login');
@@ -31,9 +33,9 @@ export default function HomePage() {
       <BlobBackground />
 
       <div role="status" aria-busy="true" className="relative z-10 flex flex-col items-center gap-md">
-        <span className="text-sm font-bold tracking-tight text-primary">전자계약</span>
+        <span className="text-sm font-bold tracking-tight text-primary">{t('common.product')}</span>
         <Spinner />
-        <span className="sr-only">로그인 상태를 확인하고 있어요.</span>
+        <span className="sr-only">{t('auth.checkingSession')}</span>
       </div>
     </main>
   );

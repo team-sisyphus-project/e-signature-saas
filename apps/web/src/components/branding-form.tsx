@@ -28,7 +28,7 @@ import { BrandColorPicker } from './brand-color-picker';
 import { BrandingPreview } from './branding-preview';
 import { useBranding } from './branding-provider';
 import { isValidHex } from '@/lib/branding';
-import { ApiError, GENERIC_ERROR } from '@/lib/api';
+import { apiErrorMessage } from '@/lib/api';
 import { getToken } from '@/lib/auth';
 import { fetchBranding, updateBrandColor, uploadBrandingAsset } from '@/lib/web-branding';
 import { MAX_IMAGE_MB } from '@/lib/image-validation';
@@ -138,7 +138,7 @@ export function BrandingForm() {
       setSaved(true);
     } catch (err) {
       // Surface the server's Toss-tone copy inline; never expose raw errors.
-      setError(err instanceof ApiError ? err.message : GENERIC_ERROR);
+      setError(apiErrorMessage(t, err));
     } finally {
       setSaving(false);
     }

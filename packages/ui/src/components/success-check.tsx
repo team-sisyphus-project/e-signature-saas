@@ -2,8 +2,7 @@ import * as React from 'react';
 import { cn } from '../cn';
 
 /**
- * SuccessCheck — an animated success mark for completion moments
- * (e.g. "계약 발송이 완료되었습니다!").
+ * SuccessCheck — an animated success mark for completion moments.
  *
  * The ring and tick are SVG strokes drawn on with the `checkmark-draw` keyframe
  * (stroke-dashoffset → 0). Under reduced-motion the strokes render fully drawn
@@ -12,14 +11,20 @@ import { cn } from '../cn';
 export interface SuccessCheckProps extends React.HTMLAttributes<HTMLSpanElement> {
   /** Pixel size of the mark. */
   size?: number;
+  /**
+   * Accessible name of the mark. Callers normally pass the success headline
+   * they are already rendering, so the image and the heading agree. English
+   * default for the same reason as `DialogContentProps.closeLabel`.
+   */
+  label?: string;
 }
 
 export const SuccessCheck = React.forwardRef<HTMLSpanElement, SuccessCheckProps>(
-  ({ className, size = 96, ...props }, ref) => (
+  ({ className, size = 96, label = 'Success', ...props }, ref) => (
     <span
       ref={ref}
       role="img"
-      aria-label="완료"
+      aria-label={label}
       className={cn('inline-flex', className)}
       style={{ width: size, height: size }}
       {...props}

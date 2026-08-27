@@ -27,6 +27,7 @@ import {
   loadPdfFromUrl,
   renderPageToCanvas,
   isRenderCancelled,
+  PDF_READ_ERROR_KEY,
   PdfRenderError,
   type PdfDocument,
 } from '@/lib/pdf';
@@ -36,6 +37,7 @@ import { useFill, type FillField, type FillFieldValue } from './fill-context';
 import { BrandingHeader } from './branding-header';
 import { SignatureInputSheet } from './signature-sheet';
 import { useTranslation } from '@/components/locale-provider';
+import type { WebTranslationKey } from '@/lib/web-translations';
 
 type LoadStatus = 'loading' | 'ready' | 'error';
 
@@ -83,7 +85,8 @@ export function DocumentViewer() {
   const [status, setStatus] = React.useState<LoadStatus>('loading');
   // A render failure carries the renderer's own message; everything else is the
   // catalog's neutral line, resolved at render time so it follows the locale.
-  const [renderError, setRenderError] = React.useState<string | null>(null);
+  // A catalog key, never a sentence — see `template-field-preview.tsx`.
+  const [renderError, setRenderError] = React.useState<WebTranslationKey | null>(null);
 
   // Open the streamed PDF once per session; dispose on unmount.
   React.useEffect(() => {
@@ -111,7 +114,7 @@ export function DocumentViewer() {
       })
       .catch((err: unknown) => {
         if (disposed) return;
-        setRenderError(err instanceof PdfRenderError ? err.message : null);
+        setRenderError(err instanceof PdfRenderError ? PDF_READ_ERROR_KEY : null);
         setStatus('error');
       });
     return () => {
@@ -219,7 +222,7 @@ export function DocumentViewer() {
       >
         {status === 'error' ? (
           <div className="flex aspect-[1/1.414] w-full flex-col items-center justify-center gap-xs rounded-md border border-border bg-surface-muted px-md text-center">
-            <p className="text-sm text-foreground-muted">{renderError ?? t(copy.loadError)}</p>
+            <p className="text-sm text-foreground-muted">{t(renderError ?? copy.loadError)}</p>
           </div>
         ) : status === 'loading' || !doc || pageWidth === 0 ? (
           <Skeleton className="aspect-[1/1.414] w-full" />

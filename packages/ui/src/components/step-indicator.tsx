@@ -13,14 +13,19 @@ export interface StepIndicatorProps extends React.HTMLAttributes<HTMLOListElemen
   steps: string[];
   /** Zero-based index of the active step. */
   current: number;
+  /**
+   * Accessible name of the rail. English default for the same reason as
+   * `DialogContentProps.closeLabel`: this package cannot resolve a locale.
+   */
+  label?: string;
 }
 
 export const StepIndicator = React.forwardRef<HTMLOListElement, StepIndicatorProps>(
-  ({ className, steps, current, ...props }, ref) => (
+  ({ className, steps, current, label = 'Progress', ...props }, ref) => (
     <ol
       ref={ref}
       className={cn('flex w-full items-center', className)}
-      aria-label="진행 단계"
+      aria-label={label}
       {...props}
     >
       {steps.map((label, index) => {

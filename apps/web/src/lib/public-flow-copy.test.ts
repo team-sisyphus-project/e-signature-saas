@@ -14,7 +14,7 @@
  * from two different state machines.
  */
 
-import { completionDownloadCopyFor } from './completion-download';
+import { COMPLETION_ARTIFACT_KEYS } from './completion-download';
 import { SIGNER_FILL_COPY, SHARE_FILL_COPY, type FillCopy } from './fill-copy';
 import { SIGNER_TRANSLATIONS } from './i18n/signer';
 import { SHARE_TRANSLATIONS } from './i18n/share';
@@ -152,12 +152,12 @@ describe('English copy for a reader who never chose the language', () => {
   });
 
   it('labels the signer completion download in English', () => {
-    const copy = completionDownloadCopyFor('en');
+    const { t } = translatorFor('en');
 
-    expect(copy.sectionTitle).toBe('Completed documents');
-    expect(copy.items.signed.title).toBe('Signed contract');
-    expect(copy.items.certificate.title).toBe('Audit trail certificate');
-    expect(copy.cta).toBe('Download');
+    expect(t('common.completionTitle')).toBe('Completed documents');
+    expect(t(COMPLETION_ARTIFACT_KEYS.signed.title)).toBe('Signed contract');
+    expect(t(COMPLETION_ARTIFACT_KEYS.certificate.title)).toBe('Audit trail certificate');
+    expect(t('common.completionDownload')).toBe('Download');
   });
 });
 

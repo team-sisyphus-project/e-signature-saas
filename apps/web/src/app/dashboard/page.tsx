@@ -25,7 +25,7 @@ import {
 import { KanbanBoard } from '@/components/kanban-board';
 import { OnboardingGuide } from '@/components/onboarding-guide';
 import { ViewSwitcher } from '@/components/view-switcher';
-import { ApiError } from '@/lib/api';
+import { ApiError, apiErrorMessage } from '@/lib/api';
 import { isOnboardingComplete, markOnboardingComplete } from '@/lib/onboarding';
 import { readViewMode, writeViewMode, type ViewMode } from '@/lib/view-mode';
 import { onboardingCopy } from '@/lib/onboarding-copy';
@@ -109,7 +109,7 @@ export default function DashboardPage() {
         router.replace('/login');
         return;
       }
-      setError(err instanceof ApiError ? err.message : t('dashboard.loadError'));
+      setError(apiErrorMessage(t, err, 'dashboard.loadError'));
     }
   }, [router, t]);
 
@@ -311,7 +311,7 @@ function PlanUsage({
       {isFree ? <QuotaBar quota={quota} /> : null}
 
       <Dialog open={upgradeOpen} onOpenChange={setUpgradeOpen}>
-        <DialogContent>
+        <DialogContent closeLabel={t('common.close')}>
           <DialogHeader>
             <DialogTitle>{t('dashboard.upgradeTitle')}</DialogTitle>
             <DialogDescription>{t('dashboard.upgradeDescription')}</DialogDescription>

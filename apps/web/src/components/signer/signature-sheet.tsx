@@ -115,7 +115,7 @@ export function SignatureInputSheet() {
         if (!open) closeField();
       }}
     >
-      <SheetContent side="bottom">
+      <SheetContent side="bottom" closeLabel={t(sheetCopy.close)}>
         {field ? (
           // Key by field id so each capture starts from a fresh, reset state.
           <SheetBody
@@ -352,13 +352,14 @@ function FontChips({
       <div role="radiogroup" aria-label={fontLabel} className="flex gap-xs overflow-x-auto pb-2xs">
         {SIGNATURE_FONTS.map((f) => {
           const active = selected.id === f.id;
+          const label = t(f.labelKey);
           return (
             <button
               key={f.id}
               type="button"
               role="radio"
               aria-checked={active}
-              aria-label={f.label}
+              aria-label={label}
               onClick={() => onSelect(f)}
               style={{ fontFamily: f.fontFamily }}
               className={cn(
@@ -370,7 +371,7 @@ function FontChips({
                   : 'border-border text-foreground',
               )}
             >
-              {preview || f.label}
+              {preview || label}
             </button>
           );
         })}

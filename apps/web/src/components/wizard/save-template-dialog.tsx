@@ -30,7 +30,7 @@ import {
   Input,
   SuccessCheck,
 } from '@repo/ui';
-import { ApiError } from '@/lib/api';
+import { ApiError, apiErrorMessage } from '@/lib/api';
 import { createTemplate } from '@/lib/templates';
 import { useTranslation } from '@/components/locale-provider';
 import type { SignFieldDraft } from './wizard-context';
@@ -86,7 +86,7 @@ export function SaveTemplateDialog({
         router.replace('/login');
         return;
       }
-      setError(err instanceof ApiError ? err.message : t('wizard.genericError'));
+      setError(apiErrorMessage(t, err, 'wizard.genericError'));
       setStatus('error');
     }
   }, [trimmed, storageKey, pageCount, fields, router, t]);
@@ -95,10 +95,10 @@ export function SaveTemplateDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent closeLabel={t('common.close')}>
         {status === 'success' ? (
           <div className="flex flex-col items-center gap-md py-sm text-center">
-            <SuccessCheck size={72} aria-label={t('wizard.saveTemplateSuccessTitle')} />
+            <SuccessCheck size={72} label={t('wizard.saveTemplateSuccessTitle')} />
             <DialogHeader className="items-center pb-0">
               <DialogTitle>{t('wizard.saveTemplateSuccessTitle')}</DialogTitle>
               <DialogDescription>{t('wizard.saveTemplateSuccessBody')}</DialogDescription>

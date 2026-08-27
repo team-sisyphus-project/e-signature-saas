@@ -36,12 +36,21 @@ export interface DialogContentProps
   extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> {
   /** Hide the default close (×) button in the top-right. */
   hideClose?: boolean;
+  /**
+   * Accessible name of the close (×) button.
+   *
+   * This package is locale-agnostic by design — it cannot read the consuming
+   * app's translation catalog without inverting the dependency — so the name
+   * arrives as a prop. The English default exists only so the control is never
+   * unnamed; apps pass a localized label.
+   */
+  closeLabel?: string;
 }
 
 export const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   DialogContentProps
->(({ className, children, hideClose = false, ...props }, ref) => (
+>(({ className, children, hideClose = false, closeLabel = 'Close', ...props }, ref) => (
   <DialogPortal>
     <DialogOverlay />
     <DialogPrimitive.Content
@@ -58,7 +67,7 @@ export const DialogContent = React.forwardRef<
       {children}
       {!hideClose ? (
         <DialogPrimitive.Close
-          aria-label="닫기"
+          aria-label={closeLabel}
           className={cn(
             'absolute right-md top-md flex h-9 w-9 items-center justify-center rounded-full',
             'text-foreground-subtle transition-colors duration-fast ease-standard',

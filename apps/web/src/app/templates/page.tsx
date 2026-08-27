@@ -8,7 +8,7 @@ import { TemplateCard, type TemplateCardActions } from '@/components/template-ca
 import { RenameTemplateDialog } from '@/components/rename-template-dialog';
 import { DeleteTemplateDialog } from '@/components/delete-template-dialog';
 import { TemplatePreviewDialog } from '@/components/template-preview-dialog';
-import { ApiError } from '@/lib/api';
+import { ApiError, apiErrorMessage } from '@/lib/api';
 import { clearSession, getToken, getUser, type SessionUser } from '@/lib/auth';
 import {
   deleteTemplate,
@@ -77,7 +77,7 @@ export default function TemplatesPage() {
       }
       // The server still sends its own copy; only the transport-failure
       // fallback is ours to translate.
-      setError(err instanceof ApiError ? err.message : t('templates.loadError'));
+      setError(apiErrorMessage(t, err, 'templates.loadError'));
     }
   }, [router, t]);
 
@@ -128,7 +128,7 @@ export default function TemplatesPage() {
               ? list.map((t) => (t.id === template.id ? { ...t, name: template.name } : t))
               : list,
           );
-          setActionError(err instanceof ApiError ? err.message : t('templates.renameFailed'));
+          setActionError(apiErrorMessage(t, err, 'templates.renameFailed'));
         });
     },
     [bounceIfUnauthorized, t],
@@ -148,7 +148,7 @@ export default function TemplatesPage() {
           next.splice(index < 0 ? next.length : index, 0, template);
           return next;
         });
-        setActionError(err instanceof ApiError ? err.message : t('templates.deleteFailed'));
+        setActionError(apiErrorMessage(t, err, 'templates.deleteFailed'));
       });
     },
     [templates, bounceIfUnauthorized, t],

@@ -15,7 +15,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Button, Card, Skeleton } from '@repo/ui';
 import { ContractDetail } from '@/components/contracts/contract-detail';
 import { useTranslation } from '@/components/locale-provider';
-import { ApiError } from '@/lib/api';
+import { ApiError, apiErrorMessage } from '@/lib/api';
 import { clearSession, getToken } from '@/lib/auth';
 import { fetchDocumentDetail, type DocumentDetail } from '@/lib/documents';
 
@@ -64,7 +64,7 @@ export default function ContractDetailPage() {
       }
       setError({
         kind: 'generic',
-        message: err instanceof ApiError ? err.message : t('contracts.loadError'),
+        message: apiErrorMessage(t, err, 'contracts.loadError'),
       });
     }
   }, [id, router, t]);

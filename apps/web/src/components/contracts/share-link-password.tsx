@@ -26,7 +26,7 @@
 
 import * as React from 'react';
 import { Button, Field } from '@repo/ui';
-import { ApiError } from '@/lib/api';
+import { ApiError, apiErrorMessage } from '@/lib/api';
 import { PasswordInput } from '@/components/password-input';
 import { useTranslation } from '@/components/locale-provider';
 import {
@@ -92,7 +92,7 @@ export function ShareLinkPasswordEditor({
       })
       .catch((err) => {
         if (!active) return;
-        setLoadError(err instanceof ApiError ? err.message : t('contracts.linkPasswordLoadError'));
+        setLoadError(apiErrorMessage(t, err, 'contracts.linkPasswordLoadError'));
       });
     return () => {
       active = false;

@@ -15,6 +15,8 @@
  * bytes or an authenticated URL — the same handle shape every renderer consumes.
  */
 
+import type { WebTranslationKey } from './web-translations';
+
 // Loaded lazily; types are import()-only so nothing pdfjs touches SSR runtime.
 type PdfjsModule = typeof import('pdfjs-dist');
 export type PdfDocument = Awaited<ReturnType<PdfjsModule['getDocument']>['promise']>;
@@ -37,13 +39,22 @@ async function getPdfjs(): Promise<PdfjsModule> {
   return pdfjsPromise;
 }
 
-/** Raised when a file can't be parsed as a PDF (corrupt / not a real PDF). */
+/**
+ * Raised when a file can't be parsed as a PDF (corrupt / not a real PDF).
+ *
+ * The `message` is diagnostic, not user-facing: this module runs outside React
+ * and cannot know the reader's locale. Render sites show
+ * {@link PDF_READ_ERROR_KEY} instead.
+ */
 export class PdfRenderError extends Error {
-  constructor(message = 'PDF를 읽을 수 없어요. 파일이 손상되지 않았는지 확인해 주세요.') {
+  constructor(message = 'PDF could not be parsed') {
     super(message);
     this.name = 'PdfRenderError';
   }
 }
+
+/** Catalog key for the user-facing "this PDF cannot be read" line. */
+export const PDF_READ_ERROR_KEY: WebTranslationKey = 'common.pdfReadError';
 
 /**
  * Parse a PDF from a File. Returns the document handle plus its page count.
