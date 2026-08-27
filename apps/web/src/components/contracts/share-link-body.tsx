@@ -1,25 +1,25 @@
 'use client';
 
 /**
- * ShareLinkBody — the reusable '링크로 공유' settings + generation body
+ * ShareLinkBody — the reusable share-link settings + generation body
  * (design-spec `components/share-link-dialog/base.md`, copy
  * `messaging/share-link.md`).
  *
  * This is the shared core behind two containers: the detail screen's
  * `ShareLinkDialog` modal and the create wizard's `LinkShareStep`. Both surface
- * the exact same task — pick access settings (유효기간 단일 선택 + 비밀번호 보호),
- * generate a unique open/fill link, then copy it — so the settings/generate/
- * result flow lives here once and is composed into each container.
+ * the exact same task — pick access settings (one validity window + optional
+ * password), generate a unique open/fill link, then copy it — so the settings/
+ * generate/result flow lives here once and is composed into each container.
  *
  * The body flips between two phases on one surface:
- *   • configuring → validity preset + password toggle/field + '링크 만들기'
- *   • generated   → '공유 링크' text + 복사 버튼/확인 피드백 + 만료 안내
+ *   • configuring → validity preset + password toggle/field + create button
+ *   • generated   → the link + copy action/confirmation + its expiry note
  *
  * Containers inject what differs:
  *   • `beforeCreate` runs after validation, before `createShareLink` — the wizard
  *     uses it to persist its in-memory fields first (so `createLink` binds them).
  *   • `resultFooter` renders under the generated link — the wizard uses it for
- *     its "대시보드로 가기" hand-off; the modal omits it (Esc/overlay dismiss).
+ *     its hand-off back to the dashboard; the modal omits it (Esc/overlay dismiss).
  *
  * Security: the password lives only in this component's state and the create
  * request body. It is never persisted, logged, or rendered after generation —
@@ -30,6 +30,7 @@ import * as React from 'react';
 import { Button, Field, cn } from '@repo/ui';
 import { ApiError } from '@/lib/api';
 import { PasswordInput } from '@/components/password-input';
+import { useLocale, useTranslation } from '@/components/locale-provider';
 import {
   copyToClipboard,
   createShareLink,
@@ -38,12 +39,9 @@ import {
   expiryInput,
   expiryNote,
   findExpiryPreset,
-  SHARE_COPY,
   SHARE_PASSWORD_MIN_LENGTH,
   type ShareLink,
 } from '@/lib/sharing';
-
-const COPY = SHARE_COPY;
 
 export interface ShareLinkBodyProps {
   /** The contract these links belong to. */
@@ -66,10 +64,13 @@ export function ShareLinkBody({
   beforeCreate,
   resultFooter,
 }: ShareLinkBodyProps) {
+  const t = useTranslation();
   const [presetKey, setPresetKey] = React.useState(DEFAULT_EXPIRY_PRESET_KEY);
   const [passwordOn, setPasswordOn] = React.useState(false);
   const [password, setPassword] = React.useState('');
-  const [pwError, setPwError] = React.useState<string | null>(null);
+  // Guard failures are held as a flag, not a sentence: switching language while
+  // the error shows must re-render it in the new locale, not strand the old one.
+  const [pwTooShort, setPwTooShort] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
   const [createError, setCreateError] = React.useState<string | null>(null);
   const [link, setLink] = React.useState<ShareLink | null>(null);
@@ -81,10 +82,10 @@ export function ShareLinkBody({
     if (submitting) return;
     const pw = passwordOn ? password.trim() : '';
     if (passwordOn && pw.length < SHARE_PASSWORD_MIN_LENGTH) {
-      setPwError(COPY.password.tooShort);
+      setPwTooShort(true);
       return;
     }
-    setPwError(null);
+    setPwTooShort(false);
     setCreateError(null);
     setSubmitting(true);
     try {
@@ -100,11 +101,11 @@ export function ShareLinkBody({
       setLink(created);
       onCreated?.();
     } catch (err) {
-      setCreateError(err instanceof ApiError ? err.message : COPY.errors.create);
+      setCreateError(err instanceof ApiError ? err.message : t('contracts.linkCreateError'));
     } finally {
       setSubmitting(false);
     }
-  }, [beforeCreate, documentId, onCreated, password, passwordOn, preset, submitting]);
+  }, [beforeCreate, documentId, onCreated, password, passwordOn, preset, submitting, t]);
 
   if (link) return <LinkResult link={link} footer={resultFooter} />;
 
@@ -122,15 +123,15 @@ export function ShareLinkBody({
         on={passwordOn}
         onToggle={(next) => {
           setPasswordOn(next);
-          setPwError(null);
+          setPwTooShort(false);
           if (!next) setPassword('');
         }}
         password={password}
         onPasswordChange={(v) => {
           setPassword(v);
-          if (pwError) setPwError(null);
+          if (pwTooShort) setPwTooShort(false);
         }}
-        error={pwError}
+        tooShort={pwTooShort}
         passwordId={passwordId}
         disabled={submitting}
       />
@@ -142,7 +143,7 @@ export function ShareLinkBody({
       ) : null}
 
       <Button type="submit" size="lg" fullWidth isLoading={submitting}>
-        {submitting ? COPY.generate.loading : COPY.generate.idle}
+        {t(submitting ? 'contracts.linkCreating' : 'contracts.linkCreate')}
       </Button>
     </form>
   );
@@ -159,10 +160,13 @@ function ExpiryPresetSelector({
   onChange: (key: string) => void;
   disabled?: boolean;
 }) {
+  const t = useTranslation();
+  const label = t('contracts.linkExpiryLabel');
+
   return (
     <fieldset className="flex flex-col gap-xs" disabled={disabled}>
-      <legend className="text-sm font-semibold text-foreground-muted">{COPY.expiry.label}</legend>
-      <div role="radiogroup" aria-label={COPY.expiry.label} className="flex flex-wrap gap-2xs">
+      <legend className="text-sm font-semibold text-foreground-muted">{label}</legend>
+      <div role="radiogroup" aria-label={label} className="flex flex-wrap gap-2xs">
         {EXPIRY_PRESETS.map((p) => {
           const selected = p.key === value;
           return (
@@ -183,12 +187,12 @@ function ExpiryPresetSelector({
                   : 'border-border bg-surface-muted text-foreground-muted hover:text-foreground',
               )}
             >
-              {p.label}
+              {t(p.labelKey)}
             </button>
           );
         })}
       </div>
-      <p className="text-sm text-foreground-subtle">{COPY.expiry.help}</p>
+      <p className="text-sm text-foreground-subtle">{t('contracts.linkExpiryHelp')}</p>
     </fieldset>
   );
 }
@@ -200,7 +204,7 @@ function PasswordSection({
   onToggle,
   password,
   onPasswordChange,
-  error,
+  tooShort,
   passwordId,
   disabled,
 }: {
@@ -208,15 +212,21 @@ function PasswordSection({
   onToggle: (next: boolean) => void;
   password: string;
   onPasswordChange: (value: string) => void;
-  error: string | null;
+  /** True once the typed password is shorter than the server will accept. */
+  tooShort: boolean;
   passwordId: string;
   disabled?: boolean;
 }) {
+  const t = useTranslation();
+  const error = tooShort
+    ? t('contracts.linkPasswordTooShort', { count: SHARE_PASSWORD_MIN_LENGTH })
+    : undefined;
+
   return (
     <div className="flex flex-col gap-xs">
       <div className="flex items-center justify-between gap-md">
         <span id={`${passwordId}-toggle-label`} className="text-sm font-semibold text-foreground">
-          {COPY.password.toggle}
+          {t('contracts.linkPasswordToggle')}
         </span>
         <Switch
           checked={on}
@@ -229,17 +239,17 @@ function PasswordSection({
       {on ? (
         <Field
           htmlFor={passwordId}
-          label={COPY.password.label}
-          hint={COPY.password.hint}
-          error={error ?? undefined}
+          label={t('contracts.linkPasswordLabel')}
+          hint={t('contracts.linkPasswordHint')}
+          error={error}
         >
           <PasswordInput
             id={passwordId}
             value={password}
             onChange={(e) => onPasswordChange(e.target.value)}
-            placeholder={COPY.password.placeholder}
+            placeholder={t('contracts.linkPasswordPlaceholder')}
             autoComplete="new-password"
-            invalid={Boolean(error)}
+            invalid={tooShort}
             disabled={disabled}
             aria-describedby={`${passwordId}-message`}
           />
@@ -292,8 +302,9 @@ function Switch({
 // --- generated phase: link + copy ------------------------------------------
 
 function LinkResult({ link, footer }: { link: ShareLink; footer?: React.ReactNode }) {
+  const { t, locale } = useLocale();
   const [copied, setCopied] = React.useState(false);
-  const [copyError, setCopyError] = React.useState<string | null>(null);
+  const [copyFailed, setCopyFailed] = React.useState(false);
   const resetTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   React.useEffect(
@@ -306,19 +317,19 @@ function LinkResult({ link, footer }: { link: ShareLink; footer?: React.ReactNod
   const copy = React.useCallback(async () => {
     try {
       await copyToClipboard(link.url);
-      setCopyError(null);
+      setCopyFailed(false);
       setCopied(true);
       if (resetTimer.current) clearTimeout(resetTimer.current);
       resetTimer.current = setTimeout(() => setCopied(false), 2000);
     } catch {
       setCopied(false);
-      setCopyError(SHARE_COPY.errors.copy);
+      setCopyFailed(true);
     }
   }, [link.url]);
 
   return (
     <div className="flex flex-col gap-sm">
-      <span className="text-sm font-semibold text-foreground-muted">{COPY.result.linkLabel}</span>
+      <span className="text-sm font-semibold text-foreground-muted">{t('contracts.linkLabel')}</span>
 
       <div className="flex items-stretch gap-sm">
         <p
@@ -336,15 +347,15 @@ function LinkResult({ link, footer }: { link: ShareLink; footer?: React.ReactNod
           {copied ? (
             <>
               <CheckIcon />
-              {COPY.result.copied}
+              {t('contracts.linkCopied')}
             </>
           ) : (
-            COPY.result.copy
+            t('contracts.linkCopy')
           )}
         </Button>
       </div>
 
-      <p className="text-sm text-foreground-subtle">{expiryNote(link)}</p>
+      <p className="text-sm text-foreground-subtle">{expiryNote(t, locale, link)}</p>
 
       {/* Copy feedback announced to assistive tech. The visible toast appears
           briefly; the error is sticky until the next copy attempt. */}
@@ -352,10 +363,10 @@ function LinkResult({ link, footer }: { link: ShareLink; footer?: React.ReactNod
         {copied ? (
           <span className="inline-flex items-center gap-2xs text-sm font-semibold text-success">
             <CheckIcon />
-            {COPY.result.copyToast}
+            {t('contracts.linkCopyToast')}
           </span>
-        ) : copyError ? (
-          <span className="text-sm text-danger">{copyError}</span>
+        ) : copyFailed ? (
+          <span className="text-sm text-danger">{t('contracts.linkCopyError')}</span>
         ) : null}
       </div>
 

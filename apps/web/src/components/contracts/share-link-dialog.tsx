@@ -1,12 +1,12 @@
 'use client';
 
 /**
- * ShareLinkDialog — the '링크로 공유' settings modal (design-spec
- * `components/share-link-dialog/base.md`, copy `messaging/share-link.md`).
+ * ShareLinkDialog — the share-link settings modal (design-spec
+ * `components/share-link-dialog/base.md`, copy `messaging/contract-detail-copy.md`).
  *
- * One modal, one task: the sender picks access settings (유효기간 단일 선택 +
- * 비밀번호 보호), generates a unique open/fill link, then copies it — all on the
- * same surface. The settings/generate/result flow lives in the shared
+ * One modal, one task: the sender picks access settings (one validity window +
+ * an optional password), generates a unique open/fill link, then copies it — all
+ * on the same surface. The settings/generate/result flow lives in the shared
  * `ShareLinkBody`; this container only wraps it in `@repo/ui` Dialog (focus trap,
  * scroll lock, Esc/overlay dismiss, accessible title/description). The same body
  * is reused by the create wizard's link step, so the two entry points stay in
@@ -24,10 +24,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@repo/ui';
-import { SHARE_COPY } from '@/lib/sharing';
+import { useTranslation } from '@/components/locale-provider';
 import { ShareLinkBody } from './share-link-body';
-
-const COPY = SHARE_COPY;
 
 export interface ShareLinkDialogProps {
   open: boolean;
@@ -45,12 +43,14 @@ export function ShareLinkDialog({
   documentId,
   onCreated,
 }: ShareLinkDialogProps) {
+  const t = useTranslation();
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>{COPY.header.title}</DialogTitle>
-          <DialogDescription>{COPY.header.description}</DialogDescription>
+          <DialogTitle>{t('contracts.linkDialogTitle')}</DialogTitle>
+          <DialogDescription>{t('contracts.linkDialogDescription')}</DialogDescription>
         </DialogHeader>
 
         {/* Remount the body each time the modal opens so it starts at the

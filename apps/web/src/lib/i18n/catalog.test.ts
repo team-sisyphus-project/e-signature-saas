@@ -117,6 +117,7 @@ describe('key paths consumed by shipped screens', () => {
     ['dashboard.newContract', '새 계약 생성', 'Create contract'],
     ['wizard.chooseTitle', '새 계약을 만들어요', 'Create a new contract'],
     ['settings.languageTitle', '언어 설정', 'Language settings'],
+    ['contracts.shareTitle', '공유 링크', 'Share links'],
     ['signer.verifyTitle', '본인확인', 'Verify your identity'],
   ];
 

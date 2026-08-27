@@ -5,21 +5,20 @@
  * (design-spec components/contract-detail/base.md).
  *
  * Presentational: the route owns data fetching and the loading/error/404 states.
- * Renders the title + status, a summary definition list (받는 분 · 분량 · 날짜),
- * and the ShareLinksSection ('링크로 공유' entry point + link list slot). Completed
- * contracts also surface the existing CompletionDownload area so the owner can
- * grab the finished artifacts from the detail view.
+ * Renders the title + status, a summary definition list (recipients · pages ·
+ * dates), and the ShareLinksSection (the share entry point + link list slot).
+ * Completed contracts also surface the existing CompletionDownload area so the
+ * owner can grab the finished artifacts from the detail view.
  */
 
 import * as React from 'react';
 import { Card } from '@repo/ui';
 import { StatusBadge } from '@/components/status-badge';
 import { CompletionDownload } from '@/components/completion-download';
-import { CONTRACT_DETAIL_COPY } from '@/lib/contract-detail';
+import { useLocale } from '@/components/locale-provider';
+import { formatContractDate } from '@/lib/contract-detail';
 import { downloadOwnerArtifact, type DocumentDetail } from '@/lib/documents';
 import { ShareLinksSection } from './share-links-section';
-
-const COPY = CONTRACT_DETAIL_COPY;
 
 export function ContractDetail({ document }: { document: DocumentDetail }) {
   const completed = document.status === 'COMPLETED';
@@ -62,26 +61,32 @@ export function ContractDetail({ document }: { document: DocumentDetail }) {
 }
 
 function SummaryCard({ document }: { document: DocumentDetail }) {
+  const { t, locale } = useLocale();
   const sent = document.status !== 'DRAFT' && Boolean(document.sentAt);
+  // A link-only contract has no addressed recipients, so it reports how it is
+  // shared rather than a count of zero.
   const recipientValue =
     document.recipientCount > 0
-      ? COPY.summary.recipientCount(document.recipientCount)
-      : COPY.summary.linkOnly;
+      ? t('contracts.summaryRecipientCount', { count: document.recipientCount })
+      : t('contracts.summaryLinkOnly');
 
   return (
     <Card className="flex flex-col p-lg">
       <dl className="grid grid-cols-1 gap-md sm:grid-cols-2">
-        <SummaryRow label={COPY.summary.recipients} value={recipientValue} />
+        <SummaryRow label={t('contracts.summaryRecipients')} value={recipientValue} />
         <SummaryRow
-          label={COPY.summary.pages}
-          value={COPY.summary.pageCount(document.pageCount)}
+          label={t('contracts.summaryPages')}
+          value={t('contracts.summaryPageCount', { count: document.pageCount })}
         />
         <SummaryRow
-          label={sent ? COPY.summary.sent : COPY.summary.created}
-          value={formatDate(sent ? (document.sentAt as string) : document.createdAt)}
+          label={t(sent ? 'contracts.summarySent' : 'contracts.summaryCreated')}
+          value={formatContractDate(sent ? (document.sentAt as string) : document.createdAt, locale)}
         />
         {document.completedAt ? (
-          <SummaryRow label={COPY.summary.completed} value={formatDate(document.completedAt)} />
+          <SummaryRow
+            label={t('contracts.summaryCompleted')}
+            value={formatContractDate(document.completedAt, locale)}
+          />
         ) : null}
       </dl>
     </Card>
@@ -95,15 +100,6 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
       <dd className="text-base font-semibold text-foreground">{value}</dd>
     </div>
   );
-}
-
-/** ISO → "YYYY.MM.DD" (matches the dashboard's date fallback format). */
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '—';
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(
-    d.getDate(),
-  ).padStart(2, '0')}`;
 }
 
 function DocumentIcon() {

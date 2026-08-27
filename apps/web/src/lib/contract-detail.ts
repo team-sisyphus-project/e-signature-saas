@@ -1,43 +1,61 @@
 /**
- * Copy for the sender's contract detail screen (`/contracts/[id]`).
+ * Contract-detail bindings — the one thing the sender's detail screen renders
+ * that is computed rather than read from the catalog.
  *
- * Centralized here like `SIGNER_COPY` / `COMPLETION_DOWNLOAD_COPY` so the screen
- * binds to a single source of truth. Toss-tone 해요체 (design-spec
- * `messaging/contract-detail.md`). The share-link *creation* modal and the link
- * list rendering live in grain-5; this module only owns the detail-screen shell,
- * the share entry point, and the empty/placeholder copy.
+ * Every fixed string this screen shows now lives in the `contracts` domain of
+ * the browser catalog (`lib/i18n/contracts.ts`) and is read straight from `t()`
+ * at the render site. A calendar date is not copy: no catalog entry can hold it,
+ * because it is assembled from an instant and a locale. It lives here so it can
+ * be unit-tested without mounting the screen.
  */
 
-export const CONTRACT_DETAIL_COPY = {
-  /** Back affordance → dashboard. */
-  back: '계약 목록',
-  backAria: '계약 목록으로 돌아가기',
+import type { SupportedLocale } from './locale';
 
-  /** Summary definition list labels. */
-  summary: {
-    recipients: '받는 분',
-    pages: '분량',
-    created: '생성일',
-    sent: '발송일',
-    completed: '완료일',
-    /** Shown when the contract has no addressed recipients (link-only sharing). */
-    linkOnly: '링크 공유',
-    recipientCount: (n: number) => `${n}명`,
-    pageCount: (n: number) => `${n}페이지`,
-  },
+/** Rendered in place of a date that cannot be parsed (never a raw value). */
+export const UNKNOWN_DATE = '—';
 
-  /** Share-link section (the '링크로 공유' entry point + link list slot). */
-  share: {
-    sectionTitle: '공유 링크',
-    sectionHelp:
-      '링크를 만들어 받는 분에게 전달하면, 로그인 없이 계약서를 열고 작성할 수 있어요.',
-    createButton: '링크로 공유',
-    emptyTitle: '아직 만든 공유 링크가 없어요',
-    emptyBody: '‘링크로 공유’를 눌러 첫 링크를 만들어 보세요.',
-  },
+/**
+ * A contract's summary date, written the way the reader's language writes short
+ * dates: `2026.08.27` in Korean, `Aug 27, 2026` in English.
+ *
+ * Both are built from the same instant in KST, the zone the product's own
+ * timestamps (sent, completed) are stated in — so switching language re-words
+ * the date without moving it a day.
+ *
+ * Korean is assembled from the numeric parts rather than from `ko-KR`'s own
+ * short pattern (`2026. 8. 27.`), because this exact `YYYY.MM.DD` form is what
+ * the dashboard already shows for the same timestamps; the two screens must not
+ * disagree about a date the sender is comparing across them.
+ */
+export function formatContractDate(iso: string, locale: SupportedLocale): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return UNKNOWN_DATE;
 
-  /** 404 / no-access terminal for the detail route. */
-  notFoundTitle: '계약을 찾을 수 없어요',
-  notFoundBody: '이미 삭제되었거나 접근할 수 없는 계약이에요.',
-  notFoundAction: '계약 목록으로',
-} as const;
+  if (locale === 'ko') {
+    const parts = numericParts(date);
+    return `${parts.year}.${parts.month}.${parts.day}`;
+  }
+
+  return new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    timeZone: CONTRACT_TIME_ZONE,
+  }).format(date);
+}
+
+/** The zone every contract timestamp is stated in (see `lib/sharing.ts`). */
+const CONTRACT_TIME_ZONE = 'Asia/Seoul';
+
+/** `en-CA` yields ISO-ordered `2026-08-27`, the only pattern we reshape. */
+function numericParts(date: Date): { year: string; month: string; day: string } {
+  const [year = '', month = '', day = ''] = new Intl.DateTimeFormat('en-CA', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    timeZone: CONTRACT_TIME_ZONE,
+  })
+    .format(date)
+    .split('-');
+  return { year, month, day };
+}

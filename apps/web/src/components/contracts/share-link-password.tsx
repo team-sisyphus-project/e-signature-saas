@@ -1,23 +1,23 @@
 'use client';
 
 /**
- * ShareLinkPasswordEditor — the inline "비밀번호 확인·수정" panel for one share
+ * ShareLinkPasswordEditor — the inline password view/edit panel for one share
  * link row (design-spec conventions/share-link-password-admin.md, grain-3).
  *
- * Opened from a link row's 비밀번호 확인/설정 trigger. On mount it fetches the
- * link's current password state (grain-2 owner-only API) and reflects one of the
- * three semantic states:
- *   • no password        → empty field, "설정된 비밀번호가 없어요…" hint.
+ * Opened from a link row's password trigger. On mount it fetches the link's
+ * current password state (grain-2 owner-only API) and reflects one of the three
+ * semantic states:
+ *   • no password        → empty field, "this link has no password" hint.
  *   • confirmable        → field pre-filled with the plaintext (masked; the
  *                          shared PasswordInput's reveal toggle shows it on demand).
- *   • legacy (unrecoverable) → empty field, "이전에 설정한 비밀번호는 확인할 수
- *                          없어요…" hint — set a new one to make it confirmable again.
+ *   • legacy (unrecoverable) → empty field, "the password set earlier cannot be
+ *                          shown" hint — set a new one to make it viewable again.
  *
- * The same field serves 확인 and 수정: the owner sees the current value (masked),
- * reveals it if they want, edits it, and saves — taking effect immediately (the
- * next unlock reads the fresh value). 저장 replaces the password; 비밀번호 해제
- * removes protection entirely. On success `onChanged` hands the updated link view
- * back to the section so the row's 비밀번호 tag stays in sync.
+ * The same field serves viewing and editing: the owner sees the current value
+ * (masked), reveals it if they want, edits it, and saves — taking effect
+ * immediately (the next unlock reads the fresh value). Save replaces the
+ * password; remove drops protection entirely. On success `onChanged` hands the
+ * updated link view back to the section so the row's password tag stays in sync.
  *
  * Security: the plaintext lives only in this component's local state while the
  * panel is open. It is dropped on close/remove and never persisted or logged; the
@@ -28,20 +28,28 @@ import * as React from 'react';
 import { Button, Field } from '@repo/ui';
 import { ApiError } from '@/lib/api';
 import { PasswordInput } from '@/components/password-input';
+import { useTranslation } from '@/components/locale-provider';
 import {
   getShareLinkPassword,
   passwordEditorInitialValue,
   passwordStateHint,
-  SHARE_COPY,
   SHARE_PASSWORD_MIN_LENGTH,
   updateShareLinkPassword,
   type ShareLink,
   type ShareLinkPasswordView,
 } from '@/lib/sharing';
+import type { WebTranslationKey } from '@/lib/web-translations';
 
-const COPY = SHARE_COPY.passwordAdmin;
-
-type Feedback = { tone: 'success' | 'error'; text: string } | null;
+/**
+ * The panel's outcome line. It holds a catalog *key* rather than a sentence, so
+ * changing language while a result is on screen re-renders it in the new locale
+ * instead of stranding the old one. A server-sent message is the one exception —
+ * it arrives as text and has no key (milestone 4 moves it into the catalog).
+ */
+type Feedback =
+  | { tone: 'success' | 'error'; key: WebTranslationKey }
+  | { tone: 'error'; text: string }
+  | null;
 type Busy = 'save' | 'remove' | null;
 
 export interface ShareLinkPasswordEditorProps {
@@ -59,11 +67,12 @@ export function ShareLinkPasswordEditor({
   id,
   onChanged,
 }: ShareLinkPasswordEditorProps) {
+  const t = useTranslation();
   const [view, setView] = React.useState<ShareLinkPasswordView | null>(null);
   const [loadError, setLoadError] = React.useState<string | null>(null);
   const [value, setValue] = React.useState('');
   const [initial, setInitial] = React.useState('');
-  const [pwError, setPwError] = React.useState<string | null>(null);
+  const [pwTooShort, setPwTooShort] = React.useState(false);
   const [busy, setBusy] = React.useState<Busy>(null);
   const [feedback, setFeedback] = React.useState<Feedback>(null);
 
@@ -83,28 +92,28 @@ export function ShareLinkPasswordEditor({
       })
       .catch((err) => {
         if (!active) return;
-        setLoadError(err instanceof ApiError ? err.message : COPY.loadError);
+        setLoadError(err instanceof ApiError ? err.message : t('contracts.linkPasswordLoadError'));
       });
     return () => {
       active = false;
     };
-  }, [documentId, link.id]);
+  }, [documentId, link.id, t]);
 
   const trimmed = value.trim();
   // Save is meaningful only for a non-empty value that differs from what loaded
   // (re-saving the same confirmable value would be a no-op). Removal is a
   // separate, explicit action so an accidental empty save can't drop protection.
   const canSave = busy === null && trimmed.length > 0 && value !== initial;
-  // Show 해제 whenever a password is currently set (disabled while any op runs),
+  // Offer removal whenever a password is currently set (disabled while any op runs),
   // plus during its own removal so the button doesn't vanish mid-request.
   const showRemove = Boolean(view?.hasPassword) || busy === 'remove';
 
   const save = React.useCallback(async () => {
     if (trimmed.length < SHARE_PASSWORD_MIN_LENGTH) {
-      setPwError(COPY.tooShort);
+      setPwTooShort(true);
       return;
     }
-    setPwError(null);
+    setPwTooShort(false);
     setFeedback(null);
     setBusy('save');
     const wasSet = Boolean(view?.hasPassword);
@@ -113,20 +122,20 @@ export function ShareLinkPasswordEditor({
       // Reflect the just-saved value as the new confirmable baseline.
       setView({ hasPassword: true, recoverable: true, password: trimmed });
       setInitial(trimmed);
-      setFeedback({ tone: 'success', text: wasSet ? COPY.savedChanged : COPY.savedSet });
+      setFeedback({
+        tone: 'success',
+        key: wasSet ? 'contracts.linkPasswordSavedChanged' : 'contracts.linkPasswordSavedSet',
+      });
       onChanged(updated);
     } catch (err) {
-      setFeedback({
-        tone: 'error',
-        text: err instanceof ApiError ? err.message : COPY.saveError,
-      });
+      setFeedback(saveFailure(err));
     } finally {
       setBusy(null);
     }
   }, [documentId, link.id, onChanged, trimmed, view]);
 
   const remove = React.useCallback(async () => {
-    setPwError(null);
+    setPwTooShort(false);
     setFeedback(null);
     setBusy('remove');
     try {
@@ -134,13 +143,10 @@ export function ShareLinkPasswordEditor({
       setView({ hasPassword: false, recoverable: false, password: null });
       setValue('');
       setInitial('');
-      setFeedback({ tone: 'success', text: COPY.savedRemoved });
+      setFeedback({ tone: 'success', key: 'contracts.linkPasswordSavedRemoved' });
       onChanged(updated);
     } catch (err) {
-      setFeedback({
-        tone: 'error',
-        text: err instanceof ApiError ? err.message : COPY.saveError,
-      });
+      setFeedback(saveFailure(err));
     } finally {
       setBusy(null);
     }
@@ -154,27 +160,31 @@ export function ShareLinkPasswordEditor({
         </p>
       ) : view === null ? (
         <p className="text-sm text-foreground-subtle" role="status">
-          {COPY.loading}
+          {t('contracts.linkPasswordLoading')}
         </p>
       ) : (
         <>
           <Field
             htmlFor={fieldId}
-            label={COPY.label}
-            hint={passwordStateHint(view)}
-            error={pwError ?? undefined}
+            label={t('contracts.linkPasswordLabel')}
+            hint={passwordStateHint(t, view)}
+            error={
+              pwTooShort
+                ? t('contracts.linkPasswordTooShort', { count: SHARE_PASSWORD_MIN_LENGTH })
+                : undefined
+            }
           >
             <PasswordInput
               id={fieldId}
               value={value}
               onChange={(e) => {
                 setValue(e.target.value);
-                if (pwError) setPwError(null);
+                if (pwTooShort) setPwTooShort(false);
                 if (feedback) setFeedback(null);
               }}
-              placeholder={COPY.placeholder}
+              placeholder={t('contracts.linkPasswordPlaceholder')}
               autoComplete="off"
-              invalid={Boolean(pwError)}
+              invalid={pwTooShort}
               disabled={busy !== null}
               aria-describedby={`${fieldId}-message`}
             />
@@ -188,7 +198,7 @@ export function ShareLinkPasswordEditor({
               isLoading={busy === 'save'}
               disabled={!canSave}
             >
-              {busy === 'save' ? COPY.saving : COPY.save}
+              {t(busy === 'save' ? 'contracts.linkPasswordSaving' : 'contracts.linkPasswordSave')}
             </Button>
             {showRemove ? (
               <Button
@@ -200,7 +210,11 @@ export function ShareLinkPasswordEditor({
                 disabled={busy !== null}
                 className="text-danger hover:bg-danger-subtle"
               >
-                {busy === 'remove' ? COPY.removing : COPY.remove}
+                {t(
+                  busy === 'remove'
+                    ? 'contracts.linkPasswordRemoving'
+                    : 'contracts.linkPasswordRemove',
+                )}
               </Button>
             ) : null}
           </div>
@@ -218,10 +232,20 @@ export function ShareLinkPasswordEditor({
             }
             role={feedback.tone === 'error' ? 'alert' : undefined}
           >
-            {feedback.text}
+            {'key' in feedback ? t(feedback.key) : feedback.text}
           </span>
         ) : null}
       </div>
     </div>
   );
+}
+
+/**
+ * A failed save/remove: the server's own message when it sent one (it is more
+ * specific than our catch-all), otherwise the catalog's.
+ */
+function saveFailure(err: unknown): Feedback {
+  return err instanceof ApiError
+    ? { tone: 'error', text: err.message }
+    : { tone: 'error', key: 'contracts.linkPasswordSaveError' };
 }

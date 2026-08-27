@@ -4,13 +4,13 @@
  * ShareLinksSection — the contract detail screen's share-link area.
  *
  * Two parts (design-spec components/contract-detail):
- *   1. The '링크로 공유' primary action — the entry point that opens the
+ *   1. The share primary action — the entry point that opens the
  *      ShareLinkDialog (its settings + generation live in `share-link-dialog`).
  *   2. The link list — a summary of the contract's existing share links fetched
- *      via `lib/sharing.ts`. Each row shows its lifecycle state (사용 중 / 만료됨 /
- *      중지됨 / 제출 완료), an expiry note, a copy action, and — for still-active
- *      links — a 사용 중지(revoke) action. When the contract has no links yet, the
- *      "no links" rest state shows so the section reads as intentional.
+ *      via `lib/sharing.ts`. Each row shows its lifecycle state (active /
+ *      expired / disabled / submitted), an expiry note, a copy action, and — for
+ *      still-active links — a revoke action. When the contract has no links yet,
+ *      the "no links" rest state shows so the section reads as intentional.
  *
  * The list refreshes after the dialog creates a link (`onCreated`) and after a
  * revoke succeeds, so the rows always reflect the server's derived state.
@@ -19,21 +19,19 @@
 import * as React from 'react';
 import { Button, cn } from '@repo/ui';
 import { ApiError } from '@/lib/api';
-import { CONTRACT_DETAIL_COPY } from '@/lib/contract-detail';
+import { useLocale, useTranslation } from '@/components/locale-provider';
 import {
   copyToClipboard,
   expiryNote,
   listShareLinks,
   passwordTriggerLabel,
   revokeShareLink,
-  SHARE_COPY,
+  shareLinkStateLabel,
   type ShareLink,
   type ShareLinkState,
 } from '@/lib/sharing';
 import { ShareLinkDialog } from './share-link-dialog';
 import { ShareLinkPasswordEditor } from './share-link-password';
-
-const COPY = CONTRACT_DETAIL_COPY.share;
 
 export interface ShareLinksSectionProps {
   documentId: string;
@@ -41,6 +39,7 @@ export interface ShareLinksSectionProps {
 }
 
 export function ShareLinksSection({ documentId, documentTitle }: ShareLinksSectionProps) {
+  const t = useTranslation();
   const [shareOpen, setShareOpen] = React.useState(false);
   const [links, setLinks] = React.useState<ShareLink[] | null>(null);
   const [loadError, setLoadError] = React.useState<string | null>(null);
@@ -51,16 +50,16 @@ export function ShareLinksSection({ documentId, documentTitle }: ShareLinksSecti
       setLinks(next);
       setLoadError(null);
     } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : SHARE_COPY.list.loadError);
+      setLoadError(err instanceof ApiError ? err.message : t('contracts.linkListError'));
     }
-  }, [documentId]);
+  }, [documentId, t]);
 
   React.useEffect(() => {
     void refresh();
   }, [refresh]);
 
   /**
-   * Optimistic revoke: flip the row to 중지됨 the instant the owner clicks, then
+   * Optimistic revoke: flip the row to disabled the instant the owner clicks, then
    * confirm with the server. On success we refetch for the authoritative view;
    * on failure we restore the row to its prior status and rethrow so the row can
    * surface the error. Mutating only the targeted link (not a whole snapshot)
@@ -85,7 +84,7 @@ export function ShareLinksSection({ documentId, documentTitle }: ShareLinksSecti
   );
 
   // Replace a row with the server's authoritative link view (e.g. after a
-  // password change) so its 비밀번호 tag and status reflect the update at once.
+  // password change) so its password tag and status reflect the update at once.
   const applyLinkUpdate = React.useCallback((updated: ShareLink) => {
     setLinks((cur) => (cur ? cur.map((l) => (l.id === updated.id ? updated : l)) : cur));
   }, []);
@@ -95,13 +94,13 @@ export function ShareLinksSection({ documentId, documentTitle }: ShareLinksSecti
       <div className="flex flex-col gap-sm sm:flex-row sm:items-start sm:justify-between">
         <div className="flex min-w-0 flex-col gap-2xs">
           <h2 id="share-links-heading" className="text-lg font-bold text-foreground">
-            {COPY.sectionTitle}
+            {t('contracts.shareTitle')}
           </h2>
-          <p className="text-sm text-foreground-subtle">{COPY.sectionHelp}</p>
+          <p className="text-sm text-foreground-subtle">{t('contracts.shareDescription')}</p>
         </div>
         <Button size="lg" onClick={() => setShareOpen(true)} className="shrink-0 sm:w-auto">
           <ShareIcon />
-          {COPY.createButton}
+          {t('contracts.shareCreate')}
         </Button>
       </div>
 
@@ -150,8 +149,9 @@ function ShareLinkRow({
   onRevoke: (link: ShareLink) => Promise<void>;
   onPasswordChanged: (updated: ShareLink) => void;
 }) {
+  const { t, locale } = useLocale();
   const [copied, setCopied] = React.useState(false);
-  const [copyError, setCopyError] = React.useState<string | null>(null);
+  const [copyFailed, setCopyFailed] = React.useState(false);
   const [revoking, setRevoking] = React.useState(false);
   const [revokeError, setRevokeError] = React.useState<string | null>(null);
   const [pwOpen, setPwOpen] = React.useState(false);
@@ -168,13 +168,13 @@ function ShareLinkRow({
   const copy = React.useCallback(async () => {
     try {
       await copyToClipboard(link.url);
-      setCopyError(null);
+      setCopyFailed(false);
       setCopied(true);
       if (resetTimer.current) clearTimeout(resetTimer.current);
       resetTimer.current = setTimeout(() => setCopied(false), 2000);
     } catch {
       setCopied(false);
-      setCopyError(SHARE_COPY.errors.copy);
+      setCopyFailed(true);
     }
   }, [link.url]);
 
@@ -183,16 +183,18 @@ function ShareLinkRow({
     setRevoking(true);
     setRevokeError(null);
     try {
-      // Optimistic: the section flips this row to 중지됨 immediately; we only need
-      // to surface an error if the server rejects (the section rolls the row back).
+      // Optimistic: the section flips this row to disabled immediately; we only
+      // need to surface an error if the server rejects (the section rolls back).
       await onRevoke(link);
     } catch (err) {
-      setRevokeError(err instanceof ApiError ? err.message : SHARE_COPY.list.revokeError);
+      setRevokeError(err instanceof ApiError ? err.message : t('contracts.linkRevokeError'));
       setRevoking(false);
     }
-  }, [link, onRevoke, revoking]);
+  }, [link, onRevoke, revoking, t]);
 
-  const label = link.label ?? SHARE_COPY.result.linkLabel;
+  // Unlabelled links fall back to the generic name, so every accessible name
+  // below still says *which* link it acts on.
+  const label = link.label ?? t('contracts.linkLabel');
   const isActive = link.status === 'active';
 
   return (
@@ -202,7 +204,7 @@ function ShareLinkRow({
         {link.requiresPassword ? (
           <span className="inline-flex items-center gap-2xs rounded-full bg-grey-100 px-xs py-2xs text-2xs font-semibold text-foreground-subtle">
             <LockIcon />
-            {SHARE_COPY.list.passwordTag}
+            {t('contracts.linkPasswordTag')}
           </span>
         ) : null}
       </div>
@@ -210,19 +212,21 @@ function ShareLinkRow({
       <p className="min-w-0 truncate text-sm text-foreground" title={link.url}>
         {link.url}
       </p>
-      {/* Only active links carry the forward-looking "…까지 열 수 있어요" note; for
-          expired/revoked/completed rows the state pill already tells the story. */}
-      {isActive ? <p className="text-xs text-foreground-subtle">{expiryNote(link)}</p> : null}
+      {/* Only active links carry the forward-looking expiry note; for expired,
+          revoked, and completed rows the state pill already tells the story. */}
+      {isActive ? (
+        <p className="text-xs text-foreground-subtle">{expiryNote(t, locale, link)}</p>
+      ) : null}
 
       <div className="mt-2xs flex flex-wrap items-center gap-xs">
         <Button type="button" variant="secondary" size="sm" onClick={() => void copy()}>
           {copied ? (
             <>
               <CheckIcon />
-              {SHARE_COPY.result.copied}
+              {t('contracts.linkCopied')}
             </>
           ) : (
-            SHARE_COPY.result.copy
+            t('contracts.linkCopy')
           )}
         </Button>
         {isActive ? (
@@ -233,9 +237,11 @@ function ShareLinkRow({
             onClick={() => setPwOpen((v) => !v)}
             aria-expanded={pwOpen}
             aria-controls={pwPanelId}
-            aria-label={SHARE_COPY.passwordAdmin.triggerAria(label)}
+            aria-label={t('contracts.linkPasswordManageLabel', { label })}
           >
-            {pwOpen ? SHARE_COPY.passwordAdmin.close : passwordTriggerLabel(link.requiresPassword)}
+            {pwOpen
+              ? t('contracts.linkPasswordClose')
+              : passwordTriggerLabel(t, link.requiresPassword)}
           </Button>
         ) : null}
         {isActive ? (
@@ -245,16 +251,16 @@ function ShareLinkRow({
             size="sm"
             onClick={() => void revoke()}
             isLoading={revoking}
-            aria-label={SHARE_COPY.list.revokeAria(label)}
+            aria-label={t('contracts.linkRevokeLabel', { label })}
             className="text-danger hover:bg-danger-subtle"
           >
-            {revoking ? SHARE_COPY.list.revoking : SHARE_COPY.list.revoke}
+            {t(revoking ? 'contracts.linkRevoking' : 'contracts.linkRevoke')}
           </Button>
         ) : null}
       </div>
 
-      {/* Inline 비밀번호 확인·수정 panel — active links only. Mounts fresh on open
-          so it always fetches the link's current password state. */}
+      {/* Inline password view/edit panel — active links only. Mounts fresh on
+          open so it always fetches the link's current password state. */}
       {isActive && pwOpen ? (
         <ShareLinkPasswordEditor
           documentId={documentId}
@@ -266,9 +272,9 @@ function ShareLinkRow({
 
       <div role="status" aria-live="polite" className="min-h-4">
         {copied ? (
-          <span className="text-xs font-semibold text-success">{SHARE_COPY.result.copyToast}</span>
-        ) : copyError ? (
-          <span className="text-xs text-danger">{copyError}</span>
+          <span className="text-xs font-semibold text-success">{t('contracts.linkCopyToast')}</span>
+        ) : copyFailed ? (
+          <span className="text-xs text-danger">{t('contracts.linkCopyError')}</span>
         ) : revokeError ? (
           <span className="text-xs text-danger" role="alert">
             {revokeError}
@@ -282,7 +288,7 @@ function ShareLinkRow({
 /**
  * StatePill — a link's lifecycle state as a pill. Hue is carried by a leading
  * dot over a tinted background while the label stays dark, mirroring
- * `StatusBadge` (color is never the only signal — the Korean label is present).
+ * `StatusBadge` (color is never the only signal — the state's label is present).
  */
 const STATE_TONE: Record<ShareLinkState, { tint: string; dot: string; text: string }> = {
   active: { tint: 'bg-primary-subtle', dot: 'bg-primary', text: 'text-primary' },
@@ -292,6 +298,7 @@ const STATE_TONE: Record<ShareLinkState, { tint: string; dot: string; text: stri
 };
 
 function StatePill({ state }: { state: ShareLinkState }) {
+  const t = useTranslation();
   const tone = STATE_TONE[state];
   return (
     <span
@@ -302,17 +309,21 @@ function StatePill({ state }: { state: ShareLinkState }) {
       )}
     >
       <span className={cn('h-1.5 w-1.5 rounded-full', tone.dot)} aria-hidden="true" />
-      {SHARE_COPY.state[state]}
+      {shareLinkStateLabel(t, state)}
     </span>
   );
 }
 
 function EmptyLinks() {
+  const t = useTranslation();
+
   return (
     <div className="flex flex-col items-center gap-2xs rounded-md border border-dashed border-border bg-surface-muted px-lg py-2xl text-center">
       <LinkGlyph />
-      <p className="mt-xs text-base font-semibold text-foreground">{COPY.emptyTitle}</p>
-      <p className="text-sm text-foreground-subtle">{COPY.emptyBody}</p>
+      <p className="mt-xs text-base font-semibold text-foreground">
+        {t('contracts.shareEmptyTitle')}
+      </p>
+      <p className="text-sm text-foreground-subtle">{t('contracts.shareEmptyDescription')}</p>
     </div>
   );
 }
