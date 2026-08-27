@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import type { SupportedLocale } from './locale-resolver';
 
 /** Server-owned copy. New server-facing strings belong here, not in services. */
@@ -195,10 +196,78 @@ export type TranslationKey =
   | 'auditCertificate.actionDocumentCompleted'
   | 'auditCertificate.actionFallback';
 
-/** Returns a translated string, with Korean as the guaranteed safe fallback. */
+/**
+ * Last-resort Korean text served when even the Korean base catalog has no copy
+ * for a key.
+ *
+ * The wording is deliberately identical to `UNKNOWN_WEB_TRANSLATION_FALLBACK`
+ * in `apps/web/src/lib/web-translations.ts`: the same gap must read the same way
+ * whether the reader hits it on a screen or in an emailed artifact. It states
+ * that copy is pending, names no key, and reveals nothing about the catalog.
+ */
+export const UNKNOWN_SERVER_TRANSLATION_FALLBACK = '내용을 준비하고 있습니다.';
+
+/** A catalog value may be absent or blank once catalogs drift out of sync. */
+type TranslationLeaf = string | null | undefined;
+type ServerCatalog = Readonly<Record<string, Readonly<Record<string, TranslationLeaf>>>>;
+
+const logger = new Logger('ServerTranslations');
+/** Keys already reported, so a gap on a hot path cannot flood the log. */
+const reportedGaps = new Set<string>();
+
+/**
+ * Own-property read. Plain object literals inherit from `Object.prototype`, so
+ * an unguarded index would answer `'constructor.name'` with `'Object'` and pass
+ * it off as translated copy. Only copy the catalog itself declares counts.
+ */
+function ownValue(record: Readonly<Record<string, unknown>> | undefined, name: string): unknown {
+  if (!record || !Object.prototype.hasOwnProperty.call(record, name)) return undefined;
+  return record[name];
+}
+
+/**
+ * Read one catalog leaf, treating an unknown scope, an unknown name and a
+ * malformed key (`''`, `'noscope'`, `'scope.'`) alike as "no value".
+ *
+ * Splitting on the first separator only keeps names containing a dot readable.
+ */
+function lookup(catalog: ServerCatalog | undefined, key: string): TranslationLeaf {
+  const separator = key.indexOf('.');
+  if (separator < 1 || separator === key.length - 1) return undefined;
+  const scope = ownValue(catalog, key.slice(0, separator)) as
+    | Readonly<Record<string, unknown>>
+    | undefined;
+  return ownValue(scope, key.slice(separator + 1)) as TranslationLeaf;
+}
+
+/** Blank copy is a gap, not a translation: it would render as an empty label. */
+function isUsable(value: TranslationLeaf): value is string {
+  return typeof value === 'string' && value.trim() !== '';
+}
+
+/** A gap is a defect, so it is traceable in the log — never in the response. */
+function reportGap(locale: string, key: string): void {
+  const id = `${locale}\u0000${key}`;
+  if (reportedGaps.has(id)) return;
+  reportedGaps.add(id);
+  logger.warn(`Missing "${locale}" translation for "${key}"; served the Korean fallback.`);
+}
+
+/**
+ * Returns localized copy, Korean base copy, or a safe Korean placeholder.
+ *
+ * Server copy ends up in emails and in signed PDFs, where a thrown error loses
+ * the whole artifact and a leaked `auditCertificate.title` is permanent. So an
+ * unknown locale, an unknown scope, an unknown name and blank copy all degrade
+ * one step at a time instead of failing: the caller always receives text a
+ * reader can understand, and the gap is reported through the log.
+ */
 export function translate(locale: SupportedLocale, key: TranslationKey): string {
-  const [scope, name] = key.split('.') as [keyof (typeof SERVER_TRANSLATIONS)['ko'], string];
-  const localized = SERVER_TRANSLATIONS[locale][scope] as Record<string, string>;
-  const fallback = SERVER_TRANSLATIONS.ko[scope] as Record<string, string>;
-  return localized[name] ?? fallback[name];
+  const catalogs: Readonly<Record<string, ServerCatalog>> = SERVER_TRANSLATIONS;
+  const localized = lookup(catalogs[locale], key);
+  if (isUsable(localized)) return localized;
+
+  reportGap(locale, key);
+  const korean = lookup(catalogs.ko, key);
+  return isUsable(korean) ? korean : UNKNOWN_SERVER_TRANSLATION_FALLBACK;
 }
