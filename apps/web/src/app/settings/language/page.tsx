@@ -4,40 +4,93 @@ import * as React from 'react';
 import { Button, Card } from '@repo/ui';
 import { getUser, updateLocale } from '@/lib/auth';
 import { useLocale, useTranslation } from '@/components/locale-provider';
-import { translateWeb } from '@/lib/web-translations';
+import {
+  SAVE_NOTICE_DURATION_MS,
+  beginSave,
+  completeSave,
+  dismissSaveNotice,
+  failSave,
+  hasPendingChange,
+  initialLanguagePreference,
+  isSaving,
+  selectLocale,
+  syncSavedLocale,
+} from '@/lib/language-preference';
+import { SUPPORTED_LOCALES, type SupportedLocale } from '@/lib/locale';
+import { translateWeb, type WebTranslationKey } from '@/lib/web-translations';
 
+/**
+ * Option label per locale. A record rather than a ternary so that publishing a
+ * third locale is a compile error here — the alternative is a new option
+ * quietly rendering under the wrong language's name.
+ *
+ * Each language names itself in its own language, so a reader stranded in a
+ * language they cannot read can still find their way back.
+ */
+const LOCALE_LABEL_KEYS = {
+  ko: 'settings.korean',
+  en: 'settings.english',
+} as const satisfies Record<SupportedLocale, WebTranslationKey>;
+
+/**
+ * Language settings — pick the language the whole product speaks, stored on the
+ * account rather than the device.
+ *
+ * All the panel's state rules live in `lib/language-preference.ts`; what stays
+ * here is the wiring that a pure module cannot own:
+ *
+ *   1. **The stored locale is read after mount, never during render.** Reading
+ *      the session while rendering makes the output depend on whether storage
+ *      happens to be there, which is exactly what a server render (or a discarded
+ *      concurrent render) cannot reproduce. The panel therefore seeds from the
+ *      locale the app is already rendering in and corrects itself in an effect.
+ *   2. **`esign:session-change` re-syncs it.** That event is the app's single
+ *      announcement that the session was written — sign-in, sign-out, or a locale
+ *      update from anywhere, including this panel's own save. Listening to it is
+ *      what keeps the control describing the *current* account for as long as the
+ *      settings shell stays mounted, instead of a snapshot taken at first render.
+ */
 export default function LanguageSettingsPage() {
   const { locale } = useLocale();
   const t = useTranslation();
-  const [savedLocale, setSavedLocale] = React.useState<'ko' | 'en'>(() => getUser()?.locale ?? locale);
-  const [selected, setSelected] = React.useState<'ko' | 'en'>(savedLocale);
-  const [saving, setSaving] = React.useState(false);
-  const [saveError, setSaveError] = React.useState<string | null>(null);
-  const [savedNotice, setSavedNotice] = React.useState<string | null>(null);
+  const [state, setState] = React.useState(() => initialLanguagePreference(locale));
+  const { saved, selected, status } = state;
 
-  const changed = selected !== savedLocale;
-
+  // Adopt whatever the session says, now and on every later change. The
+  // transition is a no-op when the stored locale has not actually moved, so the
+  // panel's own save echoing back here cannot loop or disturb a pending pick.
   React.useEffect(() => {
-    if (!savedNotice) return;
-    const timeout = window.setTimeout(() => setSavedNotice(null), 3000);
-    return () => window.clearTimeout(timeout);
-  }, [savedNotice]);
+    const sync = () => setState((prev) => syncSavedLocale(prev, getUser()?.locale));
+    sync();
+    window.addEventListener('esign:session-change', sync);
+    return () => window.removeEventListener('esign:session-change', sync);
+  }, []);
 
-  async function save(localeToSave = selected) {
-    setSaving(true);
-    setSaveError(null);
-    setSavedNotice(null);
+  // The confirmation is transient; an error is not, and is left to the reader.
+  React.useEffect(() => {
+    if (status.kind !== 'saved') return;
+    const timeout = window.setTimeout(
+      () => setState(dismissSaveNotice),
+      SAVE_NOTICE_DURATION_MS,
+    );
+    return () => window.clearTimeout(timeout);
+  }, [status]);
+
+  async function save(target: SupportedLocale) {
+    // The request and the state machine agree on one gate, so no POST is ever
+    // sent for a change `beginSave` would refuse to record.
+    if (!hasPendingChange(state)) return;
+    setState(beginSave);
     try {
-      const user = await updateLocale(localeToSave);
-      setSavedLocale(user.locale);
-      setSelected(user.locale);
-      setSavedNotice(translateWeb(user.locale, 'settings.saved'));
+      const user = await updateLocale(target);
+      setState((prev) => completeSave(prev, user.locale));
     } catch {
-      setSaveError(translateWeb(localeToSave, 'settings.saveFailed'));
-    } finally {
-      setSaving(false);
+      setState(failSave);
     }
   }
+
+  const saving = isSaving(state);
+  const pending = hasPendingChange(state);
 
   const preview = {
     status: translateWeb(selected, 'settings.previewStatus'),
@@ -59,26 +112,23 @@ export default function LanguageSettingsPage() {
           {t('settings.preference')}
         </p>
         <div
-          className="mt-md inline-flex rounded-md bg-surface-muted p-1"
+          className="mt-md inline-flex rounded-md bg-surface-muted p-2xs"
           role="radiogroup"
           aria-labelledby="language-preference-label"
         >
-          {(['ko', 'en'] as const).map((value) => (
+          {SUPPORTED_LOCALES.map((value) => (
             <button
               key={value}
               type="button"
               role="radio"
               aria-checked={selected === value}
               disabled={saving}
-              onClick={() => {
-                setSelected(value);
-                setSaveError(null);
-              }}
+              onClick={() => setState((prev) => selectLocale(prev, value))}
               className={`rounded-sm px-md py-sm text-sm font-medium ${
                 selected === value ? 'bg-surface text-primary shadow-sm' : 'text-foreground-subtle'
               }`}
             >
-              {value === 'ko' ? t('settings.korean') : t('settings.english')}
+              {t(LOCALE_LABEL_KEYS[value])}
             </button>
           ))}
         </div>
@@ -99,36 +149,34 @@ export default function LanguageSettingsPage() {
         </div>
       </Card>
 
-      {saveError ? (
+      {status.kind === 'error' ? (
         <div
           className="flex items-center justify-between gap-sm rounded-md bg-danger-subtle px-md py-sm text-sm text-danger"
           role="alert"
         >
-          <span>{saveError}</span>
-          <Button size="sm" variant="secondary" disabled={saving} onClick={() => void save()}>
+          {/* Written in the language the save was attempting, not the one on screen. */}
+          <span>{translateWeb(status.locale, 'settings.saveFailed')}</span>
+          <Button size="sm" variant="secondary" disabled={saving} onClick={() => void save(selected)}>
             {t('settings.retry')}
           </Button>
         </div>
       ) : null}
 
-      {savedNotice ? (
+      {status.kind === 'saved' ? (
         <p className="rounded-md bg-success-subtle px-md py-sm text-sm text-success" role="status">
-          {savedNotice}
+          {translateWeb(status.locale, 'settings.saved')}
         </p>
       ) : null}
 
       <div className="flex justify-end gap-sm">
         <Button
           variant="secondary"
-          disabled={!changed || saving}
-          onClick={() => {
-            setSelected(savedLocale);
-            setSaveError(null);
-          }}
+          disabled={!pending}
+          onClick={() => setState((prev) => selectLocale(prev, saved))}
         >
           {t('settings.cancel')}
         </Button>
-        <Button disabled={!changed || saving} isLoading={saving} onClick={() => void save()}>
+        <Button disabled={!pending} isLoading={saving} onClick={() => void save(selected)}>
           {saving ? t('settings.saving') : t('settings.save')}
         </Button>
       </div>
