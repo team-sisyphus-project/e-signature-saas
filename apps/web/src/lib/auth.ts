@@ -9,6 +9,7 @@
  */
 
 import { apiFetch } from './api';
+import { DEFAULT_LOCALE, parseLocale } from './locale';
 
 export interface SessionUser {
   id: string;
@@ -134,4 +135,80 @@ export async function loginWithGoogle(code: string): Promise<LoginResponse> {
   });
   setSession(session);
   return session;
+}
+
+/** In-flight `/auth/me` read, so a double-mounted app makes one request. */
+let inFlightRestore: Promise<SessionUser | null> | null = null;
+
+/**
+ * Adopt the account's stored session when the browser holds a token but no
+ * cached user — the state left behind by a cleared or evicted `localStorage`
+ * (private-window reopen, "clear site data", storage pressure) between visits.
+ *
+ * Without this, such a session renders as "signed in, preference unknown", and
+ * every locale tier falls through to the Korean default: a sender who saved
+ * English would silently get Korean back. The token is the proof of identity, so
+ * the account row — not the absent cache — is the authority on the preference.
+ *
+ * Non-destructive by design: a failed read (offline, rejected token) leaves the
+ * stored session exactly as it was. Deciding that a token is dead belongs to
+ * token refresh, which this grain does not own, and clearing here would sign a
+ * user out on a transient network blip.
+ *
+ * Concurrent callers share one request, and a result is discarded if the token
+ * changed while it was in flight (a login landing mid-fetch owns the session).
+ */
+export function restoreSession(): Promise<SessionUser | null> {
+  if (!isBrowser()) return Promise.resolve(null);
+  const token = getToken();
+  if (!token) return Promise.resolve(null);
+
+  const cached = getUser();
+  if (cached) return Promise.resolve(cached);
+
+  inFlightRestore ??= fetchSessionUser(token).finally(() => {
+    inFlightRestore = null;
+  });
+  return inFlightRestore;
+}
+
+async function fetchSessionUser(token: string): Promise<SessionUser | null> {
+  let body: unknown;
+  try {
+    body = await apiFetch<unknown>('/auth/me', { token });
+  } catch {
+    return null;
+  }
+
+  const user = toSessionUser(body);
+  // A session established while this was in flight is newer than this answer.
+  if (!user || getToken() !== token) return null;
+
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
+  notifySessionChange();
+  return user;
+}
+
+/**
+ * Narrow an untrusted `/auth/me` body to exactly the session fields.
+ *
+ * The endpoint also projects branding columns, which the login response does
+ * not: storing the body verbatim would make the cached session's shape depend
+ * on which call happened to write it. An unsupported `locale` degrades to the
+ * default rather than voiding the session — identity is still known, only the
+ * preference is unreadable.
+ */
+function toSessionUser(body: unknown): SessionUser | null {
+  if (!body || typeof body !== 'object') return null;
+  const raw = body as Record<string, unknown>;
+  if (typeof raw.id !== 'string' || !raw.id) return null;
+  if (typeof raw.email !== 'string') return null;
+
+  return {
+    id: raw.id,
+    email: raw.email,
+    name: typeof raw.name === 'string' ? raw.name : null,
+    plan: typeof raw.plan === 'string' ? raw.plan : '',
+    locale: parseLocale(typeof raw.locale === 'string' ? raw.locale : null) ?? DEFAULT_LOCALE,
+  };
 }

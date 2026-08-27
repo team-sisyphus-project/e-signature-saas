@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { getUser } from '@/lib/auth';
+import { getUser, restoreSession } from '@/lib/auth';
 import {
   fetchTranslationResources,
   getBrowserLanguages,
@@ -65,6 +65,11 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     refreshUserLocale();
     window.addEventListener('esign:session-change', refreshUserLocale);
     window.addEventListener('popstate', refreshLinkLocale);
+    // A token without a cached user means the browser lost the session copy, not
+    // that the account has no preference. Re-read it from the account; the
+    // resulting `esign:session-change` feeds the user tier through the listener
+    // registered just above, so the answer cannot arrive unheard.
+    void restoreSession();
     return () => {
       window.removeEventListener('esign:session-change', refreshUserLocale);
       window.removeEventListener('popstate', refreshLinkLocale);
