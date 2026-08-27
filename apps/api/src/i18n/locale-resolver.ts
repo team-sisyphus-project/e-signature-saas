@@ -2,9 +2,14 @@
 export const SUPPORTED_LOCALES = ['ko', 'en'] as const;
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
 
+/** Locale chosen when no tier of `resolveLocale` yields a supported language. */
+export const DEFAULT_LOCALE: SupportedLocale = 'ko';
+
 export interface LocaleResolutionInput {
   /** Persisted preference of an authenticated user. */
   userLocale?: string | null;
+  /** Explicit locale carried by the signing/share link being opened. */
+  linkLocale?: string | null;
   /** Locale of the sender who created a public signing/share link. */
   senderLocale?: string | null;
   /** Raw HTTP Accept-Language header. */
@@ -34,12 +39,23 @@ export function localeFromAcceptLanguage(header?: string | null): SupportedLocal
     .sort((a, b) => b.q - a.q || a.index - b.index)[0]?.locale;
 }
 
-/** Resolve locale: authenticated user → sender → browser → Korean default. */
+/**
+ * Resolve locale: authenticated user → link parameter → sender → browser → Korean.
+ *
+ * The link parameter outranks the sender because it is an explicit, per-entry
+ * instruction ("open this in English"), whereas the sender locale is only a
+ * standing default inferred from whoever created the link.
+ *
+ * Every tier is advisory: a tier holding an unsupported or malformed tag
+ * contributes nothing and the next tier decides. A tier never short-circuits
+ * the chain to the Korean default.
+ */
 export function resolveLocale(input: LocaleResolutionInput = {}): SupportedLocale {
   return (
     parseLocale(input.userLocale) ??
+    parseLocale(input.linkLocale) ??
     parseLocale(input.senderLocale) ??
     localeFromAcceptLanguage(input.acceptLanguage) ??
-    'ko'
+    DEFAULT_LOCALE
   );
 }
