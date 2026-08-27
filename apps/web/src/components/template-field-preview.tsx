@@ -2,8 +2,8 @@
 
 /**
  * TemplateFieldPreview — a read-only look at where a template's fields sit on its
- * source PDF (design-spec `components/template-field-preview/base.md`, copy
- * `lib/templates-copy.ts` `TEMPLATE_FIELD_PREVIEW_COPY`).
+ * source PDF (design-spec `components/template-field-preview/base.md`, copy: the
+ * `templates` catalog domain).
  *
  * Given the template's original `File` and its saved field layout, this renders
  * one PDF page at a time onto a raster `<canvas>` (via `lib/pdf.ts`) and lays a
@@ -34,7 +34,6 @@ import {
   type PageSize,
   type SignFieldType,
 } from '@/lib/field-geometry';
-import { TEMPLATE_FIELD_PREVIEW_COPY as COPY } from '@/lib/templates-copy';
 import { useTranslation } from '@/components/locale-provider';
 
 /**
@@ -80,7 +79,10 @@ export function TemplateFieldPreview({
   const [pageCount, setPageCount] = React.useState(0);
   const [page, setPage] = React.useState(1); // 1-based
   const [status, setStatus] = React.useState<Status>('loading');
-  const [error, setError] = React.useState<string>(COPY.error);
+  // `null` means "no specific reason" — the render falls back to the catalog's
+  // read-failure sentence. A `PdfRenderError` carries its own message, which is
+  // more useful than the generic line, so it is kept verbatim.
+  const [error, setError] = React.useState<string | null>(null);
   const [pageSize, setPageSize] = React.useState<PageSize | null>(null);
   const [width, setWidth] = React.useState(0);
 
@@ -102,7 +104,7 @@ export function TemplateFieldPreview({
       })
       .catch((err: unknown) => {
         if (disposed) return;
-        setError(err instanceof PdfRenderError ? err.message : COPY.error);
+        setError(err instanceof PdfRenderError ? err.message : null);
         setStatus('error');
       });
     return () => {
@@ -136,11 +138,11 @@ export function TemplateFieldPreview({
         if (cancelled) return;
         setPageSize({ width: size.cssWidth, height: size.cssHeight });
         setStatus('ready');
-        setError(COPY.error);
+        setError(null);
       })
       .catch((err: unknown) => {
         if (cancelled || isRenderCancelled(err)) return;
-        setError(err instanceof PdfRenderError ? err.message : COPY.error);
+        setError(err instanceof PdfRenderError ? err.message : null);
         setStatus('error');
       });
     return () => {
@@ -181,7 +183,7 @@ export function TemplateFieldPreview({
           <Button
             variant="ghost"
             size="sm"
-            aria-label={COPY.prevPage}
+            aria-label={t('templates.previewPrevPage')}
             disabled={!canPrev}
             onClick={() => setPage((p) => Math.max(1, p - 1))}
           >
@@ -191,12 +193,12 @@ export function TemplateFieldPreview({
             aria-live="polite"
             className="min-w-[3.5rem] text-center text-sm font-semibold tabular-nums text-foreground-muted"
           >
-            {COPY.pageIndicator(page, pageCount)}
+            {t('templates.previewPageIndicator', { page, total: pageCount })}
           </span>
           <Button
             variant="ghost"
             size="sm"
-            aria-label={COPY.nextPage}
+            aria-label={t('templates.previewNextPage')}
             disabled={!canNext}
             onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
           >
@@ -208,7 +210,9 @@ export function TemplateFieldPreview({
       <div ref={containerRef} className="relative w-full">
         {ready ? null : status === 'error' ? (
           <div className="flex aspect-[1/1.414] w-full flex-col items-center justify-center gap-xs rounded-md border border-border bg-surface-muted px-md text-center">
-            <p className="text-sm text-foreground-muted">{error}</p>
+            <p className="text-sm text-foreground-muted">
+              {error ?? t('templates.previewReadError')}
+            </p>
           </div>
         ) : (
           <Skeleton className="mx-auto aspect-[1/1.414] w-full" />
@@ -222,7 +226,10 @@ export function TemplateFieldPreview({
           <canvas
             ref={canvasRef}
             role="img"
-            aria-label={COPY.pageLabel(page, Math.max(pageCount, 1))}
+            aria-label={t('templates.previewPageLabel', {
+              page,
+              total: Math.max(pageCount, 1),
+            })}
             className="block w-full rounded-sm border border-border bg-surface shadow-sm"
           />
 
@@ -240,7 +247,7 @@ export function TemplateFieldPreview({
               {pageFields.length === 0 ? (
                 <div className="absolute inset-x-0 bottom-md flex justify-center">
                   <span className="rounded-sm bg-surface/90 px-sm py-2xs text-xs text-foreground-subtle shadow-xs">
-                    {COPY.noFieldsOnPage}
+                    {t('templates.previewNoFields')}
                   </span>
                 </div>
               ) : null}
@@ -253,7 +260,7 @@ export function TemplateFieldPreview({
       {presentTypes.length > 0 ? (
         <div className="flex flex-col gap-2xs">
           <div className="flex flex-wrap items-center gap-x-md gap-y-2xs">
-            <span className="text-xs font-semibold text-foreground-subtle">{COPY.legendLabel}</span>
+            <span className="text-xs font-semibold text-foreground-subtle">{t('templates.previewLegendLabel')}</span>
             {presentTypes.map((type) => (
               <span key={type} className="flex items-center gap-2xs text-xs text-foreground-muted">
                 <span className="flex h-4 w-4 items-center justify-center rounded-sm border border-primary/60 bg-primary-subtle text-primary">
@@ -264,7 +271,7 @@ export function TemplateFieldPreview({
             ))}
           </div>
           {hasMultipleRecipients ? (
-            <p className="text-xs text-foreground-subtle">{COPY.recipientHint}</p>
+            <p className="text-xs text-foreground-subtle">{t('templates.previewRecipientHint')}</p>
           ) : null}
         </div>
       ) : null}

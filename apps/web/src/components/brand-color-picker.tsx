@@ -1,13 +1,12 @@
 'use client';
 
 /**
- * BrandColorPicker — the 대표 색상 control for the branding form.
+ * BrandColorPicker — the brand-color control for the branding form.
  *
  * A controlled, presentation-only component: the parent owns the committed
  * brand color (`value` / `onChange`) and this renders a swatch (native color
  * picker) + a HEX text field + a live preview. There is no save here — the
- * actual persistence and service-wide application land with the branding form
- * and its wiring (later grains).
+ * actual persistence and service-wide application belong to the branding form.
  *
  * The accepted color shape and the preview re-skin both defer to `lib/branding`:
  * `isValidHex` is the single validity gate (`#rgb` / `#rrggbb`), `brandStyle`
@@ -21,7 +20,7 @@
 import * as React from 'react';
 import { Button, Field, Input, cn } from '@repo/ui';
 import { brandStyle, expandHex, isValidHex } from '@/lib/branding';
-import { BRAND_COLOR_COPY } from '@/lib/settings-copy';
+import { useTranslation } from '@/components/locale-provider';
 
 export interface BrandColorPickerProps {
   /** Ties the field label to the HEX input. Must be unique on the page. */
@@ -30,7 +29,7 @@ export interface BrandColorPickerProps {
   value: string;
   /** Called with a valid hex when the swatch or a valid HEX entry commits. */
   onChange: (hex: string) => void;
-  /** Field label. Defaults to the settings copy (`대표 색상`). */
+  /** Field label. Defaults to the settings copy ("Brand color"). */
   label?: React.ReactNode;
   /** Constraint hint under the field. Defaults to the settings copy. */
   hint?: React.ReactNode;
@@ -52,12 +51,15 @@ export function BrandColorPicker({
   showPreview = true,
   className,
 }: BrandColorPickerProps) {
+  const t = useTranslation();
   const swatchId = `${id}-swatch`;
   // Local draft mirrors the text field so the user can type an in-progress
   // (temporarily invalid) value without the committed color jumping. It re-syncs
   // whenever a new committed color arrives (from the swatch or from the parent).
   const [draft, setDraft] = React.useState(value);
-  const [error, setError] = React.useState<string | null>(null);
+  // The HEX guard is the control's only message, so it holds a boolean and the
+  // sentence is resolved at render — a language switch re-renders it in place.
+  const [invalid, setInvalid] = React.useState(false);
 
   React.useEffect(() => {
     setDraft(value);
@@ -72,13 +74,13 @@ export function BrandColorPicker({
     (raw: string) => {
       setDraft(raw);
       if (isValidHex(raw)) {
-        setError(null);
+        setInvalid(false);
         onChange(raw.trim());
       } else if (raw.trim() === '') {
         // Empty is "not yet decided", not an error — the committed color stays.
-        setError(null);
+        setInvalid(false);
       } else {
-        setError(BRAND_COLOR_COPY.invalidHex);
+        setInvalid(true);
       }
     },
     [onChange],
@@ -87,7 +89,7 @@ export function BrandColorPicker({
   const handleSwatch = React.useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       // The native color input only ever yields a valid `#rrggbb`.
-      setError(null);
+      setInvalid(false);
       onChange(event.target.value);
     },
     [onChange],
@@ -95,10 +97,10 @@ export function BrandColorPicker({
 
   return (
     <Field
-      label={label ?? BRAND_COLOR_COPY.label}
+      label={label ?? t('settings.colorLabel')}
       htmlFor={id}
-      hint={hint ?? BRAND_COLOR_COPY.hint}
-      error={error}
+      hint={hint ?? t('settings.colorHint')}
+      error={invalid ? t('settings.colorInvalid') : null}
       className={className}
     >
       <div className="flex items-stretch gap-sm">
@@ -114,13 +116,13 @@ export function BrandColorPicker({
           )}
           style={{ backgroundColor: active }}
         >
-          <span className="sr-only">{BRAND_COLOR_COPY.swatchLabel}</span>
+          <span className="sr-only">{t('settings.colorSwatch')}</span>
           <input
             id={swatchId}
             type="color"
             value={swatchValue}
             onChange={handleSwatch}
-            aria-label={BRAND_COLOR_COPY.swatchLabel}
+            aria-label={t('settings.colorSwatch')}
             className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
           />
         </label>
@@ -129,7 +131,7 @@ export function BrandColorPicker({
           id={id}
           value={draft}
           onChange={(e) => handleHexInput(e.target.value)}
-          invalid={!!error}
+          invalid={invalid}
           spellCheck={false}
           autoCapitalize="none"
           autoCorrect="off"
@@ -147,7 +149,7 @@ export function BrandColorPicker({
       {showPreview ? (
         <div className="mt-xs flex flex-col gap-xs">
           <span className="text-xs font-semibold text-foreground-muted">
-            {BRAND_COLOR_COPY.previewLabel}
+            {t('settings.previewLabel')}
           </span>
           <div
             aria-hidden="true"
@@ -155,10 +157,10 @@ export function BrandColorPicker({
             className="flex flex-wrap items-center gap-md rounded-lg border border-border bg-surface p-md"
           >
             <Button type="button" variant="primary" size="sm" tabIndex={-1}>
-              {BRAND_COLOR_COPY.previewButton}
+              {t('settings.previewSampleButton')}
             </Button>
             <span className="text-sm font-semibold text-primary underline underline-offset-2">
-              {BRAND_COLOR_COPY.previewLink}
+              {t('settings.previewSampleLink')}
             </span>
             <span className="ml-auto inline-flex items-center rounded-full bg-primary-subtle px-md py-2xs text-xs font-semibold uppercase text-primary">
               {active}

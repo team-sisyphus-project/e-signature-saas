@@ -4,9 +4,9 @@
  * DeleteTemplateDialog — confirm the irreversible deletion of a saved template
  * (design-spec `components/confirm-dialog/base.md`, copy `tone/templates-list.md`).
  *
- * A destructive confirm: it names the consequence plainly ('삭제하면 되돌릴 수
- * 없어요'), reassures that already-sent contracts are untouched, and offers a calm
- * way out (취소). The confirm action is a `danger` Button. On confirm it hands the
+ * A destructive confirm: it names the consequence plainly, reassures that
+ * already-sent contracts are untouched, and offers a calm way out. The confirm
+ * action is a `danger` Button. On confirm it hands the
  * template up and closes at once — the `/templates` list removes it optimistically,
  * so the async delete + rollback are the page's job, not the modal's.
  */
@@ -22,9 +22,7 @@ import {
   DialogTitle,
 } from '@repo/ui';
 import type { TemplateSummary } from '@/lib/templates';
-import { TEMPLATE_ACTIONS_COPY } from '@/lib/templates-copy';
-
-const COPY = TEMPLATE_ACTIONS_COPY.delete_dialog;
+import { useTranslation } from '@/components/locale-provider';
 
 export interface DeleteTemplateDialogProps {
   open: boolean;
@@ -41,6 +39,8 @@ export function DeleteTemplateDialog({
   template,
   onConfirm,
 }: DeleteTemplateDialogProps) {
+  const t = useTranslation();
+
   const handleConfirm = () => {
     if (!template) return;
     onConfirm(template);
@@ -51,16 +51,18 @@ export function DeleteTemplateDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{template ? COPY.title(template.name) : ''}</DialogTitle>
-          <DialogDescription>{COPY.description}</DialogDescription>
+          <DialogTitle>
+            {template ? t('templates.deleteTitle', { name: template.name }) : ''}
+          </DialogTitle>
+          <DialogDescription>{t('templates.deleteDescription')}</DialogDescription>
         </DialogHeader>
 
         <DialogFooter>
           <Button variant="secondary" onClick={() => onOpenChange(false)}>
-            {COPY.cancel}
+            {t('templates.cancel')}
           </Button>
           <Button variant="danger" onClick={handleConfirm}>
-            {COPY.confirm}
+            {t('templates.delete')}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -111,7 +111,7 @@ describe('key paths consumed by shipped screens', () => {
   // Guards the split itself: components already call these keys, so a domain
   // that moved under a different prefix shows up here as fallback copy.
   const cases: Array<[WebTranslationKey, string, string]> = [
-    ['auth.product', '전자계약', 'eSign'],
+    ['common.product', '전자계약', 'eSign'],
     ['auth.login', '로그인', 'Sign in'],
     ['dashboard.title', '계약', 'Contracts'],
     ['dashboard.newContract', '새 계약 생성', 'Create contract'],

@@ -21,14 +21,14 @@ import type { SettingsNavItem } from '@/lib/settings-copy';
  *   AA-verified "actionable = primary" language. No new colors/tokens.
  *
  * This component owns structure/selection presentation but NOT the item copy:
- * labels come in via `items` (source of truth: `lib/settings-copy.ts` →
- * design-spec/messaging/settings-copy.md), exactly like ViewSwitcher takes its
- * labels as props.
+ * labels come in via `items`, already resolved into the reader's language by
+ * `settingsNavItems()` in `lib/settings-copy.ts`, exactly like ViewSwitcher
+ * takes its labels as props.
  */
 export interface SettingsNavProps {
-  /** Menu items in render order (source: lib/settings-copy.ts). */
+  /** Menu items in render order (source: `settingsNavItems()`). */
   items: readonly SettingsNavItem[];
-  /** Accessible name for the nav landmark, e.g. "설정 메뉴". */
+  /** Accessible name for the nav landmark, e.g. "Settings menu". */
   label: string;
   className?: string;
 }

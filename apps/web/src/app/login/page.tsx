@@ -114,7 +114,7 @@ export default function LoginPage() {
 
       <Card className="motion-stagger relative z-10 w-full max-w-[420px] p-xl shadow-lg sm:p-2xl">
         <header className="mb-xl flex flex-col gap-xs">
-          <span className="text-sm font-bold tracking-tight text-primary">{t('auth.product')}</span>
+          <span className="text-sm font-bold tracking-tight text-primary">{t('common.product')}</span>
           <h1 className="text-2xl font-bold text-foreground">{t('auth.loginTitle')}</h1>
           <p className="text-base text-foreground-subtle">
             {t('auth.loginHint')}

@@ -1,7 +1,7 @@
 /**
  * Brand color helper unit tests.
  *
- * Pins the rules the 대표 색상 color picker rests on — the single validity gate
+ * Pins the rules the brand-color picker rests on — the single validity gate
  * and the swatch-format adapter both live in `lib/branding`, so the picker
  * never redefines HEX handling:
  *   • isValidHex — which `#rgb` / `#rrggbb` values pass (and what's rejected),

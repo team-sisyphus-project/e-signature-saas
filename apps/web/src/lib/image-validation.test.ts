@@ -1,11 +1,11 @@
 /**
  * Branding image-validation unit tests.
  *
- * Pins the rules the image uploader (로고 · 파비콘) rests on:
+ * Pins the rules the image uploader (logo · favicon) rests on:
  *   • accepted formats (SVG / PNG) by MIME and by extension fallback,
  *   • rejected formats,
  *   • empty vs oversize ordering and the 1MB boundary,
- *   • the exact Korean guard copy (single source, base voice).
+ *   • which guard key a rejected file reports (the uploader renders it).
  *
  * Runs in the `node` jest environment: `validateImageFile` takes a plain
  * `{ name, type, size }`, so no DOM `File` is needed.
@@ -15,7 +15,7 @@ import {
   validateImageFile,
   formatImageSize,
   MAX_IMAGE_BYTES,
-  IMAGE_VALIDATION_COPY,
+  IMAGE_GUARD_KEYS,
   ACCEPTED_IMAGE_TYPES,
   ACCEPTED_IMAGE_EXTENSIONS,
   type ValidatedFile,
@@ -51,23 +51,23 @@ describe('validateImageFile — accepted', () => {
 describe('validateImageFile — rejected', () => {
   it('rejects a JPEG as the wrong format', () => {
     expect(validateImageFile(file({ name: 'photo.jpg', type: 'image/jpeg' }))).toBe(
-      IMAGE_VALIDATION_COPY.invalidType,
+      IMAGE_GUARD_KEYS.invalidType,
     );
   });
 
   it('rejects a PDF (wrong format wins over size checks)', () => {
     expect(
       validateImageFile(file({ name: 'doc.pdf', type: 'application/pdf', size: 0 })),
-    ).toBe(IMAGE_VALIDATION_COPY.invalidType);
+    ).toBe(IMAGE_GUARD_KEYS.invalidType);
   });
 
   it('rejects an empty but correctly-typed file', () => {
-    expect(validateImageFile(file({ size: 0 }))).toBe(IMAGE_VALIDATION_COPY.empty);
+    expect(validateImageFile(file({ size: 0 }))).toBe(IMAGE_GUARD_KEYS.empty);
   });
 
   it('rejects a file one byte over the 1MB limit', () => {
     expect(validateImageFile(file({ size: MAX_IMAGE_BYTES + 1 }))).toBe(
-      IMAGE_VALIDATION_COPY.tooLarge,
+      IMAGE_GUARD_KEYS.tooLarge,
     );
   });
 
@@ -75,7 +75,7 @@ describe('validateImageFile — rejected', () => {
     // An oversize JPEG reads as "wrong format", not "too large".
     expect(
       validateImageFile(file({ name: 'big.jpg', type: 'image/jpeg', size: MAX_IMAGE_BYTES * 5 })),
-    ).toBe(IMAGE_VALIDATION_COPY.invalidType);
+    ).toBe(IMAGE_GUARD_KEYS.invalidType);
   });
 });
 

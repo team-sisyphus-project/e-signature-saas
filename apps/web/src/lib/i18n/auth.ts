@@ -9,9 +9,6 @@ import type { WebTranslationDomain } from './types';
  * case — rather than transliterating the Korean politeness.
  */
 export const AUTH_TRANSLATIONS = {
-  /** Wordmark shown on the auth screens when no branding logo applies. */
-  product: { ko: '전자계약', en: 'eSign' },
-
   // --- login form ---------------------------------------------------------
   loginTitle: { ko: '다시 오셨네요', en: 'Welcome back' },
   loginHint: {

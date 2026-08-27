@@ -5,11 +5,8 @@ import Link from 'next/link';
 import { Button } from '@repo/ui';
 import type { SessionUser } from '@/lib/auth';
 import { useBranding } from '@/components/branding-provider';
-import {
-  HEADER_BRAND_COPY,
-  SETTINGS_ENTRY_LABEL,
-  SETTINGS_DEFAULT_ROUTE,
-} from '@/lib/settings-copy';
+import { useTranslation } from '@/components/locale-provider';
+import { SETTINGS_DEFAULT_ROUTE } from '@/lib/settings-copy';
 
 /**
  * DashboardHeader — the app's top bar for the authenticated sender area. Shared
@@ -18,9 +15,9 @@ import {
  *
  * Brand mark: when a branding logo is set it renders as an image (alt text from
  * copy, height-constrained to the header line, `object-contain`); otherwise the
- * 전자계약 wordmark shows. Either way it links home and shares one focus ring.
+ * product wordmark shows. Either way it links home and shares one focus ring.
  * Layout/tone reuse the established token language (sticky surface bar with a
- * bottom border, `max-w-[960px]` content column). The `설정` entry is a ghost
+ * bottom border, `max-w-[960px]` content column). The settings entry is a ghost
  * link to the settings section — the single doorway into `/settings` from the
  * authenticated app.
  */
@@ -32,6 +29,9 @@ export function DashboardHeader({
   onLogout: () => void;
 }) {
   const { branding } = useBranding();
+  const t = useTranslation();
+  const product = t('common.product');
+
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-surface">
       <div className="mx-auto flex w-full max-w-[960px] items-center justify-between px-md py-sm">
@@ -43,12 +43,12 @@ export function DashboardHeader({
             // eslint-disable-next-line @next/next/no-img-element -- branded logo, arbitrary host and type (SVG/PNG)
             <img
               src={branding.logoUrl}
-              alt={HEADER_BRAND_COPY.logoAlt}
+              alt={t('settings.brandLogoAlt', { product })}
               className="h-7 w-auto max-w-[160px] object-contain"
             />
           ) : (
             <span className="text-base font-bold tracking-tight text-primary">
-              {HEADER_BRAND_COPY.wordmark}
+              {product}
             </span>
           )}
         </Link>
@@ -57,10 +57,10 @@ export function DashboardHeader({
             <span className="hidden text-sm text-foreground-subtle sm:inline">{user.email}</span>
           ) : null}
           <Button variant="ghost" size="sm" asChild>
-            <Link href={SETTINGS_DEFAULT_ROUTE}>{SETTINGS_ENTRY_LABEL}</Link>
+            <Link href={SETTINGS_DEFAULT_ROUTE}>{t('settings.entry')}</Link>
           </Button>
           <Button variant="ghost" size="sm" onClick={onLogout}>
-            로그아웃
+            {t('settings.logout')}
           </Button>
         </div>
       </div>

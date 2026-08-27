@@ -16,16 +16,18 @@ import {
   renameTemplate,
   type TemplateSummary,
 } from '@/lib/templates';
-import { TEMPLATE_ACTIONS_COPY, TEMPLATES_COPY } from '@/lib/templates-copy';
+import { useTranslation } from '@/components/locale-provider';
+import type { WebTranslate } from '@/lib/web-translations';
 
 /**
- * `/templates` — the sender's saved-template list ("내 템플릿"), the destination
- * the save-template dialog promises ('다음에 내 템플릿에서 바로 불러올 수 있어요').
+ * `/templates` — the sender's saved-template list, the destination the
+ * save-template dialog promises.
  *
- * Lists the owner's templates (name · 페이지 수 · 필드 수 · 저장일) newest-first via
- * `listTemplates()`, with loading / empty / error states. Each card carries the
- * management cluster (manageable Extension): 미리보기 (PDF preview modal) · 이름
- * 수정 (rename modal) · 삭제 (delete-confirm modal) · '이 템플릿으로 시작' (→
+ * Lists the owner's templates (name · page count · field count · saved-at)
+ * newest-first via `listTemplates()`, with loading / empty / error states. Each
+ * card carries the management cluster (manageable Extension): preview (PDF
+ * preview modal) · rename (rename modal) · delete (delete-confirm modal) ·
+ * start from template (→
  * `/contracts/new?template=id`). Rename and delete are applied **optimistically**:
  * the list updates instantly and, if the server rejects, rolls back and surfaces a
  * dismissible banner. A 401/403 clears the session and bounces to login, mirroring
@@ -40,6 +42,7 @@ const NEW_CONTRACT_ROUTE = '/contracts/new';
 
 export default function TemplatesPage() {
   const router = useRouter();
+  const t = useTranslation();
 
   const [ready, setReady] = React.useState(false);
   const [user, setUser] = React.useState<SessionUser | null>(null);
@@ -72,11 +75,11 @@ export default function TemplatesPage() {
         router.replace('/login');
         return;
       }
-      setError(
-        err instanceof ApiError ? err.message : '문제가 생겼어요. 잠시 후 다시 시도해 주세요.',
-      );
+      // The server still sends its own copy; only the transport-failure
+      // fallback is ours to translate.
+      setError(err instanceof ApiError ? err.message : t('templates.loadError'));
     }
-  }, [router]);
+  }, [router, t]);
 
   React.useEffect(() => {
     if (!ready) return;
@@ -125,12 +128,10 @@ export default function TemplatesPage() {
               ? list.map((t) => (t.id === template.id ? { ...t, name: template.name } : t))
               : list,
           );
-          setActionError(
-            err instanceof ApiError ? err.message : TEMPLATE_ACTIONS_COPY.renameFailed,
-          );
+          setActionError(err instanceof ApiError ? err.message : t('templates.renameFailed'));
         });
     },
-    [bounceIfUnauthorized],
+    [bounceIfUnauthorized, t],
   );
 
   const handleDelete = React.useCallback(
@@ -147,12 +148,10 @@ export default function TemplatesPage() {
           next.splice(index < 0 ? next.length : index, 0, template);
           return next;
         });
-        setActionError(
-          err instanceof ApiError ? err.message : TEMPLATE_ACTIONS_COPY.deleteFailed,
-        );
+        setActionError(err instanceof ApiError ? err.message : t('templates.deleteFailed'));
       });
     },
-    [templates, bounceIfUnauthorized],
+    [templates, bounceIfUnauthorized, t],
   );
 
   const actions = React.useMemo<TemplateCardActions>(
@@ -173,16 +172,21 @@ export default function TemplatesPage() {
 
       <main className="mx-auto w-full max-w-[960px] px-md py-xl sm:py-2xl">
         <div className="flex flex-col gap-2xs">
-          <h1 className="text-2xl font-bold text-foreground">{TEMPLATES_COPY.title}</h1>
-          <p className="text-base text-foreground-subtle">{TEMPLATES_COPY.description}</p>
+          <h1 className="text-2xl font-bold text-foreground">{t('templates.title')}</h1>
+          <p className="text-base text-foreground-subtle">{t('templates.description')}</p>
         </div>
 
         {actionError ? (
-          <ActionErrorBanner message={actionError} onDismiss={() => setActionError(null)} />
+          <ActionErrorBanner
+            message={actionError}
+            dismissLabel={t('templates.close')}
+            onDismiss={() => setActionError(null)}
+          />
         ) : null}
 
-        <section className="mt-xl" aria-label={TEMPLATES_COPY.listLabel}>
+        <section className="mt-xl" aria-label={t('templates.listLabel')}>
           <TemplatesBody
+            t={t}
             templates={templates}
             error={error}
             actions={actions}
@@ -214,7 +218,15 @@ export default function TemplatesPage() {
 }
 
 /** Dismissible banner for an optimistic rename/delete that was rolled back. */
-function ActionErrorBanner({ message, onDismiss }: { message: string; onDismiss: () => void }) {
+function ActionErrorBanner({
+  message,
+  dismissLabel,
+  onDismiss,
+}: {
+  message: string;
+  dismissLabel: string;
+  onDismiss: () => void;
+}) {
   return (
     <div
       role="alert"
@@ -224,7 +236,7 @@ function ActionErrorBanner({ message, onDismiss }: { message: string; onDismiss:
       <button
         type="button"
         onClick={onDismiss}
-        aria-label={TEMPLATE_ACTIONS_COPY.preview_dialog.close}
+        aria-label={dismissLabel}
         className="shrink-0 rounded-md p-2xs text-danger transition-colors duration-fast ease-standard hover:bg-danger/10 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus"
       >
         <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" aria-hidden="true">
@@ -236,12 +248,14 @@ function ActionErrorBanner({ message, onDismiss }: { message: string; onDismiss:
 }
 
 function TemplatesBody({
+  t,
   templates,
   error,
   actions,
   onRetry,
   onCreate,
 }: {
+  t: WebTranslate;
   templates: TemplateSummary[] | null;
   error: string | null;
   actions: TemplateCardActions;
@@ -249,13 +263,13 @@ function TemplatesBody({
   onCreate: () => void;
 }) {
   if (error && !templates) {
-    return <ErrorState message={error} onRetry={onRetry} />;
+    return <ErrorState t={t} message={error} onRetry={onRetry} />;
   }
   if (templates === null) {
     return <SkeletonList />;
   }
   if (templates.length === 0) {
-    return <EmptyState onCreate={onCreate} />;
+    return <EmptyState t={t} onCreate={onCreate} />;
   }
   return (
     <ul className="motion-stagger flex flex-col gap-sm">
@@ -289,29 +303,37 @@ function SkeletonList() {
   );
 }
 
-function EmptyState({ onCreate }: { onCreate: () => void }) {
+function EmptyState({ t, onCreate }: { t: WebTranslate; onCreate: () => void }) {
   return (
     <Card className="motion-stagger flex flex-col items-center gap-md px-lg py-3xl text-center">
       <EmptyIllustration />
       <div className="flex flex-col gap-2xs">
-        <h2 className="text-lg font-bold text-foreground">{TEMPLATES_COPY.emptyTitle}</h2>
+        <h2 className="text-lg font-bold text-foreground">{t('templates.emptyTitle')}</h2>
         <p className="max-w-[380px] text-base text-foreground-subtle">
-          {TEMPLATES_COPY.emptyDescription}
+          {t('templates.emptyDescription')}
         </p>
       </div>
       <Button size="lg" onClick={onCreate}>
-        {TEMPLATES_COPY.emptyCta}
+        {t('templates.emptyCta')}
       </Button>
     </Card>
   );
 }
 
-function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
+function ErrorState({
+  t,
+  message,
+  onRetry,
+}: {
+  t: WebTranslate;
+  message: string;
+  onRetry: () => void;
+}) {
   return (
     <Card className="flex flex-col items-center gap-md px-lg py-3xl text-center">
       <p className="text-base text-foreground-muted">{message}</p>
       <Button variant="secondary" onClick={onRetry}>
-        {TEMPLATES_COPY.errorRetry}
+        {t('templates.retry')}
       </Button>
     </Card>
   );

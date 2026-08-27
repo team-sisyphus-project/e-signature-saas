@@ -3,7 +3,8 @@
 import * as React from 'react';
 import { Button, Card } from '@repo/ui';
 import type { TemplateSummary } from '@/lib/templates';
-import { TEMPLATE_ACTIONS_COPY, TEMPLATE_META_COPY } from '@/lib/templates-copy';
+import { templateMetaLine } from '@/lib/templates-copy';
+import { useTranslation } from '@/components/locale-provider';
 
 /**
  * TemplateCard — one saved template as a card (design-spec
@@ -12,7 +13,7 @@ import { TEMPLATE_ACTIONS_COPY, TEMPLATE_META_COPY } from '@/lib/templates-copy'
  * surface) so the lists read as one system.
  *
  * Three shapes:
- * - **base** (default): a read-only summary in the "내 템플릿" list — no link,
+ * - **base** (default): a read-only summary in the templates list — no link,
  *   badges, or actions.
  * - **selectable** Variant (design-spec `components/template-card/selectable.md`):
  *   pass `onSelect` and the card becomes a full-width button with the Card's
@@ -20,14 +21,14 @@ import { TEMPLATE_ACTIONS_COPY, TEMPLATE_META_COPY } from '@/lib/templates-copy'
  *   picker to start a contract from a template. Disable it (`disabled`) while a
  *   pick is being prepared so only one prepare runs at a time.
  * - **manageable** Extension (design-spec `components/template-card/manageable.md`):
- *   pass `actions` and the summary row grows a divided action cluster —
- *   미리보기 · 이름 수정 · 삭제 (quiet ghost buttons; delete carries a subtle danger
- *   tint) on the left and the primary '이 템플릿으로 시작' on the right. Used by
+ *   pass `actions` and the summary row grows a divided action cluster — preview,
+ *   rename, delete (quiet ghost buttons; delete carries a subtle danger tint) on
+ *   the left and the primary "start from this template" on the right. Used by
  *   `/templates` so a saved layout can be previewed, renamed, deleted, or reused.
  *
  * `onSelect` and `actions` are mutually exclusive — the picker uses `onSelect`,
- * the list uses `actions`. Copy (units, ordering, a11y labels) is never owned
- * here: it comes from `lib/templates-copy.ts` and the caller (`selectLabel`).
+ * the list uses `actions`. Wording is never authored here: it comes from the
+ * `templates` catalog domain and the caller (`selectLabel`).
  */
 
 /** Per-card management handlers for the manageable Extension. */
@@ -67,6 +68,7 @@ export function TemplateCard({
   disabled = false,
   actions,
 }: TemplateCardProps) {
+  const t = useTranslation();
   const summaryRow = (
     <>
       <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-primary-subtle text-primary">
@@ -74,7 +76,9 @@ export function TemplateCard({
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-2xs text-left">
         <h3 className="truncate text-base font-bold text-foreground">{template.name}</h3>
-        <p className="truncate text-sm text-foreground-subtle">{metaLine(template)}</p>
+        <p className="truncate text-sm text-foreground-subtle">
+          {templateMetaLine(t, template)}
+        </p>
       </div>
       {onSelect ? <ChevronIcon /> : null}
     </>
@@ -103,13 +107,13 @@ export function TemplateCard({
         <div
           className="flex flex-wrap items-center gap-xs border-t border-border pt-md"
           role="group"
-          aria-label={TEMPLATE_ACTIONS_COPY.actionsLabel(template.name)}
+          aria-label={t('templates.actionsLabel', { name: template.name })}
         >
           <Button variant="ghost" size="sm" onClick={() => actions.onPreview(template)}>
-            {TEMPLATE_ACTIONS_COPY.preview}
+            {t('templates.preview')}
           </Button>
           <Button variant="ghost" size="sm" onClick={() => actions.onRename(template)}>
-            {TEMPLATE_ACTIONS_COPY.rename}
+            {t('templates.rename')}
           </Button>
           <Button
             variant="ghost"
@@ -117,14 +121,14 @@ export function TemplateCard({
             onClick={() => actions.onDelete(template)}
             className="text-danger hover:bg-danger-subtle hover:text-danger active:bg-danger-subtle"
           >
-            {TEMPLATE_ACTIONS_COPY.delete}
+            {t('templates.delete')}
           </Button>
           <Button
             size="sm"
             onClick={() => actions.onStart(template)}
             className="ml-auto"
           >
-            {TEMPLATE_ACTIONS_COPY.start}
+            {t('templates.start')}
           </Button>
         </div>
       </Card>
@@ -136,36 +140,6 @@ export function TemplateCard({
       {summaryRow}
     </Card>
   );
-}
-
-function metaLine(template: TemplateSummary): string {
-  const parts = [
-    TEMPLATE_META_COPY.pages(template.pageCount),
-    TEMPLATE_META_COPY.fields(template.fieldCount),
-  ];
-  const when = formatRelative(template.createdAt);
-  if (when) parts.push(`${when} ${TEMPLATE_META_COPY.savedSuffix}`);
-  return parts.join(' · ');
-}
-
-/**
- * Relative "saved" time in the same voice as the contract list (방금 전 / N분 전
- * / N시간 전 / N일 전, then an absolute YYYY.MM.DD past a week). Mirrors
- * ContractCard's formatRelative so both lists tell time identically.
- */
-function formatRelative(iso: string): string {
-  const then = new Date(iso).getTime();
-  if (Number.isNaN(then)) return '';
-  const diffMs = Date.now() - then;
-  const min = Math.floor(diffMs / 60000);
-  if (min < 1) return '방금 전';
-  if (min < 60) return `${min}분 전`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}시간 전`;
-  const day = Math.floor(hr / 24);
-  if (day < 7) return `${day}일 전`;
-  const d = new Date(then);
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
 }
 
 function TemplateIcon() {

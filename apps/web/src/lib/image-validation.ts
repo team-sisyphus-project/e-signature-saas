@@ -1,15 +1,18 @@
 /**
- * Client-side image validation for branding assets (로고 · 파비콘).
+ * Client-side validation for branding image assets (logo · favicon).
  *
- * Pure, DOM-free constants + a single validate function so the rules are unit
- * testable and shared by every image uploader. There is no network here — the
- * actual upload / persistence is the branding form's concern (a later grain);
- * this only decides whether a picked file may be previewed and held locally.
+ * Pure, DOM-free constants plus a single validate function, so the rules are
+ * unit testable and shared by every image uploader. There is no network here:
+ * this only decides whether a picked file may be previewed and held locally —
+ * persisting it is the branding form's concern.
  *
- * Guard copy mirrors the wizard PDF guard (see `GUARD` in
- * components/wizard/upload-step.tsx): plain fact + next action, no blame, plain
- * 해요체 — the project base voice (design-spec/messaging/recording.md).
+ * Like the wizard's PDF guard, the validator returns the **catalog key** of the
+ * rule a file trips rather than a sentence. Deciding *what is wrong* is a rule;
+ * deciding *what language the reader sees it in* is a rendering concern, and
+ * mixing the two would make the rule untestable without picking a locale.
  */
+
+import type { WebTranslationKey } from './web-translations';
 
 /** Accepted image MIME types for branding assets. */
 export const ACCEPTED_IMAGE_TYPES = ['image/svg+xml', 'image/png'] as const;
@@ -21,14 +24,16 @@ export const ACCEPTED_IMAGE_TYPES = ['image/svg+xml', 'image/png'] as const;
  */
 export const ACCEPTED_IMAGE_EXTENSIONS = ['.svg', '.png'] as const;
 
-/** Human-facing accepted formats, woven into hints/error copy. */
-export const ACCEPTED_IMAGE_LABEL = 'SVG 또는 PNG';
+/**
+ * Size cap, in whole megabytes. Exported because the same number appears in the
+ * uploader's constraint hint, the "already set" hints, and the too-large
+ * message: a cap that states one number and enforces another is worse than no
+ * cap at all, so every sentence takes this value through a `{limit}` slot.
+ */
+export const MAX_IMAGE_MB = 1;
 
-/** Maximum branding image size in bytes (1MB). */
-export const MAX_IMAGE_BYTES = 1024 * 1024;
-
-/** Human-facing max size, woven into hints/error copy. */
-export const MAX_IMAGE_SIZE_LABEL = '1MB';
+/** Maximum branding image size in bytes. */
+export const MAX_IMAGE_BYTES = MAX_IMAGE_MB * 1024 * 1024;
 
 /**
  * The minimal file shape the validator needs. A real DOM `File` satisfies this,
@@ -41,17 +46,14 @@ export interface ValidatedFile {
 }
 
 /**
- * Guard copy — `{무슨 일이 있었는지(비난 없이)} + {다음 행동}`, plain 해요체.
- * The single source for the uploader's inline error messages.
+ * Catalog keys for the three guards, so a caller can name a rule without
+ * resolving it. The uploader renders them with `{ limit: MAX_IMAGE_MB }`.
  */
-export const IMAGE_VALIDATION_COPY = {
-  invalidType: `${ACCEPTED_IMAGE_LABEL} 파일만 올릴 수 있어요. 다른 파일로 다시 시도해 주세요.`,
-  empty: '파일이 비어 있어요. 다른 파일로 다시 시도해 주세요.',
-  tooLarge: `파일이 너무 커요. ${MAX_IMAGE_SIZE_LABEL} 이하의 ${ACCEPTED_IMAGE_LABEL} 파일로 올려 주세요.`,
-} as const;
-
-/** Constraint hint shown under the uploader by default (formats · max size). */
-export const IMAGE_CONSTRAINT_HINT = `${ACCEPTED_IMAGE_LABEL} · 최대 ${MAX_IMAGE_SIZE_LABEL}`;
+export const IMAGE_GUARD_KEYS = {
+  invalidType: 'settings.imageInvalidType',
+  empty: 'settings.imageEmpty',
+  tooLarge: 'settings.imageTooLarge',
+} as const satisfies Record<string, WebTranslationKey>;
 
 /** The `accept` attribute value for the file input (MIME types + extensions). */
 export const IMAGE_ACCEPT_ATTR = [...ACCEPTED_IMAGE_TYPES, ...ACCEPTED_IMAGE_EXTENSIONS].join(',');
@@ -62,23 +64,27 @@ function hasAcceptedExtension(name: string): boolean {
 }
 
 /**
- * Validate a picked image against the branding constraints. Returns a Korean
- * guard message, or `null` when the file is acceptable.
+ * Validate a picked image against the branding constraints. Returns the catalog
+ * key of the guard it trips, or `null` when the file is acceptable.
  *
  * Order is deliberate — type → empty → size — so the most fundamental problem
  * surfaces first (a `.jpg` reads as "wrong format", not "too large").
  */
-export function validateImageFile(file: ValidatedFile): string | null {
+export function validateImageFile(file: ValidatedFile): WebTranslationKey | null {
   const typeOk =
     (file.type !== '' && (ACCEPTED_IMAGE_TYPES as readonly string[]).includes(file.type)) ||
     hasAcceptedExtension(file.name);
-  if (!typeOk) return IMAGE_VALIDATION_COPY.invalidType;
-  if (file.size === 0) return IMAGE_VALIDATION_COPY.empty;
-  if (file.size > MAX_IMAGE_BYTES) return IMAGE_VALIDATION_COPY.tooLarge;
+  if (!typeOk) return IMAGE_GUARD_KEYS.invalidType;
+  if (file.size === 0) return IMAGE_GUARD_KEYS.empty;
+  if (file.size > MAX_IMAGE_BYTES) return IMAGE_GUARD_KEYS.tooLarge;
   return null;
 }
 
-/** Format a byte count as a short human string (e.g. `240 KB`, `1.0 MB`). */
+/**
+ * Byte count as a short human size. Units stay in ASCII (B / KB / MB), which
+ * read the same in both locales — locale-aware number formatting is outside the
+ * i18n scope, and inventing a translated unit here would only fragment it.
+ */
 export function formatImageSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   const kb = bytes / 1024;

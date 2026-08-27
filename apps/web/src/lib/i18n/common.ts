@@ -11,6 +11,15 @@ import type { WebTranslationDomain } from './types';
  * sentence reached from different places) stays with its owning domain.
  */
 export const COMMON_TRANSLATIONS = {
+  // --- product identity ---------------------------------------------------
+  /**
+   * The service name, shown wherever no uploaded branding logo applies: the
+   * auth screens' wordmark, the app header's brand mark, and the branding
+   * preview's header/tab mockups. Three consumers across three domains, so a
+   * rename has exactly one place to happen.
+   */
+  product: { ko: '전자계약', en: 'eSign' },
+
   // --- sign-field vocabulary ----------------------------------------------
   /**
    * The three placeable field types. Shared rather than owned by `wizard`

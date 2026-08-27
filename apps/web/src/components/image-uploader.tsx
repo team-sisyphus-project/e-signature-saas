@@ -1,19 +1,20 @@
 'use client';
 
 /**
- * ImageUploader — the reusable branding image control (로고 · 파비콘 공용).
+ * ImageUploader — the reusable branding image control, shared by the logo and
+ * the favicon fields.
  *
  * A controlled, presentation-only component: the parent owns the picked `File`
  * (`value` / `onChange`), and this renders one of three states — default
  * (drop / pick), preview (thumbnail + filename + remove/replace), and an inline
  * error when a pick violates the format/size constraints. There is no network
- * here; validation and the local object-URL preview are all that happen (the
- * actual upload lands with the branding form, a later grain).
+ * here; validation and the local object-URL preview are all that happen.
  *
  * Visuals reuse the wizard drop-zone treatment (components/wizard/upload-step)
  * and the danger tokens the Input primitive uses for its invalid state — no new
- * colors, spacing, or radii. Labels come in as props so the same control serves
- * both 로고 and 파비콘 (copy is owned by the form, not this component).
+ * colors, spacing, or radii. The *field label* comes in as a prop so one control
+ * serves both fields; every other word is read from the `settings` domain here,
+ * because only this component knows which of its three states is on screen.
  */
 
 import * as React from 'react';
@@ -21,9 +22,11 @@ import { Button, Field, cn } from '@repo/ui';
 import {
   validateImageFile,
   formatImageSize,
-  IMAGE_CONSTRAINT_HINT,
   IMAGE_ACCEPT_ATTR,
+  MAX_IMAGE_MB,
 } from '@/lib/image-validation';
+import { useTranslation } from '@/components/locale-provider';
+import type { WebTranslationKey } from '@/lib/web-translations';
 import {
   resolveImageUploaderView,
   createObjectUrlLifecycle,
@@ -33,14 +36,14 @@ import {
 export interface ImageUploaderProps {
   /** Ties the field label to the file input. Must be unique per uploader. */
   id: string;
-  /** Field label, e.g. `로고` / `파비콘`. Supplied by the form (settings copy). */
+  /** Field label, e.g. "Logo" / "Favicon". Supplied by the form (settings copy). */
   label: React.ReactNode;
   /** Constraint hint under the field. Defaults to the format · size line. */
   hint?: React.ReactNode;
   /** The currently held file, or `null` when nothing is selected. */
   value: File | null;
   /**
-   * URL of the asset already saved on the server (로고 · 파비콘), or `null`/absent
+   * URL of the asset already saved on the server, or `null`/absent
    * when none is stored. When no file is picked, its thumbnail is shown so the
    * control reflects the live setting — priority is picked > saved > empty.
    */
@@ -59,8 +62,11 @@ export function ImageUploader({
   onChange,
   className,
 }: ImageUploaderProps) {
+  const t = useTranslation();
   const inputRef = React.useRef<HTMLInputElement>(null);
-  const [error, setError] = React.useState<string | null>(null);
+  // The guard a pick tripped, as a catalog key — resolved at render, so a
+  // language switch re-renders the message instead of stranding the old one.
+  const [errorKey, setErrorKey] = React.useState<WebTranslationKey | null>(null);
   const [dragActive, setDragActive] = React.useState(false);
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
 
@@ -90,20 +96,20 @@ export function ImageUploader({
       // Reset so re-picking the same file fires `change` again.
       if (inputRef.current) inputRef.current.value = '';
       if (!file) return;
-      const message = validateImageFile(file);
-      if (message) {
+      const guard = validateImageFile(file);
+      if (guard) {
         // Keep any previously valid selection; just surface what's wrong.
-        setError(message);
+        setErrorKey(guard);
         return;
       }
-      setError(null);
+      setErrorKey(null);
       onChange(file);
     },
     [onChange],
   );
 
   const handleRemove = React.useCallback(() => {
-    setError(null);
+    setErrorKey(null);
     if (inputRef.current) inputRef.current.value = '';
     onChange(null);
   }, [onChange]);
@@ -120,6 +126,7 @@ export function ImageUploader({
   );
 
   const labelText = typeof label === 'string' ? label : undefined;
+  const error = errorKey ? t(errorKey, { limit: MAX_IMAGE_MB }) : null;
 
   // Which source to render: a ready local pick wins, then the saved asset, then
   // the empty drop zone. `previewUrl` is only set once the file's blob URL is
@@ -133,7 +140,7 @@ export function ImageUploader({
     <Field
       label={label}
       htmlFor={id}
-      hint={hint ?? IMAGE_CONSTRAINT_HINT}
+      hint={hint ?? t('settings.imageHint', { limit: MAX_IMAGE_MB })}
       error={error}
       className={className}
     >
@@ -166,17 +173,17 @@ export function ImageUploader({
           </div>
           <div className="flex shrink-0 items-center gap-2xs">
             <Button variant="ghost" size="sm" onClick={triggerPick}>
-              다른 파일
+              {t('settings.imageReplace')}
             </Button>
             <Button variant="ghost" size="sm" onClick={handleRemove}>
-              제거
+              {t('settings.imageRemove')}
             </Button>
           </div>
         </div>
       ) : view.kind === 'saved' ? (
         // Saved-asset preview: same card shell as a fresh pick (identical tokens),
         // but the meta column names the stored asset instead of a file's
-        // name/size, and only 교체(다른 파일) is offered — deleting the saved asset
+        // name/size, and only replacement is offered — deleting the saved asset
         // needs the network, which is the form's concern, not this control's.
         <div
           className={cn(
@@ -191,13 +198,15 @@ export function ImageUploader({
           </span>
           <div className="flex min-w-0 flex-1 flex-col gap-2xs">
             <span className="truncate text-sm font-semibold text-foreground">
-              {labelText ? `현재 설정된 ${labelText}` : '현재 설정된 이미지'}
+              {labelText
+                ? t('settings.imageSaved', { label: labelText })
+                : t('settings.imageSavedGeneric')}
             </span>
-            <span className="text-xs text-foreground-subtle">새로 올리면 교체돼요</span>
+            <span className="text-xs text-foreground-subtle">{t('settings.imageSavedHint')}</span>
           </div>
           <div className="flex shrink-0 items-center gap-2xs">
             <Button variant="ghost" size="sm" onClick={triggerPick}>
-              다른 파일
+              {t('settings.imageReplace')}
             </Button>
           </div>
         </div>
@@ -236,13 +245,15 @@ export function ImageUploader({
           <div className="flex flex-col gap-2xs">
             <span className="text-sm font-bold text-foreground">
               {dragActive
-                ? '여기에 놓으면 올라가요'
-                : `${labelText ? `${labelText} 이미지를 ` : '이미지를 '}끌어다 놓으세요`}
+                ? t('settings.imageDropActive')
+                : labelText
+                  ? t('settings.imageDropPrompt', { label: labelText })
+                  : t('settings.imageDropPromptGeneric')}
             </span>
-            <span className="text-xs text-foreground-subtle">또는 클릭해서 파일을 선택하세요</span>
+            <span className="text-xs text-foreground-subtle">{t('settings.imageDropHint')}</span>
           </div>
           <span className="pointer-events-none mt-2xs inline-flex h-9 items-center rounded-md bg-surface px-md text-sm font-semibold text-primary shadow-sm">
-            파일 선택
+            {t('settings.imagePick')}
           </span>
         </label>
       )}

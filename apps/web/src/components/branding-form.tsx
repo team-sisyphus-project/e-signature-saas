@@ -1,14 +1,14 @@
 'use client';
 
 /**
- * BrandingForm — the 설정 → 브랜딩 form. It assembles the existing branding
- * controls into one page-level form: two ImageUploaders (로고 · 파비콘) reusing
- * the same control, and the BrandColorPicker for the 대표 색상. It owns each
- * field's local value, aggregates validity, and provides a save/cancel action
- * bar (save enabled only when there's a valid change to keep).
+ * BrandingForm — the Settings → Branding form. It assembles the existing
+ * branding controls into one page-level form: two ImageUploaders (logo ·
+ * favicon) reusing the same control, and the BrandColorPicker for the brand
+ * color. It owns each field's local value, aggregates validity, and provides a
+ * save/cancel action bar (save enabled only when there's a valid change to keep).
  *
- * Persistence (real, this grain): on mount it loads `GET /branding` to seed the
- * current 대표 색상 and whether a logo/favicon is already set. On save it uploads
+ * Persistence: on mount it loads `GET /branding` to seed the current brand
+ * color and whether a logo/favicon is already set. On save it uploads
  * any newly picked logo/favicon (`POST /branding/logo|favicon`), persists the
  * color (`PATCH /branding`), then calls the global runtime's `refresh()` so the
  * header logo, browser-tab favicon, and brand color update for every end user
@@ -18,7 +18,7 @@
  * All chrome reuses existing `globals.css` tokens; no new colors, spacing, or
  * radii. The child controls own their own inline validation and only ever
  * surface valid values up here, so the parent's held state stays valid — the
- * one form-level gate is that the 대표 색상 is a valid hex.
+ * one form-level gate is that the brand color is a valid hex.
  */
 
 import * as React from 'react';
@@ -31,7 +31,8 @@ import { isValidHex } from '@/lib/branding';
 import { ApiError, GENERIC_ERROR } from '@/lib/api';
 import { getToken } from '@/lib/auth';
 import { fetchBranding, updateBrandColor, uploadBrandingAsset } from '@/lib/web-branding';
-import { BRANDING_FORM_COPY } from '@/lib/settings-copy';
+import { MAX_IMAGE_MB } from '@/lib/image-validation';
+import { useTranslation } from '@/components/locale-provider';
 
 interface BrandingValues {
   logo: File | null;
@@ -48,6 +49,7 @@ function readBrandPrimary(): string {
 }
 
 export function BrandingForm() {
+  const t = useTranslation();
   // The global runtime's refresh() re-fetches branding and re-applies it across
   // the whole app (header logo · favicon · brand color) the moment we save.
   const { refresh } = useBranding();
@@ -69,7 +71,7 @@ export function BrandingForm() {
   const [saved, setSaved] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  // Seed from the persisted branding: current 대표 색상 + logo/favicon presence.
+  // Seed from the persisted branding: current brand color + logo/favicon presence.
   // Fall back to the live `--brand-primary` token when the color is unset (or the
   // load fails) so the swatch/preview open on the real current color, not empty.
   React.useEffect(() => {
@@ -150,28 +152,29 @@ export function BrandingForm() {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-lg" noValidate>
-      {/* lg 이상: 좌(입력)·우(미리보기) 2단 그리드. lg 미만: 세로 1단 붕괴.
-          `lg:items-start`로 우측 sticky 패널이 열 높이에 늘어나지 않게 고정한다. */}
+      {/* At `lg` and up: inputs on the left, preview on the right. Below `lg` the
+          grid collapses to a single column. `lg:items-start` stops the sticky
+          right panel from stretching to the column height. */}
       <div className="grid grid-cols-1 gap-lg lg:grid-cols-2 lg:items-start">
-        {/* 좌열 — 입력: 로고 · 파비콘 · 대표 색상. */}
+        {/* Left column — inputs: logo, favicon, brand color. */}
         <div className="flex flex-col gap-lg">
           <ImageUploader
             id="branding-logo"
-            label={BRANDING_FORM_COPY.logoLabel}
-            hint={hasLogo ? BRANDING_FORM_COPY.logoSetHint : undefined}
+            label={t('settings.logoLabel')}
+            hint={hasLogo ? t('settings.logoSetHint', { limit: MAX_IMAGE_MB }) : undefined}
             value={values.logo}
             savedUrl={savedLogoUrl}
             onChange={(file) => update({ logo: file })}
           />
           <ImageUploader
             id="branding-favicon"
-            label={BRANDING_FORM_COPY.faviconLabel}
-            hint={hasFavicon ? BRANDING_FORM_COPY.faviconSetHint : undefined}
+            label={t('settings.faviconLabel')}
+            hint={hasFavicon ? t('settings.faviconSetHint', { limit: MAX_IMAGE_MB }) : undefined}
             value={values.favicon}
             savedUrl={savedFaviconUrl}
             onChange={(file) => update({ favicon: file })}
           />
-          {/* showPreview=false — 우측 패널이 색상을 실시간으로 보여주므로 중복 제거. */}
+          {/* showPreview=false — the right panel already shows the color live. */}
           <BrandColorPicker
             id="branding-color"
             value={values.color}
@@ -180,7 +183,7 @@ export function BrandingForm() {
           />
         </div>
 
-        {/* 우열 — 미리보기: 스크롤 시 상단 sticky 고정(lg 이상). */}
+        {/* Right column — preview: sticks to the top on scroll at `lg` and up. */}
         <div className="lg:sticky lg:top-xl">
           <BrandingPreview
             logoFile={values.logo}
@@ -203,16 +206,16 @@ export function BrandingForm() {
           role="status"
           className="rounded-md bg-primary-subtle px-md py-sm text-sm font-semibold text-primary"
         >
-          {BRANDING_FORM_COPY.savedNotice}
+          {t('settings.brandingSaved')}
         </p>
       ) : null}
 
       <div className="flex items-center justify-end gap-sm border-t border-border pt-md">
         <Button type="button" variant="ghost" onClick={handleCancel} disabled={!isDirty || saving}>
-          {BRANDING_FORM_COPY.cancel}
+          {t('settings.cancel')}
         </Button>
         <Button type="submit" variant="primary" disabled={!canSave} isLoading={saving}>
-          {BRANDING_FORM_COPY.save}
+          {t('settings.brandingSave')}
         </Button>
       </div>
     </form>

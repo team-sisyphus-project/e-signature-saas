@@ -3,7 +3,7 @@
 /**
  * TemplatePreviewDialog — a read-only look at a saved template's source PDF with
  * its field layout overlaid (design-spec `components/template-preview-dialog/base.md`,
- * copy `lib/templates-copy.ts` `preview_dialog`, tone `tone/templates-list.md`).
+ * copy: the `templates` catalog domain, tone `tone/templates-list.md`).
  *
  * The list hands it a `TemplateSummary` (no field layout). Opening the dialog
  * loads the rest — the full field array + pageCount via `getTemplate(id)` and the
@@ -12,9 +12,9 @@
  * each signature/date/text field sits, page by page. Preview never mutates the
  * template: it only *reads* the stored geometry.
  *
- * Its own state machine — loading → (ready | error) — keeps it independent of the
- * list: a failed load surfaces the server's Korean copy with a 다시 시도 path, and
- * a 401 bounces to /login like the rest of the app.
+ * Its own state machine — loading → (ready | error) — keeps it independent of
+ * the list: a failed load surfaces the server's copy with a retry path, and a
+ * 401 bounces to /login like the rest of the app.
  */
 
 import * as React from 'react';
@@ -36,9 +36,7 @@ import {
   type TemplateField,
   type TemplateSummary,
 } from '@/lib/templates';
-import { TEMPLATE_ACTIONS_COPY } from '@/lib/templates-copy';
-
-const COPY = TEMPLATE_ACTIONS_COPY.preview_dialog;
+import { useTranslation } from '@/components/locale-provider';
 
 type Status = 'loading' | 'ready' | 'error';
 
@@ -61,6 +59,7 @@ export function TemplatePreviewDialog({
   template,
 }: TemplatePreviewDialogProps) {
   const router = useRouter();
+  const t = useTranslation();
   const [status, setStatus] = React.useState<Status>('loading');
   const [data, setData] = React.useState<PreviewData | null>(null);
   const [error, setError] = React.useState<string | null>(null);
@@ -103,9 +102,9 @@ export function TemplatePreviewDialog({
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="truncate pr-9">
-            {template ? COPY.title(template.name) : ''}
+            {template ? t('templates.previewTitle', { name: template.name }) : ''}
           </DialogTitle>
-          <DialogDescription>{COPY.description}</DialogDescription>
+          <DialogDescription>{t('templates.previewDescription')}</DialogDescription>
         </DialogHeader>
 
         <div className="mt-sm">
@@ -124,9 +123,11 @@ export function TemplatePreviewDialog({
 
           {status === 'error' ? (
             <div className="flex flex-col items-center gap-md px-md py-2xl text-center">
-              <p className="text-base text-foreground-muted">{error ?? COPY.error}</p>
+              <p className="text-base text-foreground-muted">
+                {error ?? t('templates.previewError')}
+              </p>
               <Button variant="secondary" onClick={() => setReloadKey((k) => k + 1)}>
-                {COPY.retry}
+                {t('templates.retry')}
               </Button>
             </div>
           ) : null}
