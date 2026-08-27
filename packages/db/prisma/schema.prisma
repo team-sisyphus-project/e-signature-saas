@@ -27,6 +27,11 @@ model User {
   // Preferred language for signed-in experiences. This is intentionally a
   // small closed set while the product supports Korean and English only.
   locale       Locale   @default(ko)
+  // Preferred UI color theme. A small closed set mirroring `locale`: the same
+  // lowercase strings flow through the API DTO, the client, the pre-paint
+  // cookie, and this DB enum with no case mapping. Default `system` follows the
+  // device/OS color scheme; the DB-level default backfills existing rows.
+  themePreference ThemePreference @default(system) @map("theme_preference")
   plan         Plan     @default(FREE)
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
@@ -237,6 +242,15 @@ enum Plan {
 enum Locale {
   ko
   en
+}
+
+/// Supported UI color themes. Values are kept lowercase because they are
+/// exposed directly by the API and used identically on the client, the
+/// pre-paint cookie, and the DB enum. `system` follows the device/OS scheme.
+enum ThemePreference {
+  light
+  dark
+  system
 }
 
 enum DocumentStatus {

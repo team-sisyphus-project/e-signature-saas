@@ -36,3 +36,8 @@ export class UpdateLocaleDto {
   @IsIn(['ko', 'en'])
   locale!: 'ko' | 'en';
 }
+
+export class UpdateThemeDto {
+  @IsIn(['light', 'dark', 'system'])
+  theme!: 'light' | 'dark' | 'system';
+}

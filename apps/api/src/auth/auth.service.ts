@@ -8,7 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { OAuth2Client } from 'google-auth-library';
-import type { Locale } from '@repo/db';
+import type { Locale, ThemePreference } from '@repo/db';
 import { PrismaService } from '../prisma/prisma.service';
 import { MESSAGES } from '../common/messages';
 import type { GoogleAuthDto, LoginDto, RegisterDto } from './dto/auth.dto';
@@ -21,7 +21,14 @@ const GOOGLE_REDIRECT_URI = 'postmessage';
 
 export interface AuthResult {
   accessToken: string;
-  user: { id: string; email: string; name: string | null; plan: string; locale: Locale };
+  user: {
+    id: string;
+    email: string;
+    name: string | null;
+    plan: string;
+    locale: Locale;
+    themePreference: ThemePreference;
+  };
 }
 
 @Injectable()
@@ -44,7 +51,14 @@ export class AuthService {
       data: { email, passwordHash, name: dto.name ?? null },
     });
 
-    return this.buildResult(user.id, user.email, user.name, user.plan, user.locale);
+    return this.buildResult(
+      user.id,
+      user.email,
+      user.name,
+      user.plan,
+      user.locale,
+      user.themePreference,
+    );
   }
 
   async login(dto: LoginDto): Promise<AuthResult> {
@@ -59,7 +73,14 @@ export class AuthService {
       throw new UnauthorizedException(MESSAGES.auth.invalidCredentials);
     }
 
-    return this.buildResult(user.id, user.email, user.name, user.plan, user.locale);
+    return this.buildResult(
+      user.id,
+      user.email,
+      user.name,
+      user.plan,
+      user.locale,
+      user.themePreference,
+    );
   }
 
   /**
@@ -126,7 +147,14 @@ export class AuthService {
         : await this.prisma.user.create({ data: { email, googleId, name } });
     }
 
-    return this.buildResult(user.id, user.email, user.name, user.plan, user.locale);
+    return this.buildResult(
+      user.id,
+      user.email,
+      user.name,
+      user.plan,
+      user.locale,
+      user.themePreference,
+    );
   }
 
   private buildResult(
@@ -135,8 +163,9 @@ export class AuthService {
     name: string | null,
     plan: string,
     locale: Locale,
+    themePreference: ThemePreference,
   ): AuthResult {
     const accessToken = this.jwt.sign({ sub: id, email });
-    return { accessToken, user: { id, email, name, plan, locale } };
+    return { accessToken, user: { id, email, name, plan, locale, themePreference } };
   }
 }
