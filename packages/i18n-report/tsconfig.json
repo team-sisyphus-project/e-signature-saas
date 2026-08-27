@@ -1,0 +1,20 @@
+{
+  "extends": "@repo/tsconfig/base.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    // `DOM` is here for the *web* catalog's sources, which this tool typechecks
+    // alongside its own: `apps/web/src/lib/locale.ts` reads `window`. Nothing in
+    // `src/` may touch a browser global — this is a Node CLI.
+    "lib": ["ES2022", "DOM"],
+    "types": ["node", "jest"],
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "incremental": false,
+    "isolatedModules": false,
+    "noUncheckedIndexedAccess": false
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules"]
+}

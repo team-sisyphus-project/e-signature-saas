@@ -1,0 +1,20 @@
+{
+  "name": "@repo/i18n-report",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Repo-level tooling that merges the web and server translation catalogs into one missing-key report.",
+  "scripts": {
+    "report": "ts-node --transpile-only src/cli.ts",
+    "test": "jest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@repo/tsconfig": "workspace:*",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.10.2",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.3"
+  }
+}

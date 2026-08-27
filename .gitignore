@@ -44,6 +44,9 @@ packages/db/src/generated/
 .env.development.local
 .env.test.local
 .env.production.local
+# i18n missing-key report (regenerate with `pnpm i18n:report`)
+i18n-missing-keys.json
+i18n-missing-keys.txt
 # Local-disk storage fallback (uploaded PDFs when S3 is not configured)
 .storage/
 **/.storage/

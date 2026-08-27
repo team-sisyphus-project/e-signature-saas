@@ -50,6 +50,7 @@ pnpm dev
 | `pnpm build` | 전체 빌드 |
 | `pnpm lint` | 전체 린트 |
 | `pnpm typecheck` | 전체 타입 체크 |
+| `pnpm i18n:report` | ko/en 번역 누락 키 리포트 생성 (`i18n-missing-keys.json` / `.txt`) |
 | `pnpm db:generate` | Prisma 클라이언트 생성 |
 | `pnpm db:migrate` | Prisma 마이그레이션 (dev) |
 
