@@ -45,7 +45,9 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
         ? t('settings.branding')
         : item.href === '/settings/language'
           ? t('settings.language')
-          : item.label,
+          : item.href === '/settings/theme'
+            ? t('settings.theme')
+            : item.label,
   }));
 
   return (
