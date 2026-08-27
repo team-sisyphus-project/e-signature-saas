@@ -6,8 +6,7 @@ import type { ViewMode } from '@/lib/view-mode';
 
 /**
  * ViewSwitcher — the reusable segmented control that flips the dashboard between
- * its TO-DO **list** and **kanban** views (design-spec
- * `components/view-switcher/base.md`). It is a pure, controlled presentation
+ * its TO-DO **list** and **kanban** views. It is a pure, controlled presentation
  * component: the parent owns the selected `value` and the switch is a plain
  * conditional render, so toggling views never touches the loaded data, active
  * filter, or scroll position (context is preserved — see dashboard/page.tsx).
@@ -21,12 +20,11 @@ import type { ViewMode } from '@/lib/view-mode';
  *   segment is signalled by *form* as well as hue — a filled primary-subtle chip
  *   and a heavier font weight — not color by itself. The `primary-subtle` /
  *   `text-primary` pair is the dashboard's AA-verified "actionable = primary"
- *   language (same as the SEND_DRAFT CTA pill and status-badge 진행 중).
+ *   language (same as the send CTA pill and the in-progress status badge).
  *
- * This component owns structure/tone/interaction but NOT copy: the Korean segment
- * labels come in via `copy` (single source of truth:
- * design-spec/messaging/todo-copy.md "뷰 전환 라벨"), exactly like DashboardSummary
- * and UrgencyBadge take their strings as props.
+ * This component owns structure/tone/interaction but NOT copy: the segment
+ * labels come in via `copy`, exactly like DashboardSummary and UrgencyBadge take
+ * their strings as props.
  */
 
 /** Render order of the segments (left → right). `list` is the default view. */
@@ -34,14 +32,14 @@ const VIEW_ORDER: readonly ViewMode[] = ['list', 'kanban'];
 
 /**
  * Segment labels, injected so the component never owns user-facing strings
- * (source of truth: design-spec/messaging/todo-copy.md).
+ * (built from the translation catalog by `lib/todo-copy.ts`).
  */
 export interface ViewSwitcherCopy {
-  /** Label per view, e.g. `{ list: '목록', kanban: '칸반' }`. */
+  /** Label per view, one per segment. */
   label: Record<ViewMode, string>;
   /**
-   * Accessible name for the whole control (the radiogroup), e.g. "뷰 전환".
-   * Keeps the segment buttons from being an unlabeled group for screen readers.
+   * Accessible name for the whole control (the radiogroup). Keeps the segment
+   * buttons from being an unlabeled group for screen readers.
    */
   groupLabel: string;
 }
@@ -51,7 +49,7 @@ export interface ViewSwitcherProps {
   value: ViewMode;
   /** Called with the newly chosen view when a segment is activated. */
   onChange: (value: ViewMode) => void;
-  /** Segment + group labels (source: messaging/todo-copy.md). */
+  /** Segment + group labels (source: `lib/todo-copy.ts`). */
   copy: ViewSwitcherCopy;
   className?: string;
 }

@@ -6,10 +6,10 @@ import type { OnboardingStep } from '@/lib/onboarding-copy';
 /**
  * OnboardingGuide — the first-run welcome guide that walks a brand-new user
  * (zero real contracts) through creating their first contract: a numbered
- * ①업로드 ②서명 요청 ③완료 추적 walkthrough plus one primary CTA that starts a
- * real contract.
+ * upload → request a signature → track completion walkthrough, plus one primary
+ * CTA that starts a real contract.
  *
- * Design decisions (design-spec/components/onboarding-guide/base.md):
+ * Design decisions:
  * - Visual language is shared with the dashboard's EmptyState and summary cards
  *   (same `Card` surface, spacing, typography, tone): heading in
  *   `text-lg font-bold text-foreground`, lead/step body in `text-foreground-subtle`,
@@ -21,18 +21,18 @@ import type { OnboardingStep } from '@/lib/onboarding-copy';
  *   colors. Steps render in an `<ol>` so their order is conveyed semantically;
  *   the visual number is `aria-hidden` to avoid a double read.
  * - Pure presentation: the component owns structure/tone but NOT the wording —
- *   `title`, `description`, `steps`, and `ctaLabel` are all injected (single
- *   source of truth: design-spec/messaging + `lib/onboarding-copy.ts`), exactly
- *   like UrgencyBadge/DashboardSummary take their copy as props. It holds no
+ *   `title`, `description`, `steps`, and `ctaLabel` are all injected by
+ *   `lib/onboarding-copy.ts` from the translation catalog, exactly like
+ *   UrgencyBadge/DashboardSummary take their copy as props. It holds no
  *   gating or persistence logic (that is the dashboard's job in a later grain);
  *   it just renders and calls `onCreate` on the CTA.
  */
 export interface OnboardingGuideProps {
-  /** Guide heading (source: onboarding-copy.ts). */
+  /** Guide heading (source: `lib/onboarding-copy.ts`). */
   title: string;
   /** One-line lead under the heading. */
   description: string;
-  /** The ordered walkthrough steps (①업로드 ②서명 요청 ③완료 추적). */
+  /** The ordered walkthrough steps: upload, request a signature, track completion. */
   steps: OnboardingStep[];
   /** Primary CTA label; clicking it calls {@link onCreate}. */
   ctaLabel: string;

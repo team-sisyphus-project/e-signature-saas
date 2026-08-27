@@ -7,31 +7,34 @@ import { STATUS_TONE } from '@/components/status-badge';
 import type { DocumentStatus, DocumentSummary } from '@/lib/documents';
 
 /**
- * KanbanBoard — the dashboard's 칸반 view (design-spec
- * `components/kanban-board/base.md`). It lays the *same* documents the list shows
- * (the `visible` set — already filtered by the active summary card and urgency-
- * sorted) into columns by lifecycle status, so switching 목록↔칸반 loses no
- * context and applies the same filter (same `visible` set → context preserved).
+ * KanbanBoard — the dashboard's board view. It lays the *same* documents the
+ * list shows (the `visible` set — already filtered by the active summary card
+ * and urgency-sorted) into columns by lifecycle status, so switching between
+ * list and board loses no context and applies the same filter.
  *
- * Design decisions (design-spec):
- * - Columns follow the lifecycle left→right: 작성 중 → 예약됨 → 진행 중 → 완료됨.
- *   The established three active columns always render; 예약됨 and 취소됨 render
- *   only when the visible set contains a document in that state, keeping an
- *   unscheduled dashboard's shape stable.
+ * Design decisions:
+ * - Columns follow the lifecycle left→right: draft → scheduled → in progress →
+ *   completed. The three active columns always render; scheduled and cancelled
+ *   render only when the visible set contains a document in that state, keeping
+ *   an unscheduled dashboard's shape stable.
  * - Column highlight reuses `STATUS_TONE` from status-badge (the same status reads
  *   with the same hue as its badge; no color re-declared).
- * - Cards reuse ContractCard in its `compact` density (design-spec
- *   `components/contract-card/compact.md`).
+ * - Cards reuse ContractCard in its `compact` density.
  *
- * Copy is never owned here: column labels / count unit / empty-column text come in
- * via `copy` (source: design-spec/messaging/todo-copy.md via lib/todo-copy.ts).
+ * Copy is never owned here: column labels, the column screen-reader name, and
+ * the empty-column text come in via `copy`, built from the translation catalog
+ * by `lib/todo-copy.ts`.
  */
 
 export interface KanbanBoardCopy {
-  /** Column header label per status, e.g. `{ DRAFT: '작성 중', ... }`. */
+  /** Column header label per status. */
   columnLabel: Record<DocumentStatus, string>;
-  /** Count-unit noun for the column's screen-reader label, e.g. "건". */
-  countUnit: string;
+  /**
+   * The column's screen-reader name, pairing the status with its count (e.g.
+   * "Draft: 2"). A function rather than a count-unit noun to append: how a count
+   * joins its label is grammar, and grammar belongs to the catalog sentence.
+   */
+  srLabel: (status: DocumentStatus, count: number) => string;
   /** Text shown in a column with no contracts. */
   emptyColumn: string;
   /** Accessible name for the whole board. */
@@ -56,9 +59,9 @@ function groupByStatus(documents: DocumentSummary[]): Record<DocumentStatus, Doc
 }
 
 export interface KanbanBoardProps {
-  /** The visible (filtered + urgency-sorted) set — the exact list the 목록 view shows. */
+  /** The visible (filtered + urgency-sorted) set — the exact list the list view shows. */
   documents: DocumentSummary[];
-  /** Column labels + count unit + empty text (source: messaging/todo-copy.md). */
+  /** Column labels + screen-reader names + empty text (source: `lib/todo-copy.ts`). */
   copy: KanbanBoardCopy;
   /** Briefly ring-highlight a just-sent contract, matching the list. */
   highlightId?: string | null;
@@ -67,7 +70,8 @@ export interface KanbanBoardProps {
 
 export function KanbanBoard({ documents, copy, highlightId, className }: KanbanBoardProps) {
   const groups = React.useMemo(() => groupByStatus(documents), [documents]);
-  // 작성 중 / 진행 중 / 완료됨 always render; 예약됨 / 취소됨 only when they have cards.
+  // Draft / in progress / completed always render; scheduled / cancelled only
+  // when they hold cards.
   const columns = COLUMN_ORDER.filter(
     (status) =>
       status !== 'SCHEDULED' && status !== 'CANCELLED'
@@ -86,7 +90,7 @@ export function KanbanBoard({ documents, copy, highlightId, className }: KanbanB
           key={status}
           status={status}
           label={copy.columnLabel[status]}
-          countUnit={copy.countUnit}
+          srLabel={copy.srLabel(status, groups[status].length)}
           emptyCopy={copy.emptyColumn}
           documents={groups[status]}
           highlightId={highlightId}
@@ -99,14 +103,15 @@ export function KanbanBoard({ documents, copy, highlightId, className }: KanbanB
 function KanbanColumn({
   status,
   label,
-  countUnit,
+  srLabel,
   emptyCopy,
   documents,
   highlightId,
 }: {
   status: DocumentStatus;
   label: string;
-  countUnit: string;
+  /** The status and its count read together, e.g. "Draft: 2". */
+  srLabel: string;
   emptyCopy: string;
   documents: DocumentSummary[];
   highlightId?: string | null;
@@ -115,9 +120,9 @@ function KanbanColumn({
   const count = documents.length;
   return (
     <section
-      // Not color alone: the label text + count carry the meaning; SR reads
-      // "작성 중 2건". The tone tint/dot is a secondary signal.
-      aria-label={`${label} ${count}${countUnit}`}
+      // Not color alone: the label text + count carry the meaning; the tone
+      // tint/dot is a secondary signal.
+      aria-label={srLabel}
       className="flex w-[17.5rem] shrink-0 flex-col gap-sm"
     >
       <header className={cn('flex items-center justify-between gap-xs rounded-lg px-sm py-xs', tone.tint)}>

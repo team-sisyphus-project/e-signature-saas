@@ -1,42 +1,46 @@
 /**
- * TO-DO dashboard copy — the single source of truth for the user-facing strings
- * that turn the contract list into a work queue (urgency labels, next-action
- * copy, the pending-signer line, and the summary-card titles).
+ * TO-DO dashboard copy bindings — the layer that turns `dashboard.*` catalog
+ * keys into the copy shapes the dashboard's presentational components take as
+ * props (urgency labels, next-action copy, the card meta line, and the summary,
+ * view-switcher, and kanban payloads).
  *
- * Source of truth: design-spec/messaging/todo-copy.md, which extends the project
- * base voice (design-spec/messaging/recording.md): 해요체, no blame, always give
- * the next action, and stay calm (never manufacture urgency/countdowns). Per base
- * voice principle 6, every user-facing string lives in one place (`lib/*-copy.ts`)
- * so it stays consistent and auditable — components take these as props and never
- * own the wording themselves.
+ * The strings themselves live in `lib/i18n/dashboard.ts`; nothing here holds
+ * wording. That split is what keeps two rules true at once: components never own
+ * user-facing text, and no user-facing text exists outside the translation
+ * catalog. Every function is pure and takes the locale-bound translator, so both
+ * locales are verifiable without rendering a component.
+ *
+ * Voice (unchanged by the move): calm, no blame, always offer the next action,
+ * and never manufacture urgency.
  */
 
-import type { NextAction, Urgency } from './documents';
-import type { DashboardSummaryCopy } from '@/components/dashboard-summary';
+import type { DocumentSummary, NextAction, Urgency } from './documents';
+import type { WebTranslate, WebTranslationKey } from './web-translations';
+import type { DashboardSummaryCopy, SummaryFilterKey } from '@/components/dashboard-summary';
 import type { ViewSwitcherCopy } from '@/components/view-switcher';
 import type { KanbanBoardCopy } from '@/components/kanban-board';
 
 /**
- * Urgency labels — shared verbatim by the UrgencyBadge and the summary cards so
- * the same urgency reads with the same word across the dashboard
- * (todo-copy.md "Urgency 라벨"). NORMAL carries no label (no badge is rendered).
+ * Urgency labels, shared verbatim by the UrgencyBadge and the summary cards so
+ * the same urgency reads with the same word across the dashboard. NORMAL
+ * carries no label — no badge is rendered for it.
  */
-const URGENCY_LABEL: Record<Exclude<Urgency, 'NORMAL'>, string> = {
-  OVERDUE: '기한 초과',
-  DUE_SOON: '마감 임박',
+const URGENCY_KEY: Record<Exclude<Urgency, 'NORMAL'>, WebTranslationKey> = {
+  OVERDUE: 'dashboard.urgencyOverdue',
+  DUE_SOON: 'dashboard.urgencyDueSoon',
 };
 
 /** The urgency label for a badge; empty for NORMAL (badge renders nothing then). */
-export function urgencyLabel(urgency: Urgency): string {
-  return urgency === 'NORMAL' ? '' : URGENCY_LABEL[urgency];
+export function urgencyLabel(t: WebTranslate, urgency: Urgency): string {
+  return urgency === 'NORMAL' ? '' : t(URGENCY_KEY[urgency]);
 }
 
 /**
- * NextAction copy (todo-copy.md "NextAction 버튼/라벨 카피"). `cta` actions are
- * value-carrying verb phrases (the primary next step); `status` is a passive
- * state label with no owner action to take right now — we do NOT invent a
- * "remind/nudge" action for it (automated reminders are out of PLAN scope).
- * `CANCELLED` maps to `null` (no next action) — no fake CTA is manufactured.
+ * NextAction copy. `cta` actions are value-carrying verb phrases (the primary
+ * next step); `status` is a passive state label with no owner action to take
+ * right now — we do NOT invent a "remind/nudge" action for it (automated
+ * reminders are out of scope). `CANCELLED` maps to `null` (no next action) — no
+ * fake CTA is manufactured.
  */
 export type NextActionKind = 'cta' | 'status';
 
@@ -45,82 +49,133 @@ export interface NextActionCopy {
   kind: NextActionKind;
 }
 
-const NEXT_ACTION_COPY: Record<NextAction, NextActionCopy> = {
-  SEND_DRAFT: { label: '발송하기', kind: 'cta' },
-  AWAITING_SIGN: { label: '서명 대기 중', kind: 'status' },
-  DOWNLOAD: { label: '내려받기', kind: 'cta' },
+const NEXT_ACTION: Record<NextAction, { key: WebTranslationKey; kind: NextActionKind }> = {
+  SEND_DRAFT: { key: 'dashboard.actionSend', kind: 'cta' },
+  AWAITING_SIGN: { key: 'dashboard.actionAwaiting', kind: 'status' },
+  DOWNLOAD: { key: 'dashboard.actionDownload', kind: 'cta' },
 };
 
 /** The card's next-action copy, or `null` when there is none (CANCELLED). */
-export function nextActionCopy(action: NextAction | null): NextActionCopy | null {
-  return action ? NEXT_ACTION_COPY[action] : null;
+export function nextActionCopy(t: WebTranslate, action: NextAction | null): NextActionCopy | null {
+  if (!action) return null;
+  const entry = NEXT_ACTION[action];
+  return { label: t(entry.key), kind: entry.kind };
 }
 
 /**
- * Pending-signer line (todo-copy.md "pendingSignerCount 표현 카피"): the short
- * form `서명 대기 {N}명`, aligned with the existing `받는 분 {N}명` meta wording.
- * `null` at 0 so the caller omits the line entirely (no "0명 대기" noise).
+ * Pending-signer line. `null` at 0 so the caller omits the segment entirely,
+ * rather than rendering a "0 awaiting" that carries no information.
  */
-export function pendingSignerLabel(count: number): string | null {
-  return count > 0 ? `서명 대기 ${count}명` : null;
+export function pendingSignerLabel(t: WebTranslate, count: number): string | null {
+  return count > 0 ? t('dashboard.metaPendingSigners', { count }) : null;
 }
 
 /**
- * Summary-card titles + count unit (todo-copy.md "요약 카드 카피"). Titles reuse
- * the urgency vocabulary (기한 초과 / 마감 임박) plus "서명 대기 중" (the
- * IN_PROGRESS superset); the count unit is "건" (aligned with the contract domain).
+ * Relative timestamp for a card's meta line: "just now" under a minute, then
+ * minutes, hours, and days, falling back to a plain numeric date after a week.
+ *
+ * The numeric date is deliberately not localized — spec excludes locale date
+ * formatting, and `YYYY.MM.DD` is unambiguous in both locales. `now` is a
+ * parameter so the boundaries are testable without freezing the clock.
  */
-export const SUMMARY_COPY: DashboardSummaryCopy = {
-  title: {
-    OVERDUE: '기한 초과',
-    DUE_SOON: '마감 임박',
-    AWAITING: '서명 대기 중',
-  },
-  countUnit: '건',
-};
+export function relativeTime(t: WebTranslate, iso: string, now: number = Date.now()): string {
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return '';
+  const min = Math.floor((now - then) / 60000);
+  if (min < 1) return t('dashboard.timeJustNow');
+  if (min < 60) return t('dashboard.timeMinutes', { count: min });
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return t('dashboard.timeHours', { count: hr });
+  const day = Math.floor(hr / 24);
+  if (day < 7) return t('dashboard.timeDays', { count: day });
+  const date = new Date(then);
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  return `${date.getFullYear()}.${month}.${String(date.getDate()).padStart(2, '0')}`;
+}
 
 /**
- * Shown when a summary-card filter is active but no contract matches it (e.g. a
- * 0-count card is selected). Base voice: state it calmly and give the next action
- * (clear the filter) — not "아직 계약이 없어요", which would be wrong when
- * contracts exist but none match the current filter.
+ * The contract card's meta line: recipients, signers still awaited, page count,
+ * and when it was sent (or created, while still a draft), joined with a middle
+ * dot. Each segment is a whole catalog sentence — the joiner is punctuation, not
+ * grammar, so no locale inherits another's word order.
  */
-export const FILTERED_EMPTY_COPY = {
-  message: '이 조건에 해당하는 계약이 없어요.',
-  clear: '전체 보기',
-};
+export function contractMetaLine(
+  t: WebTranslate,
+  document: DocumentSummary,
+  now: number = Date.now(),
+): string {
+  const parts: string[] = [];
+  if (document.recipientCount > 0) {
+    parts.push(t('dashboard.metaRecipients', { count: document.recipientCount }));
+  }
+  const pending = pendingSignerLabel(t, document.pendingSignerCount);
+  if (pending) parts.push(pending);
+  if (document.pageCount > 0) parts.push(t('dashboard.metaPages', { count: document.pageCount }));
+
+  const sent = document.status !== 'DRAFT' && document.sentAt;
+  const when = relativeTime(t, sent ? (document.sentAt as string) : document.createdAt, now);
+  parts.push(t(sent ? 'dashboard.metaSent' : 'dashboard.metaCreated', { when }));
+  return parts.join(' · ');
+}
 
 /**
- * View switcher labels (todo-copy.md "뷰 전환 라벨"). The dashboard shows its
- * contracts as a TO-DO 목록 (list) or a 칸반 (kanban) board; the ViewSwitcher takes
- * these as props so it never owns the wording. `groupLabel` names the control for
- * screen readers. Plain nouns, aligned with the calm base voice — no verbs/urgency.
+ * Accessible name for a counted group ("Overdue: 3"). One key serves both the
+ * summary cards and the kanban columns because they read identically; the count
+ * noun lives inside the catalog sentence, never concatenated at the call site.
  */
-export const VIEW_SWITCHER_COPY: ViewSwitcherCopy = {
-  label: {
-    list: '목록',
-    kanban: '칸반',
-  },
-  groupLabel: '뷰 전환',
-};
+function countLabel(t: WebTranslate, label: string, count: number): string {
+  return t('dashboard.countLabel', { label, count });
+}
 
 /**
- * Kanban board copy (todo-copy.md "칸반 컬럼 라벨"). Column headers reuse the
- * project's established status vocabulary — 작성 중 / 진행 중 / 완료됨 / 취소됨,
- * the same words as the server's DOCUMENT_STATUS_LABEL and the StatusBadge — so a
- * status reads with the same word on every screen (base voice: never say a state
- * differently per screen). `countUnit` "건" matches the summary cards; the empty-
- * column line states calmly that the column has nothing, giving no false urgency.
+ * Summary-card copy. Titles reuse the urgency vocabulary plus the
+ * awaiting-signature label (the in-progress superset), so a summary card and a
+ * document badge never say the same state with different words.
  */
-export const KANBAN_BOARD_COPY: KanbanBoardCopy = {
-  columnLabel: {
-    DRAFT: '작성 중',
-    SCHEDULED: '예약됨',
-    IN_PROGRESS: '진행 중',
-    COMPLETED: '완료됨',
-    CANCELLED: '취소됨',
-  },
-  countUnit: '건',
-  emptyColumn: '이 상태의 계약이 없어요.',
-  boardLabel: '칸반 보드',
-};
+export function summaryCopy(t: WebTranslate): DashboardSummaryCopy {
+  const title: Record<SummaryFilterKey, string> = {
+    OVERDUE: t('dashboard.urgencyOverdue'),
+    DUE_SOON: t('dashboard.urgencyDueSoon'),
+    AWAITING: t('dashboard.actionAwaiting'),
+  };
+  return {
+    title,
+    srLabel: (key, count) => countLabel(t, title[key], count),
+  };
+}
+
+/**
+ * View switcher labels. Plain nouns, aligned with the calm voice — no verbs, no
+ * urgency. `groupLabel` names the control for screen readers.
+ */
+export function viewSwitcherCopy(t: WebTranslate): ViewSwitcherCopy {
+  return {
+    label: {
+      list: t('dashboard.viewList'),
+      kanban: t('dashboard.viewKanban'),
+    },
+    groupLabel: t('dashboard.viewSwitcherLabel'),
+  };
+}
+
+/**
+ * Kanban board copy. Column headers use the product's lifecycle vocabulary —
+ * the same words the status badge shows — so a status reads the same on every
+ * surface. The empty-column line states the absence calmly, with no false
+ * urgency.
+ */
+export function kanbanBoardCopy(t: WebTranslate): KanbanBoardCopy {
+  const columnLabel = {
+    DRAFT: t('dashboard.statusDraft'),
+    SCHEDULED: t('dashboard.statusScheduled'),
+    IN_PROGRESS: t('dashboard.statusInProgress'),
+    COMPLETED: t('dashboard.statusCompleted'),
+    CANCELLED: t('dashboard.statusCancelled'),
+  };
+  return {
+    columnLabel,
+    srLabel: (status, count) => countLabel(t, columnLabel[status], count),
+    emptyColumn: t('dashboard.kanbanEmptyColumn'),
+    boardLabel: t('dashboard.kanbanBoardLabel'),
+  };
+}

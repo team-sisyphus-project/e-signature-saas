@@ -28,7 +28,7 @@ import { ViewSwitcher } from '@/components/view-switcher';
 import { ApiError } from '@/lib/api';
 import { isOnboardingComplete, markOnboardingComplete } from '@/lib/onboarding';
 import { readViewMode, writeViewMode, type ViewMode } from '@/lib/view-mode';
-import { ONBOARDING_COPY } from '@/lib/onboarding-copy';
+import { onboardingCopy } from '@/lib/onboarding-copy';
 import { clearSession, getUser, getToken, type SessionUser } from '@/lib/auth';
 import {
   fetchDocuments,
@@ -38,17 +38,11 @@ import {
   type Quota,
   type Urgency,
 } from '@/lib/documents';
-import {
-  FILTERED_EMPTY_COPY,
-  KANBAN_BOARD_COPY,
-  SUMMARY_COPY,
-  VIEW_SWITCHER_COPY,
-} from '@/lib/todo-copy';
+import { kanbanBoardCopy, summaryCopy, viewSwitcherCopy } from '@/lib/todo-copy';
 import { useTranslation } from '@/components/locale-provider';
 
 /**
- * Dashboard list ordering by urgency (design-spec/components/urgency-badge/base.md
- * — "목록 기본 정렬(OVERDUE 우선)"): OVERDUE first, then DUE_SOON, then NORMAL.
+ * Dashboard list ordering by urgency: OVERDUE first, then DUE_SOON, then NORMAL.
  * Array.prototype.sort is stable, so within one urgency the API's newest-first
  * order is preserved.
  */
@@ -74,7 +68,7 @@ export default function DashboardPage() {
   const [highlightId, setHighlightId] = React.useState<string | null>(null);
   // Active summary-card filter, or null when the list is unfiltered.
   const [filter, setFilter] = React.useState<SummaryFilterKey | null>(null);
-  // 목록/칸반 view choice. Switching is a pure conditional render — it never
+  // List/board view choice. Switching is a pure conditional render — it never
   // resets `filter`, refetches, or drops the loaded `documents` (context is
   // preserved). Persisted to localStorage so it survives a reload; the persisted
   // value only *seeds* this once after mount (below) and never clobbers an
@@ -120,7 +114,7 @@ export default function DashboardPage() {
   }, [router, t]);
 
   // Initial load + revalidate whenever the tab regains focus (e.g. returning
-  // from the send wizard), so a freshly sent contract appears as '진행 중'.
+  // from the send wizard), so a freshly sent contract appears as in progress.
   React.useEffect(() => {
     if (!ready) return;
     void load();
@@ -146,7 +140,7 @@ export default function DashboardPage() {
 
   // Switch views: update session state and persist the choice. A pure state flip —
   // it deliberately leaves `filter`, `documents`, and load state untouched, so the
-  // 목록↔칸반 switch loses no context and triggers no refetch.
+  // list↔board switch loses no context and triggers no refetch.
   const changeViewMode = React.useCallback((mode: ViewMode) => {
     setViewMode(mode);
     writeViewMode(mode);
@@ -169,6 +163,13 @@ export default function DashboardPage() {
     const t = window.setTimeout(() => setHighlightId(null), 2400);
     return () => window.clearTimeout(t);
   }, [highlightId]);
+
+  // Copy payloads for the presentational children. Rebuilt only when the
+  // translator changes (i.e. when the locale changes), so a language switch
+  // re-renders the dashboard's wording without touching its data or filter.
+  const summary = React.useMemo(() => summaryCopy(t), [t]);
+  const switcher = React.useMemo(() => viewSwitcherCopy(t), [t]);
+  const board = React.useMemo(() => kanbanBoardCopy(t), [t]);
 
   // The rendered list: filtered by the active summary card (same predicate the
   // cards count with, so "card count === filtered list count"), then ordered by
@@ -216,19 +217,15 @@ export default function DashboardPage() {
           {/* The switcher + summary sit at the top of the list section. Both only
               appear once contracts exist — with an empty/onboarding dashboard there
               is nothing to switch between. The summary stays mounted in both views
-              so its filter (context) persists across a 목록↔칸반 switch. */}
+              so its filter (context) persists across a list↔board switch. */}
           {documents && documents.length > 0 ? (
             <div className="mb-lg flex flex-col gap-md">
               <div className="flex justify-end">
-                <ViewSwitcher
-                  value={viewMode}
-                  onChange={changeViewMode}
-                  copy={VIEW_SWITCHER_COPY}
-                />
+                <ViewSwitcher value={viewMode} onChange={changeViewMode} copy={switcher} />
               </div>
               <DashboardSummary
                 documents={documents}
-                copy={SUMMARY_COPY}
+                copy={summary}
                 selected={filter}
                 onSelect={setFilter}
               />
@@ -242,11 +239,7 @@ export default function DashboardPage() {
               empty / onboarding / error all flow through DashboardBody (the list
               path) — there is nothing to lay out on a board until contracts load. */}
           {documents && documents.length > 0 && viewMode === 'kanban' && visible ? (
-            <KanbanBoard
-              documents={visible}
-              copy={KANBAN_BOARD_COPY}
-              highlightId={highlightId}
-            />
+            <KanbanBoard documents={visible} copy={board} highlightId={highlightId} />
           ) : (
             <DashboardBody
               documents={documents}
@@ -275,6 +268,7 @@ function PlanUsage({
   plan?: string;
   className?: string;
 }) {
+  const t = useTranslation();
   const [upgradeOpen, setUpgradeOpen] = React.useState(false);
   const isFree = !plan || plan === 'FREE';
 
@@ -284,19 +278,24 @@ function PlanUsage({
         <div className="flex min-w-0 flex-col gap-2xs">
           <div className="flex items-center gap-xs">
             <span className="text-sm font-bold text-foreground">
-              {isFree ? 'Free 플랜' : `${plan} 플랜`}
+              {/* The plan code itself is a product name and stays untranslated. */}
+              {t('dashboard.planName', { plan: isFree ? 'Free' : (plan ?? 'Free') })}
             </span>
             {isFree ? (
               <span className="rounded-full bg-grey-100 px-xs py-2xs text-2xs font-semibold text-foreground-subtle">
-                무료
+                {t('dashboard.planFreeBadge')}
               </span>
             ) : null}
           </div>
           {quota ? (
+            /* A stat, not a sentence: the label and its value are separate keys
+               so the emphasised value can carry each locale's own count wording
+               without a fragment order being imposed on either. */
             <p className="text-sm text-foreground-subtle">
-              이번 달 발송{' '}
-              <span className="font-semibold text-foreground">{quota.used}</span>
-              <span className="text-foreground-subtle">/{quota.limit}건</span>
+              {t('dashboard.quotaLabel')}{' '}
+              <span className="font-semibold text-foreground">
+                {t('dashboard.quotaCount', { used: quota.used, limit: quota.limit })}
+              </span>
             </p>
           ) : (
             <Skeleton className="h-4 w-32" />
@@ -304,7 +303,7 @@ function PlanUsage({
         </div>
         {isFree ? (
           <Button variant="secondary" size="sm" onClick={() => setUpgradeOpen(true)}>
-            업그레이드
+            {t('dashboard.upgrade')}
           </Button>
         ) : null}
       </div>
@@ -314,14 +313,12 @@ function PlanUsage({
       <Dialog open={upgradeOpen} onOpenChange={setUpgradeOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>곧 유료 플랜을 만나요</DialogTitle>
-            <DialogDescription>
-              더 넉넉한 발송 한도와 팀 기능을 준비하고 있어요. 조금만 기다려 주세요.
-            </DialogDescription>
+            <DialogTitle>{t('dashboard.upgradeTitle')}</DialogTitle>
+            <DialogDescription>{t('dashboard.upgradeDescription')}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="secondary">알겠어요</Button>
+              <Button variant="secondary">{t('dashboard.upgradeConfirm')}</Button>
             </DialogClose>
           </DialogFooter>
         </DialogContent>
@@ -331,6 +328,7 @@ function PlanUsage({
 }
 
 function QuotaBar({ quota }: { quota: Quota | null }) {
+  const t = useTranslation();
   const pct = quota && quota.limit > 0 ? Math.min(100, Math.round((quota.used / quota.limit) * 100)) : 0;
   const exhausted = Boolean(quota && quota.remaining <= 0);
 
@@ -342,7 +340,7 @@ function QuotaBar({ quota }: { quota: Quota | null }) {
         aria-valuemin={0}
         aria-valuemax={quota?.limit ?? 5}
         aria-valuenow={quota?.used ?? 0}
-        aria-label="이번 달 발송 사용량"
+        aria-label={t('dashboard.quotaBarLabel')}
       >
         <div
           className={
@@ -354,7 +352,9 @@ function QuotaBar({ quota }: { quota: Quota | null }) {
       </div>
       {exhausted ? (
         <p className="mt-xs text-sm font-medium text-warning">
-          이번 달 무료 발송 5건을 모두 사용했어요. 다음 달에 다시 발송할 수 있어요.
+          {/* The exhausted line names the real limit rather than a hardcoded
+              count, so the copy stays true if the free allowance changes. */}
+          {t('dashboard.quotaExhausted', { limit: quota?.limit ?? 0 })}
         </p>
       ) : null}
     </div>
@@ -398,13 +398,7 @@ function DashboardBody({
     // contract. Everyone else gets the calm EmptyState endpoint. Both reuse the
     // same onCreate → NEW_CONTRACT_ROUTE flow.
     return showOnboarding ? (
-      <OnboardingGuide
-        title={ONBOARDING_COPY.title}
-        description={ONBOARDING_COPY.description}
-        steps={ONBOARDING_COPY.steps}
-        ctaLabel={ONBOARDING_COPY.cta}
-        onCreate={onCreate}
-      />
+      <FirstRunGuide onCreate={onCreate} />
     ) : (
       <EmptyState onCreate={onCreate} />
     );
@@ -446,40 +440,56 @@ function SkeletonList() {
   );
 }
 
+/** The first-run walkthrough, with its copy taken from the active locale. */
+function FirstRunGuide({ onCreate }: { onCreate: () => void }) {
+  const t = useTranslation();
+  const copy = onboardingCopy(t);
+  return (
+    <OnboardingGuide
+      title={copy.title}
+      description={copy.description}
+      steps={copy.steps}
+      ctaLabel={copy.cta}
+      onCreate={onCreate}
+    />
+  );
+}
+
 function EmptyState({ onCreate }: { onCreate: () => void }) {
+  const t = useTranslation();
   return (
     <Card className="motion-stagger flex flex-col items-center gap-md px-lg py-3xl text-center">
       <EmptyIllustration />
       <div className="flex flex-col gap-2xs">
-        <h2 className="text-lg font-bold text-foreground">아직 보낸 계약이 없어요</h2>
-        <p className="text-base text-foreground-subtle">
-          첫 계약을 만들고 받는 분에게 서명을 요청해 보세요.
-        </p>
+        <h2 className="text-lg font-bold text-foreground">{t('dashboard.emptyTitle')}</h2>
+        <p className="text-base text-foreground-subtle">{t('dashboard.emptyDescription')}</p>
       </div>
       <Button size="lg" onClick={onCreate}>
-        새 계약 생성
+        {t('dashboard.newContract')}
       </Button>
     </Card>
   );
 }
 
 function FilteredEmptyState({ onClearFilter }: { onClearFilter: () => void }) {
+  const t = useTranslation();
   return (
     <Card className="flex flex-col items-center gap-md px-lg py-3xl text-center">
-      <p className="text-base text-foreground-subtle">{FILTERED_EMPTY_COPY.message}</p>
+      <p className="text-base text-foreground-subtle">{t('dashboard.filteredEmpty')}</p>
       <Button variant="secondary" onClick={onClearFilter}>
-        {FILTERED_EMPTY_COPY.clear}
+        {t('dashboard.clearFilter')}
       </Button>
     </Card>
   );
 }
 
 function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
+  const t = useTranslation();
   return (
     <Card className="flex flex-col items-center gap-md px-lg py-3xl text-center">
       <p className="text-base text-foreground-muted">{message}</p>
       <Button variant="secondary" onClick={onRetry}>
-        다시 시도
+        {t('dashboard.retry')}
       </Button>
     </Card>
   );

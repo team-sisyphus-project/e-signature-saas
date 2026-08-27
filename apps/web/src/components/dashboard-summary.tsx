@@ -6,43 +6,42 @@ import { Card, cn } from '@repo/ui';
 import type { DocumentSummary } from '@/lib/documents';
 
 /**
- * DashboardSummary — the three "오늘의 할 일" summary + filter cards at the top of
- * the dashboard (design-spec `components/summary-card/base.md`). It turns the
- * contract list from a passive file list into a work queue: each card counts the
- * documents in one urgency group and, when clicked, filters the list below to
- * that group (M2 core UX).
+ * DashboardSummary — the three "today's work" summary + filter cards at the top
+ * of the dashboard. It turns the contract list from a passive file list into a
+ * work queue: each card counts the documents in one urgency group and, when
+ * clicked, filters the list below to that group.
  *
- * Design decisions (design-spec):
- * - Classification (summary-card/base.md): the "처리 필요" axis is split into
- *   three *filter predicates* (NOT a mutually-exclusive partition):
- *     · 기한 초과   → urgency === 'OVERDUE'          (danger,  hierarchy 1, strongest)
- *     · 마감 임박   → urgency === 'DUE_SOON'         (warning, hierarchy 2)
- *     · 서명 대기 중 → nextAction === 'AWAITING_SIGN' (neutral, hierarchy 3, superset)
- *   "서명 대기 중" is the superset of every IN_PROGRESS contract, so a single
- *   document is intentionally counted by both "기한 초과" and "서명 대기 중". The
+ * Design decisions:
+ * - Classification: the "needs attention" axis is split into three *filter
+ *   predicates* (NOT a mutually-exclusive partition):
+ *     · overdue            → urgency === 'OVERDUE'          (danger,  hierarchy 1, strongest)
+ *     · due soon           → urgency === 'DUE_SOON'         (warning, hierarchy 2)
+ *     · awaiting signature → nextAction === 'AWAITING_SIGN' (neutral, hierarchy 3, superset)
+ *   Awaiting-signature is the superset of every in-progress contract, so a
+ *   single document is intentionally counted by both it and overdue. The
  *   predicates live in {@link SUMMARY_FILTERS} so the page can reuse the exact
  *   same predicate to filter the list — guaranteeing the DoD invariant
  *   "card count === filtered list count".
  * - Hierarchy & tone: order and emphasis follow urgency — danger > warning >
  *   neutral — and the tone map is *shared with UrgencyBadge* so the same color +
  *   shape means the same thing across the whole dashboard (a card's danger mark =
- *   a document card's danger badge = 기한 초과).
+ *   a document card's danger badge = overdue).
  * - Never color alone (accessibility): each card pairs its label text with a
  *   tone mark whose *shape* differs (alert triangle for OVERDUE, clock for
  *   DUE_SOON, a neutral dot for AWAITING) — the same glyphs UrgencyBadge fixed in
  *   grain-3. The hue rides on the mark only; the big count stays dark
  *   (`foreground`) so it never depends on a tinted-text contrast that could miss
  *   WCAG AA (warning-on-white in particular).
- * - Zero counts are de-emphasized (`foreground-subtle`) but never hidden — "0건"
+ * - Zero counts are de-emphasized (`foreground-subtle`) but never hidden — a zero
  *   ("nothing urgent right now") is information too.
  * - Selected (filter-active) state is a real toggle: `aria-pressed` semantics
  *   plus a *form* signal (an emphasized ring), not color alone.
  *
- * This component owns structure/hierarchy/tone but NOT copy: the Korean titles
- * and the count-unit noun come in via `copy` (single source of truth:
- * design-spec/messaging/todo-copy.md "요약 카드 카피"), exactly like UrgencyBadge
- * takes its label as a prop. It also owns no page state or data fetching — counts
- * derive from the `documents` prop and selection is controlled by the parent.
+ * This component owns structure/hierarchy/tone but NOT copy: titles and the
+ * screen-reader label come in via `copy`, built from the translation catalog by
+ * `lib/todo-copy.ts`, exactly like UrgencyBadge takes its label as a prop. It
+ * also owns no page state or data fetching — counts derive from the `documents`
+ * prop and selection is controlled by the parent.
  */
 
 export type SummaryFilterKey = 'OVERDUE' | 'DUE_SOON' | 'AWAITING';
@@ -59,7 +58,7 @@ export const SUMMARY_FILTERS: Record<
 > = {
   OVERDUE: (d) => d.urgency === 'OVERDUE',
   DUE_SOON: (d) => d.urgency === 'DUE_SOON',
-  // "서명 대기 중" is the IN_PROGRESS superset (every awaiting-signature contract).
+  // The IN_PROGRESS superset: every contract still awaiting a signature.
   AWAITING: (d) => d.nextAction === 'AWAITING_SIGN',
 };
 
@@ -68,13 +67,18 @@ const CARD_ORDER: readonly SummaryFilterKey[] = ['OVERDUE', 'DUE_SOON', 'AWAITIN
 
 /**
  * Copy for the three cards. Injected so the component never owns user-facing
- * strings (source of truth: design-spec/messaging/todo-copy.md).
+ * strings (built from the catalog in `lib/todo-copy.ts`).
  */
 export interface DashboardSummaryCopy {
-  /** Card title per group, e.g. `{ OVERDUE: '기한 초과', ... }`. */
+  /** Card title per group. */
   title: Record<SummaryFilterKey, string>;
-  /** Count-unit noun for the screen-reader label, e.g. "건" → "기한 초과 3건". */
-  countUnit: string;
+  /**
+   * The card's screen-reader name, pairing the group with its count (e.g.
+   * "Overdue: 3"). A function rather than a count-unit noun to append: how a
+   * count joins its label is grammar, and grammar belongs to the catalog
+   * sentence, not to a concatenation here.
+   */
+  srLabel: (key: SummaryFilterKey, count: number) => string;
 }
 
 /**
@@ -90,7 +94,7 @@ const TONE: Record<SummaryFilterKey, { chip: string; mark: string; Mark: () => R
 export interface DashboardSummaryProps {
   /** The sender's contracts; counts derive from these via {@link SUMMARY_FILTERS}. */
   documents: DocumentSummary[];
-  /** Card titles + count unit (source: messaging/todo-copy.md). */
+  /** Card titles + screen-reader label builder (source: `lib/todo-copy.ts`). */
   copy: DashboardSummaryCopy;
   /** The active filter, or `null` when the list is unfiltered. */
   selected?: SummaryFilterKey | null;
@@ -128,7 +132,7 @@ export function DashboardSummary({
           filterKey={key}
           title={copy.title[key]}
           count={counts[key]}
-          countUnit={copy.countUnit}
+          srLabel={copy.srLabel(key, counts[key])}
           selected={selected === key}
           onSelect={onSelect}
         />
@@ -141,22 +145,21 @@ function SummaryCard({
   filterKey,
   title,
   count,
-  countUnit,
+  srLabel,
   selected,
   onSelect,
 }: {
   filterKey: SummaryFilterKey;
   title: string;
   count: number;
-  countUnit: string;
+  /** The group and its count read together, e.g. "Overdue: 3". */
+  srLabel: string;
   selected: boolean;
   onSelect?: (key: SummaryFilterKey | null) => void;
 }) {
   const tone = TONE[filterKey];
   const { Mark } = tone;
   const interactive = Boolean(onSelect);
-  // SR label reads the group + count together: "기한 초과 3건".
-  const srLabel = `${title} ${count}${countUnit}`;
   const empty = count === 0;
 
   const surface = (
@@ -257,7 +260,7 @@ function ClockMark() {
 }
 
 /**
- * Neutral dot — the AWAITING (진행 중 superset) tone mark. UrgencyBadge has no
+ * Neutral dot — the AWAITING (in-progress superset) tone mark. UrgencyBadge has no
  * NORMAL/neutral mark (it renders nothing), so the neutral tone uses the
  * project's status-dot convention (a grey dot), keeping color off the sole-signal
  * path.

@@ -21,6 +21,15 @@ export type {
 /** A key is open-ended so newly added UI copy is safe before its catalog ships. */
 export type WebTranslationKey = `${string}.${string}`;
 
+/**
+ * A lookup already bound to one locale — what `useTranslation()` hands out.
+ *
+ * Named here so copy modules can take the translator as a plain argument and
+ * stay outside React: a pure `(t) => copy` function is testable in both locales
+ * without rendering anything.
+ */
+export type WebTranslate = (key: WebTranslationKey, params?: WebTranslationParams) => string;
+
 export type MissingWebTranslationReason = 'missing' | 'empty' | 'placeholder';
 
 /** This report retains keys and counters only, never user data or rendered copy. */
