@@ -34,12 +34,13 @@ export function localeFromAcceptLanguage(header?: string | null): SupportedLocal
     .sort((a, b) => b.q - a.q || a.index - b.index)[0]?.locale;
 }
 
-/** Resolve locale: authenticated user → sender → browser → English default. */
+/**
+ * Resolve locale: authenticated user → sender → English default.
+ *
+ * Accept-Language auto-detection is intentionally NOT part of the chain:
+ * the demo must render in English until a user explicitly switches
+ * languages in the app.
+ */
 export function resolveLocale(input: LocaleResolutionInput = {}): SupportedLocale {
-  return (
-    parseLocale(input.userLocale) ??
-    parseLocale(input.senderLocale) ??
-    localeFromAcceptLanguage(input.acceptLanguage) ??
-    'en'
-  );
+  return parseLocale(input.userLocale) ?? parseLocale(input.senderLocale) ?? 'en';
 }

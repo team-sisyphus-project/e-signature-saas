@@ -21,8 +21,9 @@ describe('web locale resolver', () => {
     expect(resolveLocale({ senderLocale: 'en', browserLanguages: ['ko-KR'] })).toBe('en');
   });
 
-  it('uses the first supported browser language and safely defaults to English', () => {
+  it('ignores browser languages and defaults to English without an explicit preference', () => {
     expect(localeFromBrowserLanguages(['fr-FR', 'en-GB', 'ko-KR'])).toBe('en');
+    expect(resolveLocale({ browserLanguages: ['ko-KR'] })).toBe('en');
     expect(resolveLocale({ browserLanguages: ['fr-FR', 'ja-JP'] })).toBe('en');
   });
 });

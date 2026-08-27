@@ -14,7 +14,8 @@ describe('locale resolver', () => {
     expect(localeFromAcceptLanguage('fr;q=0.9, en-US;q=0.8, ko;q=0.7')).toBe('en');
   });
 
-  it('falls back safely to English and English copy', () => {
+  it('ignores Accept-Language and falls back to English copy', () => {
+    expect(resolveLocale({ acceptLanguage: 'ko-KR' })).toBe('en');
     expect(resolveLocale({ acceptLanguage: 'fr-FR' })).toBe('en');
     expect(translate('en', 'signing.completed')).toBe('Signing is complete!');
   });

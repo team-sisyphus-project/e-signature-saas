@@ -39,14 +39,15 @@ export function localeFromBrowserLanguages(
   return languages?.map(parseLocale).find((locale): locale is SupportedLocale => !!locale);
 }
 
-/** Resolve: signed-in user → public-link sender → browser → English. */
+/**
+ * Resolve: signed-in user → public-link sender → English.
+ *
+ * Browser-language auto-detection is intentionally NOT part of the chain:
+ * this is a demo product that must render in English until someone
+ * explicitly switches languages in the app.
+ */
 export function resolveLocale(input: LocaleResolutionInput = {}): SupportedLocale {
-  return (
-    parseLocale(input.userLocale) ??
-    parseLocale(input.senderLocale) ??
-    localeFromBrowserLanguages(input.browserLanguages) ??
-    'en'
-  );
+  return parseLocale(input.userLocale) ?? parseLocale(input.senderLocale) ?? 'en';
 }
 
 /** Browser-facing lookup for the API's read-only translation resources. */
