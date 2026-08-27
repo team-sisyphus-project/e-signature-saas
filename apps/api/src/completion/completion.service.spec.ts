@@ -224,13 +224,20 @@ describe('CompletionService.runPostProcessing', () => {
 
     await h.service.runPostProcessing('doc_xyz789', 'en');
 
+    // The locale is the whole contract with the renderer: display copy — the
+    // identity-verification wording included — is the renderer's to resolve,
+    // so the caller must not be found smuggling a language in beside it.
     expect(certificate.generate).toHaveBeenCalledWith(expect.objectContaining({
       locale: 'en',
       serviceName: 'eContract',
       participants: expect.arrayContaining([
-        expect.objectContaining({ verificationMethod: '6-digit verification code' }),
+        expect.objectContaining({ email: 'signer@example.com', order: 1 }),
       ]),
     }));
+    const [{ participants }] = certificate.generate.mock.calls[0] as [
+      { participants: Array<Record<string, unknown>> },
+    ];
+    expect(participants.every((p) => !('verificationMethod' in p))).toBe(true);
   });
 
   it('sends English completion email copy when completion locale is English', async () => {

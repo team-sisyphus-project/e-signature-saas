@@ -50,11 +50,18 @@ export const SERVER_TRANSLATIONS = {
       documentId: '대상 문서 ID',
       contractSummary: '계약 요약',
       contractName: '계약명',
+      /** Row label. Its value is the `originalPageCount` template — the two
+       *  are never interchangeable: a label that still holds `{count}` is a
+       *  defect the reader sees. */
+      originalPages: '원본 쪽수',
       originalPageCount: '{count}쪽',
       sender: '발신자',
       senderEmail: '발신자 이메일',
       sentAt: '발송 일시',
       completedAt: '완료 일시',
+      /** Zone shown beside every certificate timestamp — the clock itself is
+       *  always KST, so this names it rather than converting it. */
+      timeZone: 'KST',
       finalStatus: '최종 상태',
       completed: '완료됨',
       participants: '참여자',
@@ -121,11 +128,13 @@ export const SERVER_TRANSLATIONS = {
       documentId: 'Document ID',
       contractSummary: 'Contract summary',
       contractName: 'Contract name',
+      originalPages: 'Original pages',
       originalPageCount: '{count} pages',
       sender: 'Sender',
       senderEmail: 'Sender email',
       sentAt: 'Sent at',
       completedAt: 'Completed at',
+      timeZone: 'KST, UTC+9',
       finalStatus: 'Final status',
       completed: 'Completed',
       participants: 'Participants',
@@ -186,11 +195,13 @@ export type TranslationKey =
   | 'auditCertificate.documentId'
   | 'auditCertificate.contractSummary'
   | 'auditCertificate.contractName'
+  | 'auditCertificate.originalPages'
   | 'auditCertificate.originalPageCount'
   | 'auditCertificate.sender'
   | 'auditCertificate.senderEmail'
   | 'auditCertificate.sentAt'
   | 'auditCertificate.completedAt'
+  | 'auditCertificate.timeZone'
   | 'auditCertificate.finalStatus'
   | 'auditCertificate.completed'
   | 'auditCertificate.participants'

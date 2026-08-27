@@ -32,8 +32,6 @@ export interface CertificateParticipant {
   email: string;
   /** 1-based signing order shown to the reader. */
   order: number;
-  /** Identity-verification method, already human-readable (e.g. "6자리 인증코드"). */
-  verificationMethod: string;
   /** When this signer completed signing (input timestamp; null if not signed). */
   signedAt: Date | string | null;
 }
@@ -248,9 +246,9 @@ export class AuditCertificateService {
     r.cursor -= SPACE.lg;
 
     // Issue meta + certificate ID.
-    r.drawLabelValue(t(input.locale, 'issuedAt'), `${fmtDateTime(input.issuedAt)} (KST)`);
-    r.drawLabelValue(t(input.locale, 'certificateId'), input.certificateId);
-    r.drawLabelValue(t(input.locale, 'documentId'), input.document.id);
+    for (const row of certificateRows(input).issue) {
+      r.drawLabelValue(row.label, row.value);
+    }
 
     r.cursor -= SPACE.md;
     r.drawDivider();
@@ -260,15 +258,9 @@ export class AuditCertificateService {
   /** 계약 요약: label/value pairs + completion status pill. */
   private drawContractSummary(r: Renderer, input: AuditCertificateInput): void {
     r.startSection(t(input.locale, 'contractSummary'), 6 * (SIZE.body + SPACE.sm));
-    r.drawLabelValue(t(input.locale, 'contractName'), input.document.title);
-    r.drawLabelValue(t(input.locale, 'originalPageCount'), interpolate(t(input.locale, 'originalPageCount'), { count: input.document.pageCount }));
-    r.drawLabelValue(t(input.locale, 'sender'), input.sender.name ?? '—');
-    r.drawLabelValue(t(input.locale, 'senderEmail'), input.sender.email);
-    r.drawLabelValue(t(input.locale, 'sentAt'), input.document.sentAt ? `${fmtDateTime(input.document.sentAt)} (KST)` : '—');
-    r.drawLabelValue(
-      t(input.locale, 'completedAt'),
-      input.document.completedAt ? `${fmtDateTime(input.document.completedAt)} (KST)` : '—',
-    );
+    for (const row of certificateRows(input).summary) {
+      r.drawLabelValue(row.label, row.value);
+    }
     r.drawStatusRow(t(input.locale, 'finalStatus'), t(input.locale, 'completed'));
     r.cursor -= SPACE.xl;
   }
@@ -302,8 +294,7 @@ export class AuditCertificateService {
       });
       r.cursor -= SIZE.body + SPACE.xs;
       // Secondary line: verification method · signed-at
-      const signed = p.signedAt ? `${fmtDateTimeSec(p.signedAt)} (KST)` : t(input.locale, 'unsigned');
-      r.drawText(`${t(input.locale, 'verification')}: ${p.verificationMethod}   ·   ${t(input.locale, 'signedAt')}: ${signed}`, MARGIN_X, r.cursor - SIZE.timeline, {
+      r.drawText(participantDetailLine(input.locale, p), MARGIN_X, r.cursor - SIZE.timeline, {
         size: SIZE.timeline,
         color: COLOR.foregroundMuted,
       });
@@ -355,8 +346,9 @@ export class AuditCertificateService {
   /** 문서 무결성 지문: algorithm + original & final SHA-256 (mono, wrapped). */
   private drawIntegrity(r: Renderer, input: AuditCertificateInput): void {
     r.startSection(t(input.locale, 'integrity'), 4 * (SIZE.mono + SPACE.sm));
-    r.drawLabelValue(t(input.locale, 'hashAlgorithm'), 'SHA-256');
-    r.drawLabelValue(t(input.locale, 'certificateIssued'), `${fmtDateTimeSec(input.issuedAt)} (KST)`);
+    for (const row of certificateRows(input).integrity) {
+      r.drawLabelValue(row.label, row.value);
+    }
     r.cursor -= SPACE.sm;
 
     r.drawText(t(input.locale, 'originalContract'), MARGIN_X, r.cursor - SIZE.label, {
@@ -523,6 +515,92 @@ class Renderer {
   }
 }
 
+/* ────────────────────────────────────────────────────────────────────────────
+ * Drawn copy — resolved before layout
+ *
+ * Every label the certificate draws is looked up here, in one place, so that a
+ * label and its value can be read side by side. The page-count row is why:
+ * while the value template (`{count}쪽`) doubled as its own label, the reader
+ * saw the raw placeholder on a signed legal record and nothing in the layout
+ * code made that visible. Resolving copy as data keeps it assertable without
+ * parsing the rendered PDF.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/** Value shown when a field has no content — a dash, not blank space. */
+const EMPTY_VALUE = '—';
+
+/** Digest algorithm — an identifier, not copy; identical in every locale. */
+const HASH_ALGORITHM = 'SHA-256';
+
+/** One two-column row of the certificate. */
+export interface CertificateRow {
+  label: string;
+  value: string;
+}
+
+/** Every label/value row the certificate draws, grouped by section. */
+export interface CertificateRows {
+  /** Cover issue meta. */
+  issue: CertificateRow[];
+  /** 계약 요약 — the status pill is drawn separately (it is not a text value). */
+  summary: CertificateRow[];
+  /** 문서 무결성 지문 header rows (the hashes themselves are drawn as mono). */
+  integrity: CertificateRow[];
+}
+
+/** Resolve every label/value row for `input`, in draw order. */
+export function certificateRows(input: AuditCertificateInput): CertificateRows {
+  const l = input.locale;
+  return {
+    issue: [
+      { label: t(l, 'issuedAt'), value: fmtDateTimeZoned(l, input.issuedAt) },
+      { label: t(l, 'certificateId'), value: input.certificateId },
+      { label: t(l, 'documentId'), value: input.document.id },
+    ],
+    summary: [
+      { label: t(l, 'contractName'), value: input.document.title },
+      {
+        label: t(l, 'originalPages'),
+        value: interpolate(t(l, 'originalPageCount'), { count: input.document.pageCount }),
+      },
+      { label: t(l, 'sender'), value: input.sender.name ?? EMPTY_VALUE },
+      { label: t(l, 'senderEmail'), value: input.sender.email },
+      {
+        label: t(l, 'sentAt'),
+        value: input.document.sentAt ? fmtDateTimeZoned(l, input.document.sentAt) : EMPTY_VALUE,
+      },
+      {
+        label: t(l, 'completedAt'),
+        value: input.document.completedAt
+          ? fmtDateTimeZoned(l, input.document.completedAt)
+          : EMPTY_VALUE,
+      },
+    ],
+    integrity: [
+      { label: t(l, 'hashAlgorithm'), value: HASH_ALGORITHM },
+      { label: t(l, 'certificateIssued'), value: fmtDateTimeSecZoned(l, input.issuedAt) },
+    ],
+  };
+}
+
+/**
+ * Secondary participant line: how the signer proved who they were, and when
+ * they signed.
+ *
+ * The verification method is read from the catalog rather than carried on the
+ * participant: the product has exactly one method, so a caller-supplied string
+ * was only ever a way for one locale's wording to reach every reader.
+ */
+export function participantDetailLine(
+  locale: SupportedLocale,
+  participant: CertificateParticipant,
+): string {
+  const signed = participant.signedAt
+    ? fmtDateTimeSecZoned(locale, participant.signedAt)
+    : t(locale, 'unsigned');
+  return `${t(locale, 'verification')}: ${t(locale, 'verificationMethod')}   ·   ${t(locale, 'signedAt')}: ${signed}`;
+}
+
 /* ──────────────────────────── helpers ──────────────────────────── */
 
 /** Resolve a sender brand color to pdf-lib rgb, falling back to Toss blue. */
@@ -581,6 +659,25 @@ function fmtDateTime(value: Date | string): string {
 /** `YYYY.MM.DD HH:mm:ss` (KST) — timeline & legal-precision timestamps. */
 function fmtDateTimeSec(value: Date | string): string {
   return fmtKst(value, true);
+}
+
+/**
+ * Name the zone the printed clock belongs to. The certificate never converts
+ * timestamps, so the zone is a constant fact about the reading — but how it is
+ * spelled out is copy: a reader outside Korea has no reason to know "KST".
+ * An unreadable timestamp gets no zone, since there is no clock to qualify.
+ */
+function zoned(locale: SupportedLocale, formatted: string): string {
+  if (formatted === EMPTY_VALUE) return formatted;
+  return `${formatted} (${t(locale, 'timeZone')})`;
+}
+
+function fmtDateTimeZoned(locale: SupportedLocale, value: Date | string): string {
+  return zoned(locale, fmtDateTime(value));
+}
+
+function fmtDateTimeSecZoned(locale: SupportedLocale, value: Date | string): string {
+  return zoned(locale, fmtDateTimeSec(value));
 }
 
 /** Greedy character-wrap for spaceless Korean text to a measured max width. */

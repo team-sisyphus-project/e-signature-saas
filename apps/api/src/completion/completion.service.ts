@@ -200,7 +200,6 @@ export class CompletionService {
       // email is null. The certificate masks an empty address to '—'.
       email: sr.recipientEmail ?? '',
       order: i + 1,
-      verificationMethod: verificationMethod(locale),
       signedAt: sr.signedAt,
     }));
 
@@ -320,10 +319,6 @@ export class CompletionService {
   private artifactKey(ownerId: string, documentId: string, kind: 'signed' | 'certificate'): string {
     return `documents/${ownerId}/completed/${documentId}-${kind}.pdf`;
   }
-}
-
-function verificationMethod(locale: SupportedLocale): string {
-  return translate(locale, 'auditCertificate.verificationMethod');
 }
 
 /** Shape consumed by the certificate/email helpers (subset of the query). */
