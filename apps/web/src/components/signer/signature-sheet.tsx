@@ -3,20 +3,21 @@
 /**
  * SignatureInputSheet — the signer's capture surface, a bottom BottomSheet.
  *
- * It targets the field the signer tapped (read from the signer context's
+ * It targets the field the signer tapped (read from the fill context's
  * `activeFieldId`) and adapts to that field's type:
  *
  *   • SIGNATURE — a segmented toggle picks one of two ways to sign:
- *       ① 그리기 — draw on the high-DPI `SignaturePad` (variable-width pressure
- *         ink + smoothing), with a '다시' reset.
- *       ② 입력 — type a name and pick a handwriting / serif / sans font; the
+ *       ① draw — on the high-DPI `SignaturePad` (variable-width pressure ink +
+ *         smoothing), with a reset.
+ *       ② type — enter a name and pick a handwriting / serif / sans font; the
  *         chosen rendering is rasterized to a PNG so it lands in the same field.
  *   • DATE / TEXT — a lightweight inline input variant (date picker / text box).
  *
- * '적용' captures the value into the signer context (so the page overlay reflects
- * it immediately) and persists it to the grain-1 `fields` endpoint before the
- * sheet closes. The Sheet/Button/Field primitives come from @repo/ui; every
- * visual value is a design token.
+ * Applying captures the value into the flow context (so the page overlay
+ * reflects it immediately) and persists it to the `fields` endpoint before the
+ * sheet closes. Every string arrives as a catalog key on `copy` and is resolved
+ * here, so both flows word the same sheet their own way. The Sheet/Button/Field
+ * primitives come from @repo/ui; every visual value is a design token.
  */
 
 import * as React from 'react';
@@ -37,12 +38,9 @@ import {
   DEFAULT_SIGNATURE_FONT,
   type SignatureFont,
 } from '@/lib/signature';
-import {
-  useFill,
-  type FillField,
-  type FillFieldValue,
-  type SheetCopy,
-} from './fill-context';
+import type { SheetCopy } from '@/lib/fill-copy';
+import { useTranslation } from '@/components/locale-provider';
+import { useFill, type FillField, type FillFieldValue } from './fill-context';
 import { SignaturePad, type SignaturePadHandle } from './signature-pad';
 
 /** Resolve a design-token color (e.g. `--color-foreground`) to a usable string. */
@@ -102,6 +100,7 @@ async function rasterizeTypedName(text: string, fontFamily: string): Promise<str
 
 export function SignatureInputSheet() {
   const { payload, activeFieldId, persistFields, closeField, setFieldValue, copy } = useFill();
+  const t = useTranslation();
   const sheetCopy = copy.sheet;
 
   const field = React.useMemo(
@@ -128,7 +127,7 @@ export function SignatureInputSheet() {
             onCancel={closeField}
           />
         ) : (
-          <SheetTitle className="sr-only">{sheetCopy.title.SIGNATURE}</SheetTitle>
+          <SheetTitle className="sr-only">{t(sheetCopy.title.SIGNATURE)}</SheetTitle>
         )}
       </SheetContent>
     </Sheet>
@@ -144,8 +143,11 @@ interface SheetBodyProps {
 }
 
 function SheetBody({ field, copy, persistFields, onCommit, onCancel }: SheetBodyProps) {
+  const t = useTranslation();
   const [saving, setSaving] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  // A boolean, not a sentence: the save failure re-renders in whatever language
+  // is current when it is read, not the one it was raised in.
+  const [failed, setFailed] = React.useState(false);
 
   // Persist to the server, then commit to context (which reflects on the page
   // and closes the sheet). Keeps the sheet open with a message if the save fails.
@@ -157,27 +159,25 @@ function SheetBody({ field, copy, persistFields, onCommit, onCancel }: SheetBody
           : { type: value.type, text: value.text },
       );
       if (!serialized) return;
-      setError(null);
+      setFailed(false);
       setSaving(true);
       try {
         await persistFields([{ fieldId: field.id, value: serialized }]);
         onCommit(value);
       } catch {
-        setError(copy.saveError);
+        setFailed(true);
       } finally {
         setSaving(false);
       }
     },
-    [field.id, persistFields, onCommit, copy.saveError],
+    [field.id, persistFields, onCommit],
   );
-
-  const title = copy.title[field.type];
 
   return (
     <>
       <SheetHeader>
-        <SheetTitle>{title}</SheetTitle>
-        <SheetDescription>{copy.hint(field.type)}</SheetDescription>
+        <SheetTitle>{t(copy.title[field.type])}</SheetTitle>
+        <SheetDescription>{t(copy.hint[field.type])}</SheetDescription>
       </SheetHeader>
 
       {field.type === 'SIGNATURE' ? (
@@ -192,9 +192,9 @@ function SheetBody({ field, copy, persistFields, onCommit, onCancel }: SheetBody
         />
       )}
 
-      {error ? (
+      {failed ? (
         <p className="mt-md text-sm text-danger" role="alert">
-          {error}
+          {t(copy.saveError)}
         </p>
       ) : null}
     </>
@@ -216,6 +216,7 @@ function SignatureBody({
   onApply: (value: FillFieldValue) => void | Promise<void>;
   onCancel: () => void;
 }) {
+  const t = useTranslation();
   const [mode, setMode] = React.useState<SignMode>('draw');
   const [hasInk, setHasInk] = React.useState(false);
   const [name, setName] = React.useState('');
@@ -249,7 +250,7 @@ function SignatureBody({
 
       {mode === 'draw' ? (
         <div className="flex flex-col gap-xs">
-          <SignaturePad ref={padRef} onDirtyChange={setHasInk} aria-label={copy.signaturePadAria} />
+          <SignaturePad ref={padRef} onDirtyChange={setHasInk} aria-label={t(copy.padLabel)} />
           <div className="flex justify-end">
             <Button
               type="button"
@@ -258,7 +259,7 @@ function SignatureBody({
               onClick={() => padRef.current?.clear()}
               disabled={!hasInk}
             >
-              {copy.reset}
+              {t(copy.reset)}
             </Button>
           </div>
         </div>
@@ -269,15 +270,15 @@ function SignatureBody({
               className={cn('truncate text-3xl leading-none', name ? 'text-foreground' : 'text-foreground-subtle')}
               style={{ fontFamily: font.fontFamily }}
             >
-              {name || copy.typePlaceholder}
+              {name || t(copy.typePlaceholder)}
             </span>
           </div>
-          <Field label={copy.typeHint} htmlFor="signer-typed-name">
+          <Field label={t(copy.typeHint)} htmlFor="signer-typed-name">
             <Input
               id="signer-typed-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder={copy.typePlaceholder}
+              placeholder={t(copy.typePlaceholder)}
               autoComplete="name"
               maxLength={40}
             />
@@ -300,12 +301,13 @@ function ModeToggle({
   copy: SheetCopy;
   onChange: (m: SignMode) => void;
 }) {
+  const t = useTranslation();
   const options: { id: SignMode; label: string }[] = [
-    { id: 'draw', label: copy.modeDraw },
-    { id: 'type', label: copy.modeType },
+    { id: 'draw', label: t(copy.modeDraw) },
+    { id: 'type', label: t(copy.modeType) },
   ];
   return (
-    <div role="tablist" aria-label={copy.modeLabel} className="grid grid-cols-2 gap-2xs rounded-md bg-surface-muted p-2xs">
+    <div role="tablist" aria-label={t(copy.modeLabel)} className="grid grid-cols-2 gap-2xs rounded-md bg-surface-muted p-2xs">
       {options.map((o) => {
         const active = mode === o.id;
         return (
@@ -341,11 +343,13 @@ function FontChips({
   copy: SheetCopy;
   onSelect: (f: SignatureFont) => void;
 }) {
+  const t = useTranslation();
   const preview = name.trim();
+  const fontLabel = t(copy.fontLabel);
   return (
     <div className="flex flex-col gap-xs">
-      <span className="text-sm font-semibold text-foreground-muted">{copy.fontLabel}</span>
-      <div role="radiogroup" aria-label={copy.fontLabel} className="flex gap-xs overflow-x-auto pb-2xs">
+      <span className="text-sm font-semibold text-foreground-muted">{fontLabel}</span>
+      <div role="radiogroup" aria-label={fontLabel} className="flex gap-xs overflow-x-auto pb-2xs">
         {SIGNATURE_FONTS.map((f) => {
           const active = selected.id === f.id;
           return (
@@ -390,6 +394,7 @@ function InlineValueBody({
   onApply: (value: FillFieldValue) => void | Promise<void>;
   onCancel: () => void;
 }) {
+  const t = useTranslation();
   const [value, setValue] = React.useState(() => (type === 'DATE' ? todayIso() : ''));
   const canApply = value.trim().length > 0;
   const inputId = `fill-inline-${type.toLowerCase()}`;
@@ -402,13 +407,13 @@ function InlineValueBody({
 
   return (
     <div className="flex flex-col gap-md">
-      <Field label={type === 'DATE' ? copy.dateLabel : copy.textLabel} htmlFor={inputId}>
+      <Field label={t(type === 'DATE' ? copy.dateLabel : copy.textLabel)} htmlFor={inputId}>
         <Input
           id={inputId}
           type={type === 'DATE' ? 'date' : 'text'}
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          placeholder={type === 'TEXT' ? copy.textPlaceholder : undefined}
+          placeholder={type === 'TEXT' ? t(copy.textPlaceholder) : undefined}
           maxLength={type === 'TEXT' ? 200 : undefined}
         />
       </Field>
@@ -432,10 +437,11 @@ function ApplyRow({
   onApply: () => void | Promise<void>;
   onCancel: () => void;
 }) {
+  const t = useTranslation();
   return (
     <div className="flex gap-xs pt-2xs">
       <Button type="button" variant="secondary" size="lg" onClick={onCancel} disabled={saving}>
-        {copy.close}
+        {t(copy.close)}
       </Button>
       <Button
         type="button"
@@ -445,7 +451,7 @@ function ApplyRow({
         isLoading={saving}
         disabled={!canApply || saving}
       >
-        {copy.apply}
+        {t(copy.apply)}
       </Button>
     </div>
   );

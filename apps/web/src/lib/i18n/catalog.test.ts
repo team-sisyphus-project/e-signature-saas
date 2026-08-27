@@ -119,6 +119,7 @@ describe('key paths consumed by shipped screens', () => {
     ['settings.languageTitle', '언어 설정', 'Language settings'],
     ['contracts.shareTitle', '공유 링크', 'Share links'],
     ['signer.verifyTitle', '본인확인', 'Verify your identity'],
+    ['share.gateTitle', '비밀번호를 입력해 주세요', 'Enter the password'],
   ];
 
   it.each(cases)('resolves %s in both locales', (key, korean, english) => {

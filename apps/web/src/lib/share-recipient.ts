@@ -13,8 +13,9 @@
  *
  * User-facing access/error copy is owned by the server (`MESSAGES.share`) and
  * surfaced verbatim through `ApiError`. The screen chrome authored client-side
- * lives in `SHARE_RECIPIENT_COPY` and mirrors the server catalog's Toss voice —
- * the same single-source pattern as `SIGNER_COPY`.
+ * lives in the `share` domain of the browser catalog (`lib/i18n/share.ts`) and
+ * mirrors the server catalog's Toss voice — the same single-source pattern the
+ * `signer` domain follows.
  *
  * Security: the link password is request-only. It is passed straight to `/unlock`
  * and never stored, cached, logged, or echoed — the server hashes it at rest and
@@ -23,8 +24,8 @@
 
 import { ApiError, apiFetch, apiUrl } from './api';
 import { linkLocaleQuery } from './locale';
-import { SHARE_PASSWORD_MIN_LENGTH } from './sharing';
 import type { SignFieldType, SignerSender, SignRequestStatus } from './signing';
+import type { WebTranslationKey } from './web-translations';
 
 // --- response shapes (mirror SharingService return types) --------------------
 
@@ -36,7 +37,7 @@ export interface ShareMeta {
   locale: 'ko' | 'en';
   /** Whether `/unlock` requires the link password (the value is never returned). */
   requiresPassword: boolean;
-  /** ISO expiry instant, or null for "만료 없음". */
+  /** ISO expiry instant, or null when the link never expires. */
   expiresAt: string | null;
   /** True once the recipient has already submitted (a terminal state). */
   alreadySubmitted: boolean;
@@ -177,117 +178,12 @@ export function submitShare(
   });
 }
 
-// --- client-authored copy (design-spec messaging/share-link.md) --------------
-
-/**
- * The recipient-facing strings authored on the client (the server returns only
- * access/error copy, not screen chrome). Single source so the Toss voice stays
- * consistent and auditable — the receiver counterpart to `SIGNER_COPY`.
- */
-export const SHARE_RECIPIENT_COPY = {
-  /** Password gate (`verify-screen/password-gate`). */
-  gate: {
-    title: '비밀번호를 입력해 주세요',
-    hint: '이 계약서는 비밀번호로 보호되어 있어요.',
-    label: '비밀번호',
-    placeholder: '비밀번호를 입력해 주세요',
-    submit: '확인',
-    submitting: '확인 중',
-    /** Client-side guard mirroring the server min length, before the server replies. */
-    tooShort: `비밀번호는 ${SHARE_PASSWORD_MIN_LENGTH}자 이상으로 입력해 주세요.`,
-    /** Fallback when the failure carries no server message. */
-    fallbackError: '문제가 생겼어요. 잠시 후 다시 시도해 주세요.',
-  },
-  /** Terminal notice screens (`notice-screen`, expired/disabled/…). */
-  notice: {
-    expired: {
-      title: '링크가 만료됐어요',
-      body: '이 링크는 유효 기간이 지났어요. 보낸 분에게 새 링크를 요청해 주세요.',
-    },
-    disabled: {
-      title: '지금은 열 수 없는 링크예요',
-      body: '보낸 분이 이 링크를 사용 중지했어요. 보낸 분에게 문의해 주세요.',
-    },
-    invalidLink: {
-      title: '링크를 확인해 주세요',
-      body: '링크가 올바르지 않아요. 보낸 분에게 링크를 다시 요청해 주세요.',
-    },
-    notSignable: {
-      title: '지금은 작성할 수 없어요',
-      body: '지금은 작성할 수 없는 계약이에요. 보낸 분에게 문의해 주세요.',
-    },
-    alreadySubmitted: {
-      title: '이미 제출했어요',
-      body: '이미 제출을 완료한 계약이에요.',
-    },
-  },
-  /** Document viewer chrome (recipient speaks "작성/제출"). */
-  viewer: {
-      ctaContinue: '작성하기',
-    ctaComplete: '제출하기',
-    loadError: '문서를 불러올 수 없어요. 잠시 후 다시 시도해 주세요.',
-    progressNone: '작성할 항목이 없어요.',
-    progressAllDone: '모든 항목을 작성했어요.',
-      completeError: '제출하지 못했어요. 잠시 후 다시 시도해 주세요.',
-      pageError: (page: number) => `${page}페이지를 불러올 수 없어요.`,
-      progress: (total: number, done: number) => `작성할 항목 ${total}곳 중 ${done}곳을 작성했어요.`,
-      dateHint: '날짜를 입력해 주세요.', textHint: '내용을 입력해 주세요.',
-  },
-  /** Submit-success completion takeover (`completion-screen`, Download 비노출). */
-  done: {
-    title: '제출이 완료되었습니다!',
-    body: '작성하신 내용이 안전하게 전달됐어요.',
-    documentLabel: '제출한 문서',
-    next: '보낸 분이 확인할 수 있도록 전달했어요. 이제 창을 닫으셔도 돼요.',
-  },
-} as const;
-
-export type ShareRecipientCopy = WidenStrings<typeof SHARE_RECIPIENT_COPY>;
-type WidenStrings<T> = T extends (...args: infer Args) => infer Result
-  ? (...args: Args) => Result
-  : T extends string
-    ? string
-    : { [K in keyof T]: WidenStrings<T[K]> };
-
-/** Public share chrome follows the locale resolved from link metadata. */
-export function shareRecipientCopyFor(locale: 'ko' | 'en'): ShareRecipientCopy {
-  if (locale === 'ko') return SHARE_RECIPIENT_COPY;
-  return {
-    gate: {
-      title: 'Enter the password', hint: 'This contract is password protected.', label: 'Password',
-      placeholder: 'Enter the password', submit: 'Continue', submitting: 'Checking…',
-      tooShort: `Enter at least ${SHARE_PASSWORD_MIN_LENGTH} characters.`,
-      fallbackError: 'Something went wrong. Please try again shortly.',
-    },
-    notice: {
-      expired: { title: 'This link has expired', body: 'This link is no longer valid. Ask the sender for a new link.' },
-      disabled: { title: 'This link is unavailable', body: 'The sender has disabled this link. Contact the sender for help.' },
-      invalidLink: { title: 'Check your link', body: 'This link is invalid. Ask the sender to send it again.' },
-      notSignable: { title: 'This contract cannot be completed', body: 'This contract is not available right now. Contact the sender.' },
-      alreadySubmitted: { title: 'Already submitted', body: 'You have already submitted this contract.' },
-    },
-    viewer: {
-      ctaContinue: 'Continue', ctaComplete: 'Submit', loadError: 'We could not load the document. Please try again shortly.',
-      progressNone: 'There are no fields to complete.', progressAllDone: 'All fields are complete.',
-      completeError: 'We could not submit your response. Please try again shortly.',
-      pageError: (page: number) => `We could not load page ${page}.`,
-      progress: (total: number, done: number) => `Completed ${done} of ${total} fields.`,
-      dateHint: 'Enter the date.', textHint: 'Enter the required information.',
-    },
-    done: {
-      title: 'Submission complete!', body: 'Your response has been delivered securely.', documentLabel: 'Submitted document',
-      next: 'The sender can now review your response. You may close this window.',
-    },
-  };
-}
-
 // --- terminal (blocked) state mapping ----------------------------------------
 //
-// design-spec: components/share-recipient-flow/base.md "blocked 분기 매핑" +
-// messaging/share-link.md "HTTP 코드 매핑 규칙". This is the single source for the
-// recipient's terminal decision surface: HTTP status → block reason → notice
-// title/body/tone. It mirrors the server catalog so the calm Toss voice (no
-// blame, one next-step sentence) and the 410/403/404 mapping stay auditable.
+// The single source for the recipient's terminal decision surface: HTTP status →
+// block reason → notice copy + tone. It mirrors the server catalog so the calm
+// voice (no blame, one next-step sentence) and the 410/403/404 mapping stay
+// auditable. Copy rules: design-spec `messaging/public-flow-copy.md`.
 
 /**
  * Why a share link can't be opened/filled — the recipient's terminal "blocked"
@@ -304,23 +200,48 @@ export type ShareBlockReason =
 export type ShareNoticeTone = 'success' | 'neutral';
 
 export interface ShareNotice {
-  title: string;
-  body: string;
+  /** Catalog key of the notice headline. */
+  titleKey: WebTranslationKey;
+  /** Catalog key of the single guiding sentence below it. */
+  bodyKey: WebTranslationKey;
   tone: ShareNoticeTone;
 }
 
 /**
- * Terminal copy + tone per blocked reason. Bodies mirror the server's
- * `MESSAGES.share` catalog (via `SHARE_RECIPIENT_COPY.notice`). Only an
- * "already submitted" link is a positive/success outcome; the rest are calm,
- * neutral dead-ends — the sender's branding is kept regardless of tone.
+ * Terminal copy + tone per blocked reason, as catalog keys — the single source
+ * `ShareFlow` renders from. The bodies mirror the server's `MESSAGES.share`
+ * catalog. Only an "already submitted" link is a positive/success outcome; the
+ * rest are calm, neutral dead-ends — the sender's branding is kept either way.
+ *
+ * Keys rather than sentences, so a recipient who switches language on a dead-end
+ * screen reads the new language rather than the one the notice was built in.
  */
 export const SHARE_NOTICE: Record<ShareBlockReason, ShareNotice> = {
-  expired: { ...SHARE_RECIPIENT_COPY.notice.expired, tone: 'neutral' },
-  disabled: { ...SHARE_RECIPIENT_COPY.notice.disabled, tone: 'neutral' },
-  invalidLink: { ...SHARE_RECIPIENT_COPY.notice.invalidLink, tone: 'neutral' },
-  notSignable: { ...SHARE_RECIPIENT_COPY.notice.notSignable, tone: 'neutral' },
-  alreadySubmitted: { ...SHARE_RECIPIENT_COPY.notice.alreadySubmitted, tone: 'success' },
+  expired: {
+    titleKey: 'share.noticeExpiredTitle',
+    bodyKey: 'share.noticeExpiredBody',
+    tone: 'neutral',
+  },
+  disabled: {
+    titleKey: 'share.noticeDisabledTitle',
+    bodyKey: 'share.noticeDisabledBody',
+    tone: 'neutral',
+  },
+  invalidLink: {
+    titleKey: 'share.noticeInvalidLinkTitle',
+    bodyKey: 'share.noticeInvalidLinkBody',
+    tone: 'neutral',
+  },
+  notSignable: {
+    titleKey: 'share.noticeNotSignableTitle',
+    bodyKey: 'share.noticeNotSignableBody',
+    tone: 'neutral',
+  },
+  alreadySubmitted: {
+    titleKey: 'share.noticeSubmittedTitle',
+    bodyKey: 'share.noticeSubmittedBody',
+    tone: 'success',
+  },
 };
 
 /**

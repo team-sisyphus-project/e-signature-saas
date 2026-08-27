@@ -12,8 +12,8 @@
  */
 
 import * as React from 'react';
-import { signerCopyFor } from '@/lib/signing';
-import { useLocale } from '@/components/locale-provider';
+import { useTranslation } from '@/components/locale-provider';
+import type { WebTranslationKey } from '@/lib/web-translations';
 import { useSigner, type BlockReason } from './signer-context';
 import { LoadingScreen } from './loading-screen';
 import { VerifyScreen } from './verify-screen';
@@ -21,16 +21,36 @@ import { NoticeScreen, type NoticeScreenProps } from './notice-screen';
 import { DocumentViewer } from './document-viewer';
 import { CompletionScreen } from './completion-screen';
 
-/** Terminal copy + tone for each non-signable reason (Toss voice, no blame). */
+/**
+ * Terminal copy + tone for each non-signable reason (calm voice, no blame).
+ *
+ * Catalog keys rather than sentences, so a signer who switches language while
+ * standing on a dead-end screen reads the new one.
+ */
+const NOTICE: Record<
+  BlockReason,
+  { titleKey: WebTranslationKey; bodyKey: WebTranslationKey; tone: NoticeScreenProps['tone'] }
+> = {
+  alreadySigned: {
+    titleKey: 'signer.noticeSignedTitle',
+    bodyKey: 'signer.noticeSignedBody',
+    tone: 'success',
+  },
+  unavailable: {
+    titleKey: 'signer.noticeUnavailableTitle',
+    bodyKey: 'signer.noticeUnavailableBody',
+    tone: 'neutral',
+  },
+  invalidLink: {
+    titleKey: 'signer.noticeInvalidLinkTitle',
+    bodyKey: 'signer.noticeInvalidLinkBody',
+    tone: 'neutral',
+  },
+};
+
 export function SignerFlow() {
   const { state } = useSigner();
-  const { locale } = useLocale();
-  const copy = signerCopyFor(locale);
-  const notice: Record<BlockReason, { title: string; body: string; tone: NoticeScreenProps['tone'] }> = {
-    alreadySigned: { title: copy.alreadySignedTitle, body: copy.alreadySigned, tone: 'success' },
-    unavailable: { title: copy.unavailableTitle, body: copy.unavailable, tone: 'neutral' },
-    invalidLink: { title: copy.invalidLinkTitle, body: copy.invalidLink, tone: 'neutral' },
-  };
+  const t = useTranslation();
 
   switch (state.phase) {
     case 'loading':
@@ -39,12 +59,12 @@ export function SignerFlow() {
       // Meta is guaranteed present once we leave loading for verify.
       return state.meta ? <VerifyScreen meta={state.meta} /> : <LoadingScreen />;
     case 'blocked': {
-      const currentNotice = notice[state.blockReason ?? 'invalidLink'];
+      const notice = NOTICE[state.blockReason ?? 'invalidLink'];
       return (
         <NoticeScreen
-          title={currentNotice.title}
-          body={currentNotice.body}
-          tone={currentNotice.tone}
+          title={t(notice.titleKey)}
+          body={t(notice.bodyKey)}
+          tone={notice.tone}
           sender={state.meta?.sender ?? null}
           brandColor={state.meta?.sender.brandColor ?? null}
         />

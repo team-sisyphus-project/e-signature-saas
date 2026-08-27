@@ -6,11 +6,11 @@
  * After access is granted, this renders the contract PDF fit-to-width as a
  * vertical, multi-page scroll (skeleton-shimmer per page while it rasterizes).
  * Each assigned field is overlaid on its page via `normToPx`: an unfilled field
- * breathes with a pulse highlight and a "여기에 …" affordance; a filled field
+ * breathes with a pulse highlight and a "tap here" affordance; a filled field
  * shows its captured value inline. The contract body itself is a rasterized
  * image — only the overlaid fields are interactive, so the recipient can read
- * but never edit the document text (grain-6 constraint). A safe-area-aware
- * bottom CTA tracks progress and finalizes once nothing is left.
+ * but never edit the document text. A safe-area-aware bottom CTA tracks
+ * progress and finalizes once nothing is left.
  *
  * The recipient holds no File, so the document is streamed from the
  * session-guarded PDF endpoint (`pdfUrl`) and opened with `loadPdfFromUrl`. All
@@ -23,7 +23,6 @@ import * as React from 'react';
 import { Button, Skeleton, cn } from '@repo/ui';
 import { ApiError } from '@/lib/api';
 import { brandStyle } from '@/lib/branding';
-import type { SignFieldType } from '@/lib/signing';
 import {
   loadPdfFromUrl,
   renderPageToCanvas,
@@ -31,12 +30,12 @@ import {
   PdfRenderError,
   type PdfDocument,
 } from '@/lib/pdf';
-import { normToPx, type PageSize } from '@/lib/field-geometry';
+import { fieldTypeLabel, normToPx, type PageSize } from '@/lib/field-geometry';
+import type { FillCopy } from '@/lib/fill-copy';
 import { useFill, type FillField, type FillFieldValue } from './fill-context';
 import { BrandingHeader } from './branding-header';
 import { SignatureInputSheet } from './signature-sheet';
-import { signerCopyFor } from '@/lib/signing';
-import { useLocale } from '@/components/locale-provider';
+import { useTranslation } from '@/components/locale-provider';
 
 type LoadStatus = 'loading' | 'ready' | 'error';
 
@@ -56,8 +55,7 @@ function topOf(field: FillField): number {
 }
 
 export function DocumentViewer() {
-  const { locale } = useLocale();
-  const localeCopy = signerCopyFor(locale);
+  const t = useTranslation();
   const {
     sender,
     brandColor,
@@ -74,7 +72,8 @@ export function DocumentViewer() {
   // Finalize state for the bottom CTA. A failed `complete` keeps every captured
   // value in place (the context never clears them), so the recipient just retries.
   const [completing, setCompleting] = React.useState(false);
-  const [completeError, setCompleteError] = React.useState<string | null>(null);
+  // Server-authored rejection text, or `true` for the catalog's own fallback.
+  const [completeError, setCompleteError] = React.useState<string | true | null>(null);
 
   const session = React.useMemo(() => loadSession(), [loadSession]);
   const fields = React.useMemo(() => payload?.fields ?? [], [payload]);
@@ -82,13 +81,15 @@ export function DocumentViewer() {
   const [doc, setDoc] = React.useState<PdfDocument | null>(null);
   const [pageCount, setPageCount] = React.useState(0);
   const [status, setStatus] = React.useState<LoadStatus>('loading');
-  const [error, setError] = React.useState<string>(copy.loadError);
+  // A render failure carries the renderer's own message; everything else is the
+  // catalog's neutral line, resolved at render time so it follows the locale.
+  const [renderError, setRenderError] = React.useState<string | null>(null);
 
   // Open the streamed PDF once per session; dispose on unmount.
   React.useEffect(() => {
     if (!session) {
       setStatus('error');
-      setError(copy.loadError);
+      setRenderError(null);
       return;
     }
     let disposed = false;
@@ -110,14 +111,14 @@ export function DocumentViewer() {
       })
       .catch((err: unknown) => {
         if (disposed) return;
-        setError(err instanceof PdfRenderError ? err.message : copy.loadError);
+        setRenderError(err instanceof PdfRenderError ? err.message : null);
         setStatus('error');
       });
     return () => {
       disposed = true;
       void opened?.destroy();
     };
-  }, [pdfUrl, session, copy.loadError]);
+  }, [pdfUrl, session]);
 
   // Measure the page column so each page rasterizes exactly fit-to-width.
   const pagesRef = React.useRef<HTMLDivElement>(null);
@@ -183,17 +184,17 @@ export function DocumentViewer() {
     try {
       await complete();
     } catch (err) {
-      setCompleteError(err instanceof ApiError ? err.message : copy.completeError);
+      setCompleteError(err instanceof ApiError ? err.message : true);
       setCompleting(false);
     }
-  }, [orderedUnfilled, scrollToField, openField, complete, completing, copy.completeError]);
+  }, [orderedUnfilled, scrollToField, openField, complete, completing]);
 
   const progress =
     total === 0
-      ? copy.progressNone
+      ? t(copy.progressNone)
       : remaining === 0
-        ? copy.progressAllDone
-        : copy.progress(total, total - remaining);
+        ? t(copy.progressAllDone)
+        : t(copy.progress, { total, done: total - remaining });
 
   return (
     <main
@@ -218,7 +219,7 @@ export function DocumentViewer() {
       >
         {status === 'error' ? (
           <div className="flex aspect-[1/1.414] w-full flex-col items-center justify-center gap-xs rounded-md border border-border bg-surface-muted px-md text-center">
-            <p className="text-sm text-foreground-muted">{error}</p>
+            <p className="text-sm text-foreground-muted">{renderError ?? t(copy.loadError)}</p>
           </div>
         ) : status === 'loading' || !doc || pageWidth === 0 ? (
           <Skeleton className="aspect-[1/1.414] w-full" />
@@ -232,8 +233,6 @@ export function DocumentViewer() {
               fields={fields.filter((f) => f.page === pageNumber)}
               fieldValues={fieldValues}
               affordance={copy.fieldAffordance}
-              pageError={copy.pageError}
-              localeCopy={localeCopy}
               onFieldTap={onFieldTap}
             />
           ))
@@ -252,11 +251,11 @@ export function DocumentViewer() {
               aria-live="assertive"
               className="mb-xs text-center text-sm text-danger"
             >
-              {completeError}
+              {completeError === true ? t(copy.completeError) : completeError}
             </p>
           ) : null}
           <Button fullWidth size="lg" onClick={onCta} isLoading={completing}>
-            {remaining > 0 ? copy.ctaContinue : copy.ctaComplete}
+            {t(remaining > 0 ? copy.ctaContinue : copy.ctaComplete)}
           </Button>
         </div>
       </div>
@@ -274,9 +273,7 @@ interface PdfPageViewProps {
   width: number;
   fields: FillField[];
   fieldValues: Record<string, FillFieldValue>;
-  affordance: Record<SignFieldType, string>;
-  pageError: (pageNumber: number) => string;
-  localeCopy: ReturnType<typeof signerCopyFor>;
+  affordance: FillCopy['fieldAffordance'];
   onFieldTap: (field: FillField) => void;
 }
 
@@ -288,10 +285,10 @@ function PdfPageView({
   fields,
   fieldValues,
   affordance,
-  pageError,
-  localeCopy,
   onFieldTap,
 }: PdfPageViewProps) {
+  const t = useTranslation();
+  const { copy } = useFill();
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const [pageSize, setPageSize] = React.useState<PageSize | null>(null);
   const [status, setStatus] = React.useState<LoadStatus>('loading');
@@ -322,7 +319,7 @@ function PdfPageView({
     <div className="relative w-full">
       {ready ? null : status === 'error' ? (
         <div className="flex aspect-[1/1.414] w-full items-center justify-center rounded-sm border border-border bg-surface-muted px-md text-center">
-          <p className="text-sm text-foreground-muted">{pageError(pageNumber)}</p>
+          <p className="text-sm text-foreground-muted">{t(copy.pageError, { page: pageNumber })}</p>
         </div>
       ) : (
         <Skeleton className="aspect-[1/1.414] w-full" />
@@ -331,7 +328,7 @@ function PdfPageView({
       <canvas
         ref={canvasRef}
         role="img"
-        aria-label={localeCopy.pageAria(pageNumber)}
+        aria-label={t('signer.viewerPageLabel', { page: pageNumber })}
         className={cn(
           'block w-full rounded-sm border border-border bg-surface shadow-sm',
           ready ? 'animate-fade-in' : 'hidden',
@@ -347,7 +344,6 @@ function PdfPageView({
               pageSize={pageSize}
               value={fieldValues[field.id]}
               affordance={affordance}
-              localeCopy={localeCopy}
               onTap={() => onFieldTap(field)}
             />
           ))}
@@ -361,13 +357,13 @@ interface FieldOverlayProps {
   field: FillField;
   pageSize: PageSize;
   value: FillFieldValue | undefined;
-  affordance: Record<SignFieldType, string>;
-  localeCopy: ReturnType<typeof signerCopyFor>;
+  affordance: FillCopy['fieldAffordance'];
   onTap: () => void;
 }
 
 /** A single field box positioned over the page: pulse affordance, or its value. */
-function FieldOverlay({ field, pageSize, value, affordance, localeCopy, onTap }: FieldOverlayProps) {
+function FieldOverlay({ field, pageSize, value, affordance, onTap }: FieldOverlayProps) {
+  const t = useTranslation();
   const rect = normToPx(field, pageSize);
   const style: React.CSSProperties = {
     left: rect.left,
@@ -375,17 +371,17 @@ function FieldOverlay({ field, pageSize, value, affordance, localeCopy, onTap }:
     width: rect.width,
     height: rect.height,
   };
-  const label = localeCopy.fieldLabel[field.type];
+  const label = fieldTypeLabel(t, field.type);
 
   if (value != null || field.filled) {
     return (
       <div
         id={fieldDomId(field.id)}
-        aria-label={localeCopy.fieldCompleteAria(label)}
+        aria-label={t('signer.fieldDoneLabel', { label })}
         className="absolute flex items-center justify-center overflow-hidden rounded-sm border border-success bg-success-subtle/30"
         style={style}
       >
-        <FieldValueContent field={field} value={value} localeCopy={localeCopy} />
+        <FieldValueContent value={value} label={label} />
       </div>
     );
   }
@@ -395,7 +391,7 @@ function FieldOverlay({ field, pageSize, value, affordance, localeCopy, onTap }:
       type="button"
       id={fieldDomId(field.id)}
       onClick={onTap}
-      aria-label={localeCopy.fieldInputAria(label)}
+      aria-label={t('signer.fieldInputLabel', { label })}
       className={cn(
         'field-pulse animate-breathing-pulse absolute flex items-center justify-center rounded-sm',
         'border-2 border-primary bg-primary-subtle/40 text-2xs font-bold text-primary',
@@ -405,7 +401,7 @@ function FieldOverlay({ field, pageSize, value, affordance, localeCopy, onTap }:
       style={style}
     >
       <span className="pointer-events-none truncate px-2xs leading-none">
-        {affordance[field.type]}
+        {t(affordance[field.type])}
       </span>
     </button>
   );
@@ -413,21 +409,31 @@ function FieldOverlay({ field, pageSize, value, affordance, localeCopy, onTap }:
 
 /** Renders the captured value inside a filled field box. */
 function FieldValueContent({
-  field,
   value,
-  localeCopy,
+  label,
 }: {
-  field: FillField;
   value: FillFieldValue | undefined;
-  localeCopy: ReturnType<typeof signerCopyFor>;
+  /** The field-type noun, already resolved by the overlay that owns the box. */
+  label: string;
 }) {
+  const t = useTranslation();
   // Server-saved on a resumed session but not re-fetched into the client.
   if (!value) {
-    return <span className="truncate px-2xs text-2xs font-semibold text-success">{localeCopy.fieldCompleted}</span>;
+    return (
+      <span className="truncate px-2xs text-2xs font-semibold text-success">
+        {t('signer.fieldDone')}
+      </span>
+    );
   }
   if (value.type === 'SIGNATURE') {
-    // eslint-disable-next-line @next/next/no-img-element -- in-memory data URL, not a remote asset
-    return <img src={value.dataUrl} alt={localeCopy.fieldValueAlt(localeCopy.fieldLabel[field.type])} className="h-full w-full object-contain" />;
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- in-memory data URL, not a remote asset
+      <img
+        src={value.dataUrl}
+        alt={t('signer.fieldValueAlt', { label })}
+        className="h-full w-full object-contain"
+      />
+    );
   }
   const fontFamily = value.type === 'TEXT' ? value.fontFamily : undefined;
   return (

@@ -22,9 +22,9 @@
 
 import * as React from 'react';
 import { ApiError } from '@/lib/api';
-import { useLocale } from '@/components/locale-provider';
+import { useLocale, useTranslation } from '@/components/locale-provider';
 import { getLinkLocale } from '@/lib/locale';
-import { signerCopyFor } from '@/lib/signing';
+import { SHARE_FILL_COPY } from '@/lib/fill-copy';
 import {
   fetchShareMeta,
   fetchSharePayload,
@@ -36,7 +36,6 @@ import {
   unlockShare,
   metaBlockReason,
   unlockBlockReason,
-  shareRecipientCopyFor,
   type ShareBlockReason,
   type ShareMeta,
   type SharePayload,
@@ -46,7 +45,6 @@ export type { ShareBlockReason };
 import {
   FillProvider,
   type FillContextValue,
-  type FillCopy,
   type FillFieldValue,
 } from '@/components/signer/fill-context';
 
@@ -138,8 +136,8 @@ export function ShareProvider({
   children: React.ReactNode;
 }) {
   const [state, dispatch] = React.useReducer(reducer, initialState);
-  const { setSenderLocale, setPublicLinkActive, locale } = useLocale();
-  const recipientCopy = React.useMemo(() => shareRecipientCopyFor(locale), [locale]);
+  const { setSenderLocale, setPublicLinkActive } = useLocale();
+  const t = useTranslation();
 
   const unlock = React.useCallback(
     async (password?: string) => {
@@ -220,11 +218,11 @@ export function ShareProvider({
     const session = getShareSession(token);
     if (!session) {
       // A missing session means the unlock token expired or the tab lost it.
-      throw new ApiError(recipientCopy.viewer.completeError, 401);
+      throw new ApiError(t('share.viewerCompleteError'), 401);
     }
     const result = await submitShare(token, session);
     dispatch({ type: 'DONE', documentCompleted: result.documentCompleted });
-  }, [token, recipientCopy.viewer.completeError]);
+  }, [token, t]);
 
   const value = React.useMemo<ShareContextValue>(
     () => ({ state, token, unlock }),
@@ -255,10 +253,10 @@ export function ShareProvider({
       closeField,
       setFieldValue,
       complete,
-      copy: shareFillCopy(recipientCopy, locale),
+      copy: SHARE_FILL_COPY,
       // No download: a fill link has no completed artifact to hand back.
     };
-  }, [state, token, persistFields, openField, closeField, setFieldValue, complete, recipientCopy, locale]);
+  }, [state, token, persistFields, openField, closeField, setFieldValue, complete]);
 
   return (
     <ShareContext.Provider value={value}>
@@ -271,37 +269,4 @@ export function useShare(): ShareContextValue {
   const ctx = React.useContext(ShareContext);
   if (!ctx) throw new Error('useShare must be used within a ShareProvider');
   return ctx;
-}
-
-/** The recipient flow's copy for the shared fill surface (speaks "작성/제출"). */
-function shareFillCopy(recipient: ReturnType<typeof shareRecipientCopyFor>, locale: 'ko' | 'en'): FillCopy {
-  const signer = signerCopyFor(locale);
-  return {
-  ctaContinue: recipient.viewer.ctaContinue,
-  ctaComplete: recipient.viewer.ctaComplete,
-  loadError: recipient.viewer.loadError,
-  pageError: recipient.viewer.pageError,
-  progress: recipient.viewer.progress,
-  progressNone: recipient.viewer.progressNone,
-  progressAllDone: recipient.viewer.progressAllDone,
-  // The capture affordance + sheet chrome are identical to the signer flow.
-  fieldAffordance: signer.fieldAffordance,
-  completeError: recipient.viewer.completeError,
-  sheet: {
-    ...signer.sheet,
-    hint: (type) => {
-      if (type === 'DATE') return recipient.viewer.dateHint;
-      if (type === 'TEXT') return recipient.viewer.textHint;
-      return signer.sheet.drawHint;
-    },
-  },
-  done: {
-    title: recipient.done.title,
-    body: recipient.done.body,
-    documentLabel: recipient.done.documentLabel,
-    // A share submission shows one next-step line regardless of other participants.
-    nextAllDone: recipient.done.next,
-    nextWaiting: recipient.done.next,
-  },
-  };
 }

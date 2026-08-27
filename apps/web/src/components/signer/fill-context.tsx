@@ -13,8 +13,8 @@
  * {@link FillProvider}: the components consume `useFill()` and never reach for a
  * flow-specific context or API client directly.
  *
- * This is the "안전하게 파라미터화" boundary from grain-6 — the signer state
- * machine (`signer-context`) keeps owning the OTP path; the share state machine
+ * This is the flow-parameterization boundary — the signer state machine
+ * (`signer-context`) keeps owning the OTP path; the share state machine
  * (`share-context`) owns the password path; both project onto this one surface.
  */
 
@@ -22,6 +22,15 @@ import * as React from 'react';
 import type { SignFieldType } from '@/lib/signing';
 import type { CompletionArtifact } from '@/lib/completion-download';
 import type { SignerSender } from '@/lib/signing';
+import type { DoneCopy, FillCopy, SheetCopy } from '@/lib/fill-copy';
+
+/**
+ * Flow-specific copy for the shared screens, as catalog keys. The OTP flow
+ * speaks "서명"; the share flow speaks "작성/제출". Both key maps live in
+ * `lib/fill-copy.ts`, where they can be resolved in every locale without
+ * mounting a component; the screens below stay audience-neutral.
+ */
+export type { DoneCopy, FillCopy, SheetCopy };
 
 /**
  * A value the recipient has captured for one field, reflected inline on the page
@@ -50,67 +59,6 @@ export interface FillPayload {
   documentTitle: string;
   pageCount: number;
   fields: FillField[];
-}
-
-/**
- * Flow-specific copy for the shared screens. The OTP flow speaks "서명"; the
- * share flow speaks "작성/제출" (the recipient may fill a name/date/address, not
- * only sign). Authored in each flow's copy catalog; the components stay neutral.
- */
-export interface FillCopy {
-  /** Bottom CTA when unfilled fields remain (jumps to the next one). */
-  ctaContinue: string;
-  /** Bottom CTA when every field is captured (finalizes). */
-  ctaComplete: string;
-  /** Whole-document load failure. */
-  loadError: string;
-  /** Per-page rasterize failure, by page number. */
-  pageError: (pageNumber: number) => string;
-  /** Progress line, by total + completed counts. */
-  progress: (total: number, done: number) => string;
-  /** Progress line when there are no fields to fill. */
-  progressNone: string;
-  /** Progress line when every field is done. */
-  progressAllDone: string;
-  /** "Tap here" affordance on an unfilled field, by type. */
-  fieldAffordance: Record<SignFieldType, string>;
-  /** Finalize-CTA failure fallback (when the server gives none). */
-  completeError: string;
-  /** The capture BottomSheet chrome (titles, mode toggles, hints, apply…). */
-  sheet: SheetCopy;
-  /** The completion takeover chrome. */
-  done: DoneCopy;
-}
-
-export interface SheetCopy {
-  title: Record<SignFieldType, string>;
-  modeDraw: string;
-  modeType: string;
-  drawHint: string;
-  typeHint: string;
-  typePlaceholder: string;
-  fontLabel: string;
-  dateLabel: string;
-  textLabel: string;
-  textPlaceholder: string;
-  reset: string;
-  apply: string;
-  saveError: string;
-  modeLabel: string;
-  close: string;
-  signaturePadAria: string;
-  /** Inline hint under the sheet title, by field type. */
-  hint: (type: SignFieldType) => string;
-}
-
-export interface DoneCopy {
-  title: string;
-  body: string;
-  documentLabel: string;
-  /** Next-step note when the whole document is now complete. */
-  nextAllDone: string;
-  /** Next-step note when other participants are still pending. */
-  nextWaiting: string;
 }
 
 /** Optional completed-artifact download (OTP only; the share flow omits it). */
@@ -151,7 +99,7 @@ export interface FillContextValue {
   setFieldValue: (fieldId: string, value: FillFieldValue) => void;
   /** Finalize the recipient's part (complete / submit), advancing to `done`. */
   complete: () => Promise<void>;
-  /** Flow-specific copy for the shared screens. */
+  /** Flow-specific copy keys for the shared screens. */
   copy: FillCopy;
   /** Present ⇒ the completion screen shows a download area (OTP only). */
   download?: FillDownload;

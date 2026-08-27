@@ -22,8 +22,9 @@
 
 import * as React from 'react';
 import { ApiError } from '@/lib/api';
-import { useLocale } from '@/components/locale-provider';
+import { useLocale, useTranslation } from '@/components/locale-provider';
 import { getLinkLocale } from '@/lib/locale';
+import { SIGNER_FILL_COPY } from '@/lib/fill-copy';
 import {
   completeSigning,
   downloadSignerArtifact,
@@ -34,15 +35,12 @@ import {
   setSignerSession,
   signerPdfUrl,
   verifyCode,
-  signerCopyFor,
-  type SignerCopy,
   type SigningMeta,
   type SigningPayload,
 } from '@/lib/signing';
 import {
   FillProvider,
   type FillContextValue,
-  type FillCopy,
   type FillFieldValue,
 } from './fill-context';
 
@@ -176,7 +174,7 @@ export function SignerProvider({
 }) {
   const [state, dispatch] = React.useReducer(reducer, initialState);
   const { setSenderLocale, setPublicLinkActive, locale } = useLocale();
-  const signerCopy = React.useMemo(() => signerCopyFor(locale), [locale]);
+  const t = useTranslation();
 
   // Load pre-auth metadata once per link, then route to verify / blocked.
   React.useEffect(() => {
@@ -224,11 +222,11 @@ export function SignerProvider({
     if (!session) {
       // The session is required to finalize; a missing one means it expired or
       // the tab lost it. Surface a neutral error so the viewer offers a retry.
-      throw new ApiError(signerCopy.completeError, 401);
+      throw new ApiError(t('signer.completeError'), 401);
     }
     const result = await completeSigning(token, session);
     dispatch({ type: 'DONE', documentCompleted: result.documentCompleted });
-  }, [token, signerCopy.completeError]);
+  }, [token, t]);
   const openField = React.useCallback(
     (fieldId: string) => dispatch({ type: 'OPEN_FIELD', fieldId }),
     [],
@@ -281,42 +279,18 @@ export function SignerProvider({
       closeField,
       setFieldValue,
       complete,
-      copy: signerFillCopy(signerCopy),
+      copy: SIGNER_FILL_COPY,
       download: {
         onDownload: (kind) => downloadSignerArtifact(token, kind, documentTitle, locale),
       },
     };
-  }, [state, token, persistFields, openField, closeField, setFieldValue, complete, signerCopy, locale]);
+  }, [state, token, persistFields, openField, closeField, setFieldValue, complete, locale]);
 
   return (
     <SignerContext.Provider value={value}>
       <FillProvider value={fillValue}>{children}</FillProvider>
     </SignerContext.Provider>
   );
-}
-
-/** The OTP signer flow's copy for the shared fill surface (speaks "서명"). */
-function signerFillCopy(copy: SignerCopy): FillCopy {
-  return {
-  ctaContinue: copy.viewerCtaContinue,
-  ctaComplete: copy.viewerCtaComplete,
-  loadError: copy.viewerLoadError,
-  pageError: copy.pageError,
-  progress: copy.progress,
-  progressNone: copy.progressNone,
-  progressAllDone: copy.progressAllDone,
-  fieldAffordance: copy.fieldAffordance,
-  completeError: copy.completeError,
-  sheet: {
-    ...copy.sheet,
-    hint: (type) => {
-      if (type === 'DATE') return copy.dateHint;
-      if (type === 'TEXT') return copy.textHint;
-      return copy.sheet.drawHint;
-    },
-  },
-  done: copy.done,
-};
 }
 
 export function useSigner(): SignerContextValue {

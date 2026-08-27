@@ -1,13 +1,16 @@
 /**
  * Terminal (blocked) state mapping for the link-share recipient.
  *
- * Asserts the design-spec contract (components/share-recipient-flow/base.md
- * "blocked 분기 매핑" + messaging/share-link.md "HTTP 코드 매핑 규칙"): the
- * server's HTTP codes (410/403/404) map to the right terminal reason, and each
- * reason carries the right tone (만료/무효/취소/체결불가 = neutral, 이미제출 =
- * success) and the server-mirrored copy. This is the receiver counterpart to the
- * backend `link-state.spec.ts`, pinned on the client side where the screen is
- * actually chosen.
+ * Asserts the contract the recipient's dead-end screens run on: the server's
+ * HTTP codes (410/403/404) map to the right terminal reason, and each reason
+ * carries the right tone (expired / invalid / disabled / not-fillable =
+ * neutral, already-submitted = success) and the right catalog copy. This is the
+ * receiver counterpart to the backend `link-state.spec.ts`, pinned on the client
+ * side where the screen is actually chosen.
+ *
+ * The copy itself is asserted through the catalog rather than against a second
+ * copy of the strings: `SHARE_NOTICE` holds keys, so what is worth pinning here
+ * is that each reason points at *its own* notice and that both locales resolve.
  */
 
 import { ApiError } from './api';
@@ -15,9 +18,9 @@ import {
   metaBlockReason,
   unlockBlockReason,
   SHARE_NOTICE,
-  SHARE_RECIPIENT_COPY,
   type ShareBlockReason,
 } from './share-recipient';
+import { translateWeb } from './web-translations';
 
 const apiError = (status: number) => new ApiError('boom', status);
 
@@ -85,18 +88,25 @@ describe('SHARE_NOTICE — tone + copy per terminal reason', () => {
     expect(SHARE_NOTICE.alreadySubmitted.tone).toBe('success');
   });
 
-  it('mirrors the server-catalog copy (title + body) for each reason', () => {
-    for (const reason of Object.keys(SHARE_NOTICE) as ShareBlockReason[]) {
-      expect(SHARE_NOTICE[reason].title).toBe(SHARE_RECIPIENT_COPY.notice[reason].title);
-      expect(SHARE_NOTICE[reason].body).toBe(SHARE_RECIPIENT_COPY.notice[reason].body);
-    }
+  it('gives every reason its own notice in the share domain', () => {
+    const keys = (Object.keys(SHARE_NOTICE) as ShareBlockReason[]).flatMap((reason) => [
+      SHARE_NOTICE[reason].titleKey,
+      SHARE_NOTICE[reason].bodyKey,
+    ]);
+
+    expect(keys.every((key) => key.startsWith('share.notice'))).toBe(true);
+    // A duplicated key would mean two different dead-ends read identically.
+    expect(new Set(keys).size).toBe(keys.length);
   });
 
-  it('mirrors the expired-link copy the spec pins to the "만료된 링크" screen', () => {
-    // Spec deliverable: the expired notice tells the recipient it is time (not
-    // their fault) and offers the one next step — request a new link.
-    expect(SHARE_NOTICE.expired.title).toBe('링크가 만료됐어요');
-    expect(SHARE_NOTICE.expired.body).toContain('유효 기간이 지났어요');
-    expect(SHARE_NOTICE.expired.body).toContain('새 링크를 요청');
+  it('resolves the expired-link notice in both locales', () => {
+    // The expired notice tells the recipient it is time (not their fault) and
+    // offers the one next step — request a new link.
+    expect(translateWeb('ko', SHARE_NOTICE.expired.titleKey)).toBe('링크가 만료됐어요');
+    expect(translateWeb('ko', SHARE_NOTICE.expired.bodyKey)).toContain('새 링크를 요청');
+    expect(translateWeb('en', SHARE_NOTICE.expired.titleKey)).toBe('This link has expired');
+    expect(translateWeb('en', SHARE_NOTICE.expired.bodyKey)).toContain(
+      'Ask the sender for a new link',
+    );
   });
 });

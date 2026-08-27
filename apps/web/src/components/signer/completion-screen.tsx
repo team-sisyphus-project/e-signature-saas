@@ -10,10 +10,10 @@
  * token. A calm summary names the finished document and explains what happens
  * next — no further action is required.
  *
- * Flow-neutral: all copy and the optional artifact download come from the
- * {@link useFill} adapter, so the OTP signer flow (with a download area) and the
- * link-share recipient flow (download hidden — a fill link has no artifact to
- * hand back) reuse this one screen.
+ * Flow-neutral: the copy keys and the optional artifact download come from the
+ * {@link useFill} adapter and are resolved here, so the OTP signer flow (with a
+ * download area) and the link-share recipient flow (download hidden — a fill
+ * link has no artifact to hand back) reuse this one screen.
  *
  * Rendered through a portal to <body> so no transformed/over­flow-clipped ancestor
  * can trap the fixed overlay; the brand hook is re-applied on the overlay itself
@@ -27,25 +27,28 @@ import { createPortal } from 'react-dom';
 import { Confetti, SuccessCheck } from '@repo/ui';
 import { brandStyle } from '@/lib/branding';
 import { CompletionDownload } from '@/components/completion-download';
+import { useTranslation } from '@/components/locale-provider';
 import { useFill } from './fill-context';
 
 export function CompletionScreen() {
   const { brandColor, documentTitle, payload, documentCompleted, copy, download } = useFill();
+  const t = useTranslation();
   const done = copy.done;
+  const title = t(done.title);
 
   // Portals need the DOM; gate on mount so SSR/first paint stays clean.
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => setMounted(true), []);
   if (!mounted) return null;
 
-  const title = payload?.documentTitle ?? documentTitle;
-  const nextStep = documentCompleted ? done.nextAllDone : done.nextWaiting;
+  const signedDocument = payload?.documentTitle ?? documentTitle;
+  const nextStep = t(documentCompleted ? done.nextAllDone : done.nextWaiting);
 
   return createPortal(
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={done.title}
+      aria-label={title}
       style={{
         ...brandStyle(brandColor),
         // Safe-area aware: keep clear of notch/home-indicator on mobile.
@@ -56,16 +59,16 @@ export function CompletionScreen() {
     >
       <div className="relative flex items-center justify-center">
         <Confetti className="z-0" />
-        <SuccessCheck size={104} className="relative z-10" aria-label={done.title} />
+        <SuccessCheck size={104} className="relative z-10" aria-label={title} />
       </div>
 
       <div className="motion-stagger flex w-full max-w-[420px] flex-col items-center gap-sm">
-        <h1 className="text-2xl font-bold text-foreground">{done.title}</h1>
-        <p className="text-base text-foreground-subtle">{done.body}</p>
+        <h1 className="text-2xl font-bold text-foreground">{title}</h1>
+        <p className="text-base text-foreground-subtle">{t(done.body)}</p>
 
         <div className="mt-xs w-full rounded-md border border-border bg-surface-muted px-md py-sm text-left">
-          <p className="text-2xs font-medium text-foreground-subtle">{done.documentLabel}</p>
-          <p className="mt-2xs truncate text-sm font-semibold text-foreground">{title}</p>
+          <p className="text-2xs font-medium text-foreground-subtle">{t(done.documentLabel)}</p>
+          <p className="mt-2xs truncate text-sm font-semibold text-foreground">{signedDocument}</p>
         </div>
 
         <p className="mt-xs text-sm text-foreground-subtle">{nextStep}</p>

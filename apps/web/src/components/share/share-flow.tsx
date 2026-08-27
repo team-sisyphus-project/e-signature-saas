@@ -15,15 +15,14 @@ import { LoadingScreen } from '@/components/signer/loading-screen';
 import { DocumentViewer } from '@/components/signer/document-viewer';
 import { CompletionScreen } from '@/components/signer/completion-screen';
 import { NoticeScreen } from '@/components/signer/notice-screen';
-import { shareRecipientCopyFor } from '@/lib/share-recipient';
-import { useLocale } from '@/components/locale-provider';
+import { SHARE_NOTICE } from '@/lib/share-recipient';
+import { useTranslation } from '@/components/locale-provider';
 import { useShare } from './share-context';
 import { PasswordGate } from './password-gate';
 
 export function ShareFlow() {
   const { state } = useShare();
-  const { locale } = useLocale();
-  const copy = shareRecipientCopyFor(locale);
+  const t = useTranslation();
 
   switch (state.phase) {
     case 'loading':
@@ -31,15 +30,13 @@ export function ShareFlow() {
     case 'gate':
       return state.meta ? <PasswordGate meta={state.meta} /> : <LoadingScreen />;
     case 'blocked': {
-      const reason = state.blockReason ?? 'invalidLink';
-      const notice = {
-        ...copy.notice[reason],
-        tone: reason === 'alreadySubmitted' ? 'success' as const : 'neutral' as const,
-      };
+      // `SHARE_NOTICE` owns the reason → copy + tone mapping (it is asserted
+      // against the server's HTTP-code contract in `share-recipient.test.ts`).
+      const notice = SHARE_NOTICE[state.blockReason ?? 'invalidLink'];
       return (
         <NoticeScreen
-          title={notice.title}
-          body={notice.body}
+          title={t(notice.titleKey)}
+          body={t(notice.bodyKey)}
           tone={notice.tone}
           sender={state.meta?.sender ?? null}
           brandColor={state.meta?.sender.brandColor ?? null}
