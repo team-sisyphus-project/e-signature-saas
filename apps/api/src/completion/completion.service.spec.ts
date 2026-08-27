@@ -259,4 +259,33 @@ describe('CompletionService.runPostProcessing', () => {
       expect(`${email.subject}\n${email.html}\n${email.text}`).not.toMatch(/[\u3131-\uD79D]/);
     }
   });
+
+  it('names the English email attachments in English', async () => {
+    // The attachment list is the first thing the recipient reads, so it is held
+    // to the same "no Korean for an English recipient" bar as the body copy.
+    const h = makeHarness({ title: 'Employment Agreement' });
+    h.storage.set('documents/user_1/original.pdf', await makePdf(1));
+
+    await h.service.runPostProcessing('doc_xyz789', 'en');
+
+    expect(h.emails).toHaveLength(2);
+    for (const email of h.emails) {
+      expect(email.attachments!.map((a) => a.filename)).toEqual([
+        'Employment Agreement (Final Contract).pdf',
+        'Employment Agreement (Audit Trail Certificate).pdf',
+      ]);
+    }
+  });
+
+  it('names the Korean email attachments in Korean', async () => {
+    const h = makeHarness();
+    h.storage.set('documents/user_1/original.pdf', await makePdf(1));
+
+    await h.service.runPostProcessing('doc_xyz789', 'ko');
+
+    expect(h.emails[0].attachments!.map((a) => a.filename)).toEqual([
+      '용역 위탁 계약서 (최종 계약서).pdf',
+      '용역 위탁 계약서 (감사 추적 인증서).pdf',
+    ]);
+  });
 });

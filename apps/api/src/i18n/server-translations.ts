@@ -13,6 +13,17 @@ export const SERVER_TRANSLATIONS = {
       invalidLink: '링크가 올바르지 않아요. 보낸 분에게 링크를 다시 요청해 주세요.',
       submitted: '제출이 완료되었습니다!',
     },
+    /**
+     * Names that reach the reader as a *filename* — in their mail client's
+     * attachment list and on their disk after download. Kept apart from
+     * `completionEmail.*`, which is body copy: body copy may grow a verb or an
+     * article, a filename may not.
+     */
+    artifact: {
+      finalContract: '최종 계약서',
+      auditCertificate: '감사 추적 인증서',
+      untitled: '계약서',
+    },
     completionEmail: {
       subject: '[{title}] 계약이 모두 완료되었어요',
       headline: '계약이 모두 완료되었어요',
@@ -78,6 +89,11 @@ export const SERVER_TRANSLATIONS = {
     share: {
       invalidLink: 'This link is invalid. Ask the sender for a new link.',
       submitted: 'Submission is complete!',
+    },
+    artifact: {
+      finalContract: 'Final Contract',
+      auditCertificate: 'Audit Trail Certificate',
+      untitled: 'Contract',
     },
     completionEmail: {
       subject: '[{title}] Contract completed',
@@ -145,6 +161,9 @@ export type TranslationKey =
   | 'signing.completed'
   | 'share.invalidLink'
   | 'share.submitted'
+  | 'artifact.finalContract'
+  | 'artifact.auditCertificate'
+  | 'artifact.untitled'
   | 'completionEmail.subject'
   | 'completionEmail.headline'
   | 'completionEmail.bodyAllDone'

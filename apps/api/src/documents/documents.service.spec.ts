@@ -579,3 +579,52 @@ describe('DocumentsService — scheduled dispatch', () => {
     expect(notifications.enqueueMany).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * The dashboard download is always the owner's own document, so the file is
+ * named in the language they picked for their account.
+ */
+describe('DocumentsService.openArtifact filename locale', () => {
+  function serviceFor(ownerLocale: unknown) {
+    const prisma = {
+      document: {
+        findUnique: jest.fn().mockResolvedValue({
+          ownerId: 'user_1',
+          title: 'Employment Agreement',
+          status: 'COMPLETED',
+          signedStorageKey: 'documents/user_1/completed/d1-signed.pdf',
+          certificateStorageKey: 'documents/user_1/completed/d1-certificate.pdf',
+          owner: { locale: ownerLocale },
+        }),
+      },
+    };
+    const storage = { openStream: jest.fn().mockResolvedValue({ pipe: jest.fn() }) };
+
+    return new DocumentsService(
+      prisma as never,
+      storage as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+  }
+
+  it('names both artifacts in English for an English owner', async () => {
+    const service = serviceFor('en');
+
+    const signed = await service.openArtifact('user_1', 'doc_1', 'signed');
+    const certificate = await service.openArtifact('user_1', 'doc_1', 'certificate');
+
+    expect(signed.filename).toBe('Employment Agreement (Final Contract).pdf');
+    expect(certificate.filename).toBe('Employment Agreement (Audit Trail Certificate).pdf');
+    expect(`${signed.filename}${certificate.filename}`).not.toMatch(/[가-힣]/);
+  });
+
+  it('keeps Korean naming for a Korean owner', async () => {
+    const { filename } = await serviceFor('ko').openArtifact('user_1', 'doc_1', 'certificate');
+
+    expect(filename).toBe('Employment Agreement (감사 추적 인증서).pdf');
+  });
+});

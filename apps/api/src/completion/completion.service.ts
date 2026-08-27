@@ -261,8 +261,11 @@ export class CompletionService {
     locale: SupportedLocale,
   ): Promise<number> {
     const attachments = [
-      { filename: artifactFilename(document.title, 'signed'), content: signedPdf },
-      { filename: artifactFilename(document.title, 'certificate'), content: certificatePdf },
+      { filename: artifactFilename(document.title, 'signed', locale), content: signedPdf },
+      {
+        filename: artifactFilename(document.title, 'certificate', locale),
+        content: certificatePdf,
+      },
     ];
     const senderName = document.owner.name ?? translate(locale, 'completionEmail.sender');
     const dashboardUrl = `${this.webOrigin()}/dashboard`;

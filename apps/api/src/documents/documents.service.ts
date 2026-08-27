@@ -32,6 +32,7 @@ import {
   artifactFilename,
   type CompletionArtifact,
 } from '../completion/artifact';
+import { resolveLocale } from '../i18n/locale-resolver';
 import type { CreateDocumentDto, SaveFieldsDto, SendContractDto } from './dto/documents.dto';
 import type { UpdateScheduleDto } from './dto/documents.dto';
 import {
@@ -647,6 +648,7 @@ export class DocumentsService {
         status: true,
         signedStorageKey: true,
         certificateStorageKey: true,
+        owner: { select: { locale: true } },
       },
     });
     if (!document) throw new NotFoundException(MESSAGES.document.notFound);
@@ -659,7 +661,10 @@ export class DocumentsService {
     }
 
     const stream = await this.storage.openStream(key);
-    return { stream, filename: artifactFilename(document.title, kind) };
+    // The downloader is the owner (checked above), so the file is named in the
+    // language they chose for their own account.
+    const locale = resolveLocale({ userLocale: document.owner.locale });
+    return { stream, filename: artifactFilename(document.title, kind, locale) };
   }
 
   /** Remaining Free-plan sends this calendar month. */

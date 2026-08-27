@@ -105,3 +105,52 @@ describe('SigningService.complete locale handoff', () => {
     expect(completionQueue.enqueue).toHaveBeenCalledWith('document_1', 'en');
   });
 });
+
+/**
+ * A signer has no stored language preference, so the sender's locale names the
+ * files they download — the same source that named the attachments already
+ * sitting in their inbox.
+ */
+describe('SigningService.openArtifact filename locale', () => {
+  function serviceFor(senderLocale: unknown) {
+    const prisma = {
+      signRequest: {
+        findUnique: jest.fn().mockResolvedValue({
+          document: {
+            title: 'Employment Agreement',
+            status: 'COMPLETED',
+            signedStorageKey: 'documents/u1/completed/d1-signed.pdf',
+            certificateStorageKey: 'documents/u1/completed/d1-certificate.pdf',
+            owner: { locale: senderLocale },
+          },
+        }),
+      },
+    };
+    const storage = { openStream: jest.fn().mockResolvedValue({ pipe: jest.fn() }) };
+
+    return new SigningService(prisma as never, storage as never, {} as never, {} as never);
+  }
+
+  it('names both artifacts in English for an English sender', async () => {
+    const service = serviceFor('en');
+
+    const signed = await service.openArtifact('sr_1', 'signed');
+    const certificate = await service.openArtifact('sr_1', 'certificate');
+
+    expect(signed.filename).toBe('Employment Agreement (Final Contract).pdf');
+    expect(certificate.filename).toBe('Employment Agreement (Audit Trail Certificate).pdf');
+    expect(`${signed.filename}${certificate.filename}`).not.toMatch(/[가-힣]/);
+  });
+
+  it('keeps Korean naming for a Korean sender', async () => {
+    const { filename } = await serviceFor('ko').openArtifact('sr_1', 'signed');
+
+    expect(filename).toBe('Employment Agreement (최종 계약서).pdf');
+  });
+
+  it('falls back to Korean when a legacy sender record has no usable locale', async () => {
+    const { filename } = await serviceFor(null).openArtifact('sr_1', 'certificate');
+
+    expect(filename).toBe('Employment Agreement (감사 추적 인증서).pdf');
+  });
+});

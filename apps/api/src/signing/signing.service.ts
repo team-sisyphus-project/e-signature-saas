@@ -241,6 +241,7 @@ export class SigningService {
             status: true,
             signedStorageKey: true,
             certificateStorageKey: true,
+            owner: { select: { locale: true } },
           },
         },
       },
@@ -255,7 +256,11 @@ export class SigningService {
     }
 
     const stream = await this.storage.openStream(key);
-    return { stream, filename: artifactFilename(document.title, kind) };
+    // A signer has no stored preference of their own, so the sender's locale
+    // governs — the same source the completion email used to name these very
+    // attachments. The download and the inbox copy must not disagree.
+    const locale = resolveLocale({ senderLocale: document.owner.locale });
+    return { stream, filename: artifactFilename(document.title, kind, locale) };
   }
 
   // --- ⑤ save captured field values (session) ------------------------------
