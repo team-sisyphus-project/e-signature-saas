@@ -25,6 +25,13 @@ export interface LocaleResolutionInput {
   browserLanguages?: readonly string[] | null;
 }
 
+/**
+ * Tiers available to a logged-out visitor. `LocaleResolutionInput` minus the
+ * signed-in preference — the omission is the contract, so widening this type is
+ * how the "no signed-in leak" rule would have to be broken deliberately.
+ */
+export type PublicEntryLocaleInput = Omit<LocaleResolutionInput, 'userLocale'>;
+
 export interface TranslationResources {
   locale: SupportedLocale;
   resources: Record<string, unknown>;
@@ -63,6 +70,31 @@ export function resolveLocale(input: LocaleResolutionInput = {}): SupportedLocal
     localeFromBrowserLanguages(input.browserLanguages) ??
     DEFAULT_LOCALE
   );
+}
+
+/**
+ * Resolve the screen locale for a logged-out entry: link parameter → sender →
+ * browser → Korean.
+ *
+ * This is `resolveLocale` with the signed-in tier structurally removed rather
+ * than merely left unset. Public links are opened by people who are not the
+ * account holder, and a browser that happens to carry a session for some other
+ * account must not repaint a signer's screen in that account's language. The
+ * parameters are destructured here, so an object that still carries a
+ * `userLocale` — a spread of the authenticated input, a widened caller — loses
+ * it before any tier is consulted; the guarantee survives type erasure.
+ *
+ * The sender tier expects the sender's *own stored preference*, not a locale
+ * some other layer has already resolved. A resolved value has had the Korean
+ * default folded into it and can no longer be absent, which would pin this
+ * screen to Korean and starve the browser tier below it.
+ */
+export function resolvePublicEntryLocale({
+  linkLocale,
+  senderLocale,
+  browserLanguages,
+}: PublicEntryLocaleInput = {}): SupportedLocale {
+  return resolveLocale({ linkLocale, senderLocale, browserLanguages });
 }
 
 /** Query parameter carrying an explicit locale on a signing/share link. */

@@ -11,14 +11,14 @@
 
 import * as React from 'react';
 import { cn } from '@repo/ui';
-import type { SignerSender } from '@/lib/signing';
+import type { SenderBranding } from '@/lib/signing';
 import { useTranslation } from '@/components/locale-provider';
 
 export function BrandingHeader({
   sender,
   className,
 }: {
-  sender: SignerSender;
+  sender: SenderBranding;
   className?: string;
 }) {
   const t = useTranslation();

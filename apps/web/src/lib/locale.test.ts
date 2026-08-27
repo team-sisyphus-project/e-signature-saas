@@ -6,7 +6,9 @@ import {
   localeFromBrowserLanguages,
   parseLocale,
   resolveLocale,
+  resolvePublicEntryLocale,
   type LocaleResolutionInput,
+  type PublicEntryLocaleInput,
   type SupportedLocale,
 } from './locale';
 
@@ -242,6 +244,130 @@ describe('link locale parameter', () => {
       expect(linkLocaleQuery(undefined)).toBe('');
       expect(linkLocaleQuery(null)).toBe('');
       expect(linkLocaleQuery('')).toBe('');
+    });
+  });
+});
+
+
+/**
+ * The logged-out entry path (signing links, share links) resolves without a
+ * signed-in tier at all. It is specified separately from `resolveLocale`
+ * because the two rules can diverge on the very same input, and the visitor of
+ * a public link is not the account holder whose preference the browser may
+ * still be holding.
+ */
+describe('public entry locale', () => {
+  describe('the sender leads', () => {
+    it("renders in the sender's English over a Korean browser", () => {
+      expect(
+        resolvePublicEntryLocale({ senderLocale: 'en', browserLanguages: ['ko-KR', 'ko'] }),
+      ).toBe('en');
+    });
+
+    it("renders in the sender's Korean over an English browser", () => {
+      expect(
+        resolvePublicEntryLocale({ senderLocale: 'ko', browserLanguages: ['en-US', 'en'] }),
+      ).toBe('ko');
+    });
+
+    it('accepts the sender preference in any region form', () => {
+      expect(resolvePublicEntryLocale({ senderLocale: 'en-GB', browserLanguages: ['ko-KR'] })).toBe(
+        'en',
+      );
+    });
+
+    it('still yields to an explicit ?lang= on the link', () => {
+      expect(
+        resolvePublicEntryLocale({
+          linkLocale: 'en',
+          senderLocale: 'ko',
+          browserLanguages: ['ko-KR'],
+        }),
+      ).toBe('en');
+    });
+  });
+
+  describe('the browser leads once the sender tier is absent', () => {
+    // A sender who predates the language preference has none stored, and the
+    // server forwards that column as-is. Every shape of "nothing" must reach the
+    // browser rather than being read as a choice of Korean.
+    it.each([
+      ['undefined', undefined],
+      ['null', null],
+      ['an empty string', ''],
+      ['whitespace', '   '],
+      ['an unsupported language', 'fr-FR'],
+    ])('uses the English browser when the sender preference is %s', (_label, senderLocale) => {
+      expect(resolvePublicEntryLocale({ senderLocale, browserLanguages: ['en-US', 'en'] })).toBe(
+        'en',
+      );
+    });
+
+    it('uses the first supported browser preference, skipping unsupported ones', () => {
+      expect(resolvePublicEntryLocale({ browserLanguages: ['fr-FR', 'en-GB', 'ko-KR'] })).toBe('en');
+    });
+
+    it('falls back to Korean only when nothing at all is known', () => {
+      expect(resolvePublicEntryLocale({})).toBe(DEFAULT_LOCALE);
+      expect(resolvePublicEntryLocale()).toBe(DEFAULT_LOCALE);
+      expect(
+        resolvePublicEntryLocale({ senderLocale: null, browserLanguages: ['fr-FR', 'ja-JP'] }),
+      ).toBe(DEFAULT_LOCALE);
+    });
+
+    /**
+     * The regression this function exists to prevent: feeding the sender tier a
+     * locale that some other layer already resolved. A resolved value has the
+     * Korean default baked in, so it can never be absent — and an absent sender
+     * preference would then never reach the browser tier.
+     */
+    it('would be pinned to Korean if handed an already-resolved locale instead', () => {
+      const browserLanguages = ['en-US', 'en'];
+
+      expect(resolvePublicEntryLocale({ senderLocale: null, browserLanguages })).toBe('en');
+      // What the pre-fix contexts passed: `meta.locale`, the server's answer.
+      expect(resolvePublicEntryLocale({ senderLocale: 'ko', browserLanguages })).toBe('ko');
+    });
+  });
+
+  describe('a signed-in preference never reaches a public screen', () => {
+    // The tier is absent from the parameter list, so a caller can only supply it
+    // by widening the type. These cases pin the runtime behaviour if one does.
+    const withUserLocale = (userLocale: string, input: PublicEntryLocaleInput) =>
+      ({ ...input, userLocale }) as PublicEntryLocaleInput;
+
+    it('ignores a signed-in Korean preference and follows the English sender', () => {
+      const input = withUserLocale('ko', { senderLocale: 'en', browserLanguages: ['ko-KR'] });
+
+      expect(resolvePublicEntryLocale(input)).toBe('en');
+      // The same input through the signed-in resolver answers differently — that
+      // divergence is what makes the separate function load-bearing.
+      expect(resolveLocale(input as LocaleResolutionInput)).toBe('ko');
+    });
+
+    it('ignores a signed-in English preference and follows the Korean sender', () => {
+      const input = withUserLocale('en', { senderLocale: 'ko', browserLanguages: ['ko-KR'] });
+
+      expect(resolvePublicEntryLocale(input)).toBe('ko');
+      expect(resolveLocale(input as LocaleResolutionInput)).toBe('en');
+    });
+
+    it('ignores a signed-in preference even when no other tier answers', () => {
+      expect(resolvePublicEntryLocale(withUserLocale('en', {}))).toBe(DEFAULT_LOCALE);
+    });
+  });
+
+  describe('purity', () => {
+    it('does not mutate the input and is stable across repeated calls', () => {
+      const input: PublicEntryLocaleInput = {
+        senderLocale: 'en',
+        browserLanguages: ['ko-KR'],
+      };
+      const snapshot = JSON.stringify(input);
+
+      expect(resolvePublicEntryLocale(input)).toBe('en');
+      expect(resolvePublicEntryLocale(input)).toBe('en');
+      expect(JSON.stringify(input)).toBe(snapshot);
     });
   });
 });

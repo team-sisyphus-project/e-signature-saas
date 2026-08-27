@@ -183,7 +183,11 @@ export function SignerProvider({
     fetchMeta(token, getLinkLocale())
       .then((meta) => {
         if (!active) return;
-        setSenderLocale(meta.locale);
+        // The sender tier takes the sender's own stored preference, not
+        // `meta.locale` — the server has already folded the link parameter,
+        // Accept-Language and the Korean default into that one, so it can never
+        // be absent and would silently outrank this visitor's browser.
+        setSenderLocale(meta.sender.locale);
         const reason = blockReasonFor(meta);
         if (reason) dispatch({ type: 'BLOCK', reason, meta });
         else dispatch({ type: 'META_OK', meta });
@@ -259,7 +263,10 @@ export function SignerProvider({
   const fillValue = React.useMemo<FillContextValue>(() => {
     const documentTitle = state.payload?.documentTitle ?? state.meta?.documentTitle ?? '';
     return {
-      sender: state.meta?.sender ?? { name: null, brandColor: null, brandLogoUrl: null, locale: 'ko' },
+      // No locale in the fallback: before metadata resolves, the sender's
+      // language is unknown, and claiming Korean here would outrank the
+      // visitor's browser in the tier below it.
+      sender: state.meta?.sender ?? { name: null, brandColor: null, brandLogoUrl: null },
       brandColor: state.meta?.sender.brandColor ?? null,
       documentTitle,
       payload: state.payload

@@ -39,11 +39,27 @@ export type SignFieldType = 'SIGNATURE' | 'DATE' | 'TEXT';
 
 // --- response shapes (mirror SigningService return types) --------------------
 
-export interface SignerSender {
+/**
+ * The sender's visual identity on a public screen. Carries no locale: the
+ * branding header renders the same regardless of language, and a screen that
+ * cannot name a sender still must not have to invent that sender's language.
+ */
+export interface SenderBranding {
   name: string | null;
   brandColor: string | null;
   brandLogoUrl: string | null;
-  locale: 'ko' | 'en';
+}
+
+export interface SignerSender extends SenderBranding {
+  /**
+   * The sender's stored preference, passed through from their account row.
+   *
+   * Deliberately typed as an unvalidated tag rather than `'ko' | 'en'`: the
+   * server forwards the persisted column as-is, and legacy accounts predate the
+   * preference, so this can arrive absent or unsupported. Only
+   * `resolvePublicEntryLocale` decides what it means — never a call site.
+   */
+  locale: string | null;
 }
 
 /** Pre-verification metadata for the landing screen (no PDF / fields). */

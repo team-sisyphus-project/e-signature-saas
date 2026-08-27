@@ -21,7 +21,7 @@
 import * as React from 'react';
 import type { SignFieldType } from '@/lib/signing';
 import type { CompletionArtifact } from '@/lib/completion-download';
-import type { SignerSender } from '@/lib/signing';
+import type { SenderBranding } from '@/lib/signing';
 import type { DoneCopy, FillCopy, SheetCopy } from '@/lib/fill-copy';
 
 /**
@@ -71,8 +71,8 @@ export interface FillDownload {
  * whichever flow state machine owns the session.
  */
 export interface FillContextValue {
-  /** Sender identity for the branding header. */
-  sender: SignerSender;
+  /** Sender identity for the branding header (no locale: see `SenderBranding`). */
+  sender: SenderBranding;
   /** Sender brand color for the `brandStyle()` hook (re-skins the subtree). */
   brandColor: string | null;
   /** Document title fallback (when the payload hasn't resolved yet). */

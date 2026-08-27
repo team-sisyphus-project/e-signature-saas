@@ -7,6 +7,7 @@ import {
   getBrowserLanguages,
   getLinkLocale,
   resolveLocale,
+  resolvePublicEntryLocale,
   type SupportedLocale,
   type TranslationResources,
 } from '@/lib/locale';
@@ -21,7 +22,11 @@ interface LocaleContextValue {
   locale: SupportedLocale;
   /** Loaded API catalog for the target locale; undefined while its first request is pending. */
   resources: TranslationResources['resources'] | undefined;
-  /** Public-link flows call this after their metadata has revealed the sender locale. */
+  /**
+   * Public-link flows call this with the sender's *stored* preference
+   * (`meta.sender.locale`) once metadata arrives — never with a locale the
+   * server already resolved, which would mask the absence of that preference.
+   */
   setSenderLocale: (locale: string | null | undefined) => void;
   /** Public-link UI must never inherit a signed-in user's saved preference. */
   setPublicLinkActive: (active: boolean) => void;
@@ -76,8 +81,12 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     };
   }, [refreshUserLocale, refreshLinkLocale]);
 
+  // Two resolvers, not one call with a nulled-out field: on a public link the
+  // signed-in tier does not exist rather than merely being empty.
+  // `resolvePublicEntryLocale` owns that rule so it can be tested without
+  // mounting this provider.
   const locale = publicLinkActive
-    ? resolveLocale({ linkLocale, senderLocale, browserLanguages })
+    ? resolvePublicEntryLocale({ linkLocale, senderLocale, browserLanguages })
     : resolveLocale({ userLocale, linkLocale, senderLocale, browserLanguages });
 
   React.useEffect(() => {
