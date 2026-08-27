@@ -200,7 +200,7 @@ function ShareLinkRow({
       <div className="flex flex-wrap items-center gap-2xs">
         <StatePill state={link.status} />
         {link.requiresPassword ? (
-          <span className="inline-flex items-center gap-2xs rounded-full bg-grey-100 px-xs py-2xs text-2xs font-semibold text-foreground-subtle">
+          <span className="inline-flex items-center gap-2xs rounded-full bg-surface-hover px-xs py-2xs text-2xs font-semibold text-foreground-subtle">
             <LockIcon />
             {SHARE_COPY.list.passwordTag}
           </span>
@@ -287,8 +287,8 @@ function ShareLinkRow({
 const STATE_TONE: Record<ShareLinkState, { tint: string; dot: string; text: string }> = {
   active: { tint: 'bg-primary-subtle', dot: 'bg-primary', text: 'text-primary' },
   completed: { tint: 'bg-success-subtle', dot: 'bg-success', text: 'text-foreground-muted' },
-  expired: { tint: 'bg-grey-100', dot: 'bg-grey-400', text: 'text-foreground-muted' },
-  revoked: { tint: 'bg-grey-100', dot: 'bg-grey-300', text: 'text-foreground-subtle' },
+  expired: { tint: 'bg-surface-hover', dot: 'bg-foreground-subtle', text: 'text-foreground-muted' },
+  revoked: { tint: 'bg-surface-hover', dot: 'bg-foreground-subtle', text: 'text-foreground-subtle' },
 };
 
 function StatePill({ state }: { state: ShareLinkState }) {

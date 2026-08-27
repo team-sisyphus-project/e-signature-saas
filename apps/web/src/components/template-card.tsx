@@ -185,7 +185,7 @@ function TemplateIcon() {
 /** Trailing entry affordance for the selectable Variant (mirrors ContractCard). */
 function ChevronIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0 text-grey-400" fill="none" aria-hidden="true">
+    <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0 text-foreground-subtle" fill="none" aria-hidden="true">
       <path d="m9 6 6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
