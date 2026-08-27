@@ -13,7 +13,7 @@ import { randomUUID } from 'crypto';
 const CRLF = '\r\n';
 
 export interface MimeAttachment {
-  /** Display filename (may contain non-ASCII, e.g. "최종 계약서.pdf"). */
+  /** Display filename (may contain non-ASCII, e.g. a Korean contract title). */
   filename: string;
   content: Buffer;
   /** MIME type; defaults to application/pdf. */

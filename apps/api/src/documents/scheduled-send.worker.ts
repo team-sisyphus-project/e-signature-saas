@@ -30,21 +30,21 @@ export class ScheduledSendWorker implements OnModuleInit, OnModuleDestroy {
         { connection: parseRedisConnection(redisUrl), concurrency: 2 },
       );
       this.worker.on('failed', (job, err) => {
-        this.logger.error(`예약 발송 실패: docId=${job?.data.documentId ?? '?'}: ${String(err)}`);
+        this.logger.error(`Scheduled send failed: docId=${job?.data.documentId ?? '?'}: ${String(err)}`);
         // BullMQ emits `failed` for every failed attempt. Notify the sender
         // only after the configured retry budget is exhausted.
         const attempts = job?.opts.attempts ?? 1;
         if (job && job.attemptsMade >= attempts) {
           void this.documents.notifyScheduledDispatchFailed(job.data).catch((notifyErr) => {
             this.logger.error(
-              `예약 발송 실패 알림 처리 실패: docId=${job.data.documentId}: ${String(notifyErr)}`,
+              `Failed to send the scheduled-send failure notice: docId=${job.data.documentId}: ${String(notifyErr)}`,
             );
           });
         }
       });
     } catch (err) {
       this.worker = null;
-      this.logger.error(`예약 발송 워커 초기화 실패: ${String(err)}`);
+      this.logger.error(`Scheduled-send worker init failed: ${String(err)}`);
     }
   }
 

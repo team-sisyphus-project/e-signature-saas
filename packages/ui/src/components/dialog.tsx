@@ -58,7 +58,7 @@ export const DialogContent = React.forwardRef<
       {children}
       {!hideClose ? (
         <DialogPrimitive.Close
-          aria-label="닫기"
+          aria-label="Close"
           className={cn(
             'absolute right-md top-md flex h-9 w-9 items-center justify-center rounded-full',
             'text-foreground-subtle transition-colors duration-fast ease-standard',

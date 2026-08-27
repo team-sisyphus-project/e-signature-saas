@@ -21,12 +21,12 @@ import type { ViewMode } from '@/lib/view-mode';
  *   segment is signalled by *form* as well as hue — a filled primary-subtle chip
  *   and a heavier font weight — not color by itself. The `primary-subtle` /
  *   `text-primary` pair is the dashboard's AA-verified "actionable = primary"
- *   language (same as the SEND_DRAFT CTA pill and status-badge 진행 중).
+ *   language (same as the SEND_DRAFT CTA pill and the in-progress status badge).
  *
- * This component owns structure/tone/interaction but NOT copy: the Korean segment
+ * This component owns structure/tone/interaction but NOT copy: the segment
  * labels come in via `copy` (single source of truth:
- * design-spec/messaging/todo-copy.md "뷰 전환 라벨"), exactly like DashboardSummary
- * and UrgencyBadge take their strings as props.
+ * design-spec/messaging/todo-copy.md "view switcher labels"), exactly like
+ * DashboardSummary and UrgencyBadge take their strings as props.
  */
 
 /** Render order of the segments (left → right). `list` is the default view. */
@@ -37,10 +37,10 @@ const VIEW_ORDER: readonly ViewMode[] = ['list', 'kanban'];
  * (source of truth: design-spec/messaging/todo-copy.md).
  */
 export interface ViewSwitcherCopy {
-  /** Label per view, e.g. `{ list: '목록', kanban: '칸반' }`. */
+  /** Label per view, e.g. `{ list: 'List', kanban: 'Kanban' }`. */
   label: Record<ViewMode, string>;
   /**
-   * Accessible name for the whole control (the radiogroup), e.g. "뷰 전환".
+   * Accessible name for the whole control (the radiogroup), e.g. "Switch view".
    * Keeps the segment buttons from being an unlabeled group for screen readers.
    */
   groupLabel: string;

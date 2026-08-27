@@ -28,7 +28,7 @@ import type { SettingsNavItem } from '@/lib/settings-copy';
 export interface SettingsNavProps {
   /** Menu items in render order (source: lib/settings-copy.ts). */
   items: readonly SettingsNavItem[];
-  /** Accessible name for the nav landmark, e.g. "설정 메뉴". */
+  /** Accessible name for the nav landmark, e.g. "Settings menu". */
   label: string;
   className?: string;
 }

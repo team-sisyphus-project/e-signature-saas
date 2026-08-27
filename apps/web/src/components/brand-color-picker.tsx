@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * BrandColorPicker — the 대표 색상 control for the branding form.
+ * BrandColorPicker — the brand color control for the branding form.
  *
  * A controlled, presentation-only component: the parent owns the committed
  * brand color (`value` / `onChange`) and this renders a swatch (native color
@@ -30,7 +30,7 @@ export interface BrandColorPickerProps {
   value: string;
   /** Called with a valid hex when the swatch or a valid HEX entry commits. */
   onChange: (hex: string) => void;
-  /** Field label. Defaults to the settings copy (`대표 색상`). */
+  /** Field label. Defaults to the settings copy (brand color). */
   label?: React.ReactNode;
   /** Constraint hint under the field. Defaults to the settings copy. */
   hint?: React.ReactNode;

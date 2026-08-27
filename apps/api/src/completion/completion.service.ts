@@ -88,25 +88,25 @@ export class CompletionService {
     });
 
     if (!document) {
-      this.logger.warn(`후처리 건너뜀 — 문서를 찾을 수 없어요: ${documentId}`);
+      this.logger.warn(`Post-processing skipped — document not found: ${documentId}`);
       return { documentId, processed: false, skipped: true };
     }
 
     // Defensive: only post-process a fully-completed contract.
     if (document.status !== DocumentStatus.COMPLETED) {
       this.logger.warn(
-        `후처리 건너뜀 — 문서가 아직 완료 상태가 아니에요(status=${document.status}): ${documentId}`,
+        `Post-processing skipped — document is not completed yet (status=${document.status}): ${documentId}`,
       );
       return { documentId, processed: false, skipped: true };
     }
 
     // Idempotency: `completedAt` set means this document was already processed.
     if (document.completedAt) {
-      this.logger.log(`후처리 건너뜀 — 이미 완료 처리된 문서예요: ${documentId}`);
+      this.logger.log(`Post-processing skipped — document was already processed: ${documentId}`);
       return { documentId, processed: false, skipped: true };
     }
 
-    this.logger.log(`완료 후처리 시작: ${documentId}`);
+    this.logger.log(`Completion post-processing started: ${documentId}`);
 
     // 1) Original PDF → signed final PDF (composite captured field values).
     const originalPdf = await this.storage.read(document.storageKey);
@@ -150,7 +150,7 @@ export class CompletionService {
     });
 
     this.logger.log(
-      `완료 후처리 끝: ${documentId} (수신자 ${recipientCount}명, 최종본=${signedStorageKey})`,
+      `Completion post-processing finished: ${documentId} (recipients=${recipientCount}, finalPdf=${signedStorageKey})`,
     );
 
     return {

@@ -85,9 +85,9 @@ export class SharingService {
    *
    * A share link is a real delivery channel, so the first link on a DRAFT
    * document *dispatches* it exactly like an email send would: it flips the
-   * document to 진행 중 (recording `sentAt`) and consumes one Free-plan monthly
+   * document to in-progress (recording `sentAt`) and consumes one Free-plan monthly
    * send. Additional links on an already-dispatched document neither re-count
-   * against the quota nor change the status (idempotent DRAFT → 진행 중 only).
+   * against the quota nor change the status (idempotent DRAFT → in-progress only).
    */
   async createLink(
     ownerId: string,
@@ -136,9 +136,9 @@ export class SharingService {
         data: { signRequestId: created.id },
       });
 
-      // Dispatch the contract on its first link: flip DRAFT → 진행 중 and stamp
+      // Dispatch the contract on its first link: flip DRAFT → in-progress and stamp
       // sentAt so the dashboard status and the monthly send count stay in sync
-      // with the email path. One-shot: never touches an already 진행 중/완료 doc.
+      // with the email path. One-shot: never touches an already in-progress/completed doc.
       if (isFirstDispatch) {
         await tx.document.update({
           where: { id: documentId },

@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * ImageUploader — the reusable branding image control (로고 · 파비콘 공용).
+ * ImageUploader — the reusable branding image control (shared by logo · favicon).
  *
  * A controlled, presentation-only component: the parent owns the picked `File`
  * (`value` / `onChange`), and this renders one of three states — default
@@ -13,7 +13,7 @@
  * Visuals reuse the wizard drop-zone treatment (components/wizard/upload-step)
  * and the danger tokens the Input primitive uses for its invalid state — no new
  * colors, spacing, or radii. Labels come in as props so the same control serves
- * both 로고 and 파비콘 (copy is owned by the form, not this component).
+ * both the logo and the favicon (copy is owned by the form, not this component).
  */
 
 import * as React from 'react';
@@ -33,14 +33,14 @@ import {
 export interface ImageUploaderProps {
   /** Ties the field label to the file input. Must be unique per uploader. */
   id: string;
-  /** Field label, e.g. `로고` / `파비콘`. Supplied by the form (settings copy). */
+  /** Field label, e.g. `Logo` / `Favicon`. Supplied by the form (settings copy). */
   label: React.ReactNode;
   /** Constraint hint under the field. Defaults to the format · size line. */
   hint?: React.ReactNode;
   /** The currently held file, or `null` when nothing is selected. */
   value: File | null;
   /**
-   * URL of the asset already saved on the server (로고 · 파비콘), or `null`/absent
+   * URL of the asset already saved on the server (logo · favicon), or `null`/absent
    * when none is stored. When no file is picked, its thumbnail is shown so the
    * control reflects the live setting — priority is picked > saved > empty.
    */
@@ -166,18 +166,18 @@ export function ImageUploader({
           </div>
           <div className="flex shrink-0 items-center gap-2xs">
             <Button variant="ghost" size="sm" onClick={triggerPick}>
-              다른 파일
+              Choose another
             </Button>
             <Button variant="ghost" size="sm" onClick={handleRemove}>
-              제거
+              Remove
             </Button>
           </div>
         </div>
       ) : view.kind === 'saved' ? (
         // Saved-asset preview: same card shell as a fresh pick (identical tokens),
         // but the meta column names the stored asset instead of a file's
-        // name/size, and only 교체(다른 파일) is offered — deleting the saved asset
-        // needs the network, which is the form's concern, not this control's.
+        // name/size, and only replace ("Choose another") is offered — deleting the
+        // saved asset needs the network, which is the form's concern, not this control's.
         <div
           className={cn(
             'flex items-center gap-sm rounded-lg border bg-surface p-md',
@@ -191,13 +191,15 @@ export function ImageUploader({
           </span>
           <div className="flex min-w-0 flex-1 flex-col gap-2xs">
             <span className="truncate text-sm font-semibold text-foreground">
-              {labelText ? `현재 설정된 ${labelText}` : '현재 설정된 이미지'}
+              {labelText ? `Current ${labelText.toLowerCase()}` : 'Current image'}
             </span>
-            <span className="text-xs text-foreground-subtle">새로 올리면 교체돼요</span>
+            <span className="text-xs text-foreground-subtle">
+              Uploading a new file will replace it
+            </span>
           </div>
           <div className="flex shrink-0 items-center gap-2xs">
             <Button variant="ghost" size="sm" onClick={triggerPick}>
-              다른 파일
+              Choose another
             </Button>
           </div>
         </div>
@@ -236,13 +238,13 @@ export function ImageUploader({
           <div className="flex flex-col gap-2xs">
             <span className="text-sm font-bold text-foreground">
               {dragActive
-                ? '여기에 놓으면 올라가요'
-                : `${labelText ? `${labelText} 이미지를 ` : '이미지를 '}끌어다 놓으세요`}
+                ? 'Drop it here to upload'
+                : `Drag and drop ${labelText ? `your ${labelText.toLowerCase()} image` : 'an image'} here`}
             </span>
-            <span className="text-xs text-foreground-subtle">또는 클릭해서 파일을 선택하세요</span>
+            <span className="text-xs text-foreground-subtle">or click to choose a file</span>
           </div>
           <span className="pointer-events-none mt-2xs inline-flex h-9 items-center rounded-md bg-surface px-md text-sm font-semibold text-primary shadow-sm">
-            파일 선택
+            Choose file
           </span>
         </label>
       )}

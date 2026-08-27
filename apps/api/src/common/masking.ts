@@ -2,7 +2,7 @@
  * Personal-information masking for outbound artifacts (audit certificate, email).
  *
  * Implements the cross-cutting masking policy from the Design Spec `voice.md`
- * (§3 개인정보 마스킹): server storage keeps the raw value, masking happens at
+ * (§3 Personal-information masking): server storage keeps the raw value, masking happens at
  * *display* time. Kept framework-free so both the audit-certificate service
  * (grain-3) and the completion email (grain-5) share one source of truth, and so
  * it stays consistent with the existing pre-auth `maskName` in `signing.service`.
@@ -12,8 +12,8 @@
  * Mask a person's name: reveal only the first and last character, replacing the
  * middle with `*`.
  *   • 1 char  → `*`
- *   • 2 chars → `홍*`
- *   • ≥3      → `홍*동` (first + N-2 stars + last)
+ *   • 2 chars → `J*`
+ *   • ≥3      → `J*e` (first + N-2 stars + last)
  * Matches the server's `recipientNameMasked` rule (`signing.service.ts`).
  */
 export function maskName(name: string | null | undefined): string {

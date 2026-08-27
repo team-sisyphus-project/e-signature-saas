@@ -331,10 +331,10 @@ export async function downloadSignerArtifact(
   accessToken: string,
   kind: CompletionArtifact,
   fallbackTitle: string,
-  locale: 'ko' | 'en' = 'ko',
+  locale: 'ko' | 'en' = 'en',
 ): Promise<void> {
   const session = getSignerSession(accessToken);
-  if (!session) throw new ApiError(SIGNER_COPY.completeError, 401);
+  if (!session) throw new ApiError(signerCopyFor(locale).completeError, 401);
 
   const { blob, filename } = await apiDownload(`${base(accessToken)}/download/${kind}`, {
     token: session,

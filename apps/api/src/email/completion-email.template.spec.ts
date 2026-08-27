@@ -1,15 +1,20 @@
 import { renderCompletionEmail } from './completion-email.template';
+import { SERVER_TRANSLATIONS } from '../i18n/server-translations';
+
+/** The ko-locale catalog copy the template renders (asserted by reference,
+ * so this spec stays free of hard-coded localized literals). */
+const KO = SERVER_TRANSLATIONS.ko.completionEmail;
 
 describe('renderCompletionEmail', () => {
   const base = {
-    contractTitle: '근로계약서',
-    senderName: '주식회사 토스',
+    contractTitle: 'Employment Agreement',
+    senderName: 'Acme Inc.',
     locale: 'ko' as const,
   } as const;
 
   it('renders the confirmed subject with the contract title', () => {
     const { subject } = renderCompletionEmail({ ...base, recipientRole: 'SIGNER' });
-    expect(subject).toBe('[근로계약서] 계약이 모두 완료되었어요');
+    expect(subject).toBe(KO.subject.replace('{title}', base.contractTitle));
   });
 
   it('renders every template-owned string in English for English recipients', () => {
@@ -31,14 +36,14 @@ describe('renderCompletionEmail', () => {
   it('includes headline, body, and both attachment notices (confirmed copy)', () => {
     const { html, text } = renderCompletionEmail({ ...base, recipientRole: 'SIGNER' });
     for (const out of [html, text]) {
-      expect(out).toContain('계약이 모두 완료되었어요');
-      expect(out).toContain('근로계약서 계약의 모든 서명이 끝났어요.');
-      expect(out).toContain('최종 계약서와 감사 추적 인증서를 함께 보내 드려요.');
-      expect(out).toContain('최종 계약서');
-      expect(out).toContain('서명이 모두 담긴 완료본이에요.');
-      expect(out).toContain('감사 추적 인증서');
-      expect(out).toContain('계약 진행 이력과 문서 무결성을 증명하는 문서예요.');
-      expect(out).toContain('이 메일은 계약 완료에 따라 자동으로 발송되었어요.');
+      expect(out).toContain(KO.headline);
+      expect(out).toContain(KO.bodyAllDone.replace('{title}', base.contractTitle));
+      expect(out).toContain(KO.bodyAttachments);
+      expect(out).toContain(KO.finalContract);
+      expect(out).toContain(KO.finalContractNote);
+      expect(out).toContain(KO.auditCertificate);
+      expect(out).toContain(KO.auditCertificateNote);
+      expect(out).toContain(KO.footer);
     }
   });
 
@@ -48,9 +53,9 @@ describe('renderCompletionEmail', () => {
       recipientRole: 'SIGNER',
       dashboardUrl: 'https://app.esign.kr/dashboard',
     });
-    expect(html).not.toContain('대시보드에서도 언제든 다시 내려받을 수 있어요.');
-    expect(html).not.toContain('대시보드에서 보기');
-    expect(text).not.toContain('대시보드에서 보기');
+    expect(html).not.toContain(KO.bodySenderExtra);
+    expect(html).not.toContain(KO.ctaLabel);
+    expect(text).not.toContain(KO.ctaLabel);
   });
 
   it('adds the dashboard line and CTA for sender recipients with a dashboard URL', () => {
@@ -60,16 +65,16 @@ describe('renderCompletionEmail', () => {
       recipientRole: 'SENDER',
       dashboardUrl: url,
     });
-    expect(html).toContain('대시보드에서도 언제든 다시 내려받을 수 있어요.');
-    expect(html).toContain('대시보드에서 보기');
+    expect(html).toContain(KO.bodySenderExtra);
+    expect(html).toContain(KO.ctaLabel);
     expect(html).toContain(`href="${url}"`);
-    expect(text).toContain(`대시보드에서 보기: ${url}`);
+    expect(text).toContain(`${KO.ctaLabel}: ${url}`);
   });
 
   it('keeps the sender dashboard line even without a CTA URL but drops the button', () => {
     const { html } = renderCompletionEmail({ ...base, recipientRole: 'SENDER' });
-    expect(html).toContain('대시보드에서도 언제든 다시 내려받을 수 있어요.');
-    expect(html).not.toContain('대시보드에서 보기');
+    expect(html).toContain(KO.bodySenderExtra);
+    expect(html).not.toContain(KO.ctaLabel);
   });
 
   it('applies a valid brand color to the accent bar and falls back to Toss blue otherwise', () => {
@@ -90,22 +95,22 @@ describe('renderCompletionEmail', () => {
 
     const withMonogram = renderCompletionEmail({ ...base, recipientRole: 'SIGNER' });
     // First grapheme of the sender name, uppercased.
-    expect(withMonogram.html).toContain('>주<');
+    expect(withMonogram.html).toContain('>A<');
   });
 
   it('uses the default service name in the footer when none is given', () => {
     const { html } = renderCompletionEmail({ ...base, recipientRole: 'SIGNER' });
-    expect(html).toContain('전자계약');
+    expect(html).toContain(KO.serviceName);
   });
 
   it('escapes HTML-significant characters in dynamic copy', () => {
     const { html } = renderCompletionEmail({
-      contractTitle: '<b>계약</b> & 부속',
+      contractTitle: '<b>Contract</b> & annex',
       senderName: 'A & B',
       locale: 'ko',
       recipientRole: 'SIGNER',
     });
-    expect(html).toContain('&lt;b&gt;계약&lt;/b&gt; &amp; 부속');
-    expect(html).not.toContain('<b>계약</b> & 부속');
+    expect(html).toContain('&lt;b&gt;Contract&lt;/b&gt; &amp; annex');
+    expect(html).not.toContain('<b>Contract</b> & annex');
   });
 });

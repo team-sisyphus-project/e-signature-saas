@@ -52,7 +52,7 @@ export class SignerSessionService {
 
   /**
    * Verify a bearer token and return the bound SignRequest id. Throws a
-   * Toss-tone "다시 인증" message on any failure (expired / malformed / wrong
+   * Toss-tone "verify again" message on any failure (expired / malformed / wrong
    * audience) so the signer is guided back to the code screen.
    */
   verify(token: string | undefined): SignerSession {

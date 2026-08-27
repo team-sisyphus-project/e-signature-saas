@@ -35,7 +35,7 @@ export interface ShareMeta {
   locale: 'ko' | 'en';
   /** Whether `/unlock` requires the link password (the value is never returned). */
   requiresPassword: boolean;
-  /** ISO expiry instant, or null for "만료 없음". */
+  /** ISO expiry instant, or null for "no expiry". */
   expiresAt: string | null;
   /** True once the recipient has already submitted (a terminal state). */
   alreadySubmitted: boolean;
@@ -216,7 +216,7 @@ export const SHARE_RECIPIENT_COPY = {
       body: '이미 제출을 완료한 계약이에요.',
     },
   },
-  /** Document viewer chrome (recipient speaks "작성/제출"). */
+  /** Document viewer chrome (recipient speaks "fill out / submit"). */
   viewer: {
       ctaContinue: '작성하기',
     ctaComplete: '제출하기',
@@ -228,7 +228,7 @@ export const SHARE_RECIPIENT_COPY = {
       progress: (total: number, done: number) => `작성할 항목 ${total}곳 중 ${done}곳을 작성했어요.`,
       dateHint: '날짜를 입력해 주세요.', textHint: '내용을 입력해 주세요.',
   },
-  /** Submit-success completion takeover (`completion-screen`, Download 비노출). */
+  /** Submit-success completion takeover (`completion-screen`, download hidden). */
   done: {
     title: '제출이 완료되었습니다!',
     body: '작성하신 내용이 안전하게 전달됐어요.',
@@ -278,8 +278,8 @@ export function shareRecipientCopyFor(locale: 'ko' | 'en'): ShareRecipientCopy {
 
 // --- terminal (blocked) state mapping ----------------------------------------
 //
-// design-spec: components/share-recipient-flow/base.md "blocked 분기 매핑" +
-// messaging/share-link.md "HTTP 코드 매핑 규칙". This is the single source for the
+// design-spec: components/share-recipient-flow/base.md "blocked branch mapping" +
+// messaging/share-link.md "HTTP code mapping rules". This is the single source for the
 // recipient's terminal decision surface: HTTP status → block reason → notice
 // title/body/tone. It mirrors the server catalog so the calm Toss voice (no
 // blame, one next-step sentence) and the 410/403/404 mapping stay auditable.

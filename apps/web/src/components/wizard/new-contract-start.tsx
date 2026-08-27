@@ -6,9 +6,9 @@
  * `components/start-choice-card/base.md`).
  *
  * Two ways to start:
- * - **새로 업로드**: the classic from-scratch path — mount `<ContractWizard />`
+ * - **Upload a PDF**: the classic from-scratch path — mount `<ContractWizard />`
  *   with no preload (upload → fields → delivery → …). Unchanged behavior.
- * - **내 템플릿에서 시작**: pick a saved template; we re-register its PDF as a
+ * - **Start from a template**: pick a saved template; we re-register its PDF as a
  *   fresh DRAFT (`createDocumentFromStorageKey`), reload its bytes
  *   (`fetchTemplateFile`), and hydrate its saved field layout, then mount
  *   `<ContractWizard preload={…} />` straight at the delivery-method step. The
@@ -16,10 +16,10 @@
  *   email or link exactly as on the from-scratch path.
  *
  * A `?template=<id>` query jumps past the chooser and prepares that template
- * immediately (e.g. a "이 템플릿으로 보내기" deep link). Loading / error copy is
- * 해요체; server-sent errors (not-found / forbidden) surface verbatim, transport
- * failures fall back to the neutral generic line, and a 401 bounces to /login
- * like the send flow.
+ * immediately (e.g. a "Send with this template" deep link). Loading / error copy
+ * uses the product voice; server-sent errors (not-found / forbidden) surface
+ * verbatim, transport failures fall back to the neutral generic line, and a 401
+ * bounces to /login like the send flow.
  */
 
 import * as React from 'react';
@@ -63,7 +63,7 @@ function toFieldDrafts(fields: TemplateField[]): SignFieldDraft[] {
 /**
  * Prepare a template for the wizard: load its detail, re-register its PDF as a
  * fresh DRAFT and reload the source bytes (in parallel), and hydrate the field
- * layout. Rejects with the server's Korean copy on failure.
+ * layout. Rejects with the server's user-facing copy on failure.
  */
 async function prepareTemplate(id: string): Promise<WizardPreload> {
   const template = await getTemplate(id);
@@ -95,7 +95,7 @@ export function NewContractStart() {
   const [view, setView] = React.useState<View>(
     deepLinkId ? { kind: 'preparing' } : { kind: 'choose' },
   );
-  // The template id currently being prepared — kept so "다시 시도" can re-run it.
+  // The template id currently being prepared — kept so "Try again" can re-run it.
   const preparingIdRef = React.useRef<string | null>(deepLinkId);
 
   const goChoose = React.useCallback(() => {

@@ -2,8 +2,8 @@
  * Owner-side password confirm/edit helpers (grain-3).
  *
  * Pins the design-spec contract (conventions/share-link-password-admin.md): the
- * three semantic password states (없음 / 확인 가능 / 이전 방식이라 확인 불가) map to
- * the right trigger label, editor hint, and initial field value — the pure logic
+ * three semantic password states (none / confirmable / legacy-not-confirmable)
+ * map to the right trigger label, editor hint, and initial field value — the pure logic
  * the dashboard panel binds to. DOM behavior isn't tested here (no jsdom for
  * component tests); this pins the state→copy mapping where it's decided.
  */
@@ -25,7 +25,7 @@ const CONFIRMABLE: ShareLinkPasswordView = {
 const LEGACY: ShareLinkPasswordView = { hasPassword: true, recoverable: false, password: null };
 
 describe('passwordTriggerLabel', () => {
-  it('offers 확인 when a password is set, 설정 when the link is open', () => {
+  it('offers "view" when a password is set, "set" when the link is open', () => {
     expect(passwordTriggerLabel(true)).toBe(SHARE_COPY.passwordAdmin.open);
     expect(passwordTriggerLabel(false)).toBe(SHARE_COPY.passwordAdmin.openUnset);
   });

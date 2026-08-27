@@ -1,19 +1,20 @@
 import { DocumentStatus } from '@repo/db';
 import { PDFDocument } from 'pdf-lib';
 import { DocumentsService } from './documents.service';
+import { MESSAGES } from '../common/messages';
 
 /**
  * Unit tests for `uploadAndCreate`'s filename normalization (grain-1 logic).
  *
  * Multer decodes multipart field values — the file name included — as latin1, so
- * a UTF-8 name (한글·이모지 등) arrives as mojibake: each original UTF-8 byte
+ * a UTF-8 name (Korean, emoji, etc.) arrives as mojibake: each original UTF-8 byte
  * becomes one latin1 code point. `simulateMulterName` reproduces exactly that
  * corruption (utf8 bytes read back as latin1) so these tests exercise the real
  * decode path a browser upload would hit. The assertions pin the user-facing
  * title output rules recorded in `design-spec/vocabulary/document-title.md`:
  * non-ASCII originals are preserved, and plain ASCII names are untouched.
  *
- * The four cases below map 1:1 onto that spec's 결정 1 판정표 (conditional
+ * The four cases below map 1:1 onto that spec's Decision 1 matrix (conditional
  * re-decode), so every branch of the normalization — including the two that
  * must be left ALONE to avoid double-encoding — is pinned against regression:
  *   1. mojibake, valid UTF-8 round-trip  → re-decoded  (Korean, emoji)
@@ -110,18 +111,20 @@ describe('DocumentsService.uploadAndCreate — filename title normalization', ()
     };
   }
 
-  it('recovers a Korean filename mangled by latin1 decoding → title "계약서"', async () => {
-    const mojibake = simulateMulterName('계약서.pdf');
+  it('recovers a Korean filename mangled by latin1 decoding (Hangul title restored)', async () => {
+    // "Contract" in Hangul, written as escapes so this file stays ASCII.
+    const koreanTitle = '\uACC4\uC57D\uC11C';
+    const mojibake = simulateMulterName(`${koreanTitle}.pdf`);
     // Sanity: the input really is corrupted (not already the clean name).
-    expect(mojibake).not.toBe('계약서.pdf');
+    expect(mojibake).not.toBe(`${koreanTitle}.pdf`);
 
     const result = await service.uploadAndCreate('owner-1', fileWith(mojibake));
 
-    expect(result.title).toBe('계약서');
+    expect(result.title).toBe(koreanTitle);
     // The corrected name — not the mojibake — flows into the storage key.
-    expect(storage.buildKey).toHaveBeenCalledWith('owner-1', '계약서.pdf');
+    expect(storage.buildKey).toHaveBeenCalledWith('owner-1', `${koreanTitle}.pdf`);
     expect(prisma.document.create).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ title: '계약서' }) }),
+      expect.objectContaining({ data: expect.objectContaining({ title: koreanTitle }) }),
     );
   });
 
@@ -146,21 +149,22 @@ describe('DocumentsService.uploadAndCreate — filename title normalization', ()
     expect(storage.buildKey).toHaveBeenCalledWith('owner-1', 'standard_contract.pdf');
   });
 
-  it('does NOT double-encode an already-correct Unicode filename → title "계약서"', async () => {
+  it('does NOT double-encode an already-correct Unicode filename (Hangul title kept)', async () => {
     // Some clients deliver the name already decoded as real UTF-8 (code points
     // > 0xFF). Re-encoding that would corrupt it, so normalization must leave it
     // untouched. Passing the clean name directly (no `simulateMulterName`)
     // models that path.
-    const name = '계약서.pdf';
+    const koreanTitle = '\uACC4\uC57D\uC11C';
+    const name = `${koreanTitle}.pdf`;
     // Guard the premise: this holds real Unicode, not latin1 mojibake.
     expect(name.codePointAt(0)).toBeGreaterThan(0xff);
 
     const result = await service.uploadAndCreate('owner-1', fileWith(name));
 
-    expect(result.title).toBe('계약서');
-    expect(storage.buildKey).toHaveBeenCalledWith('owner-1', '계약서.pdf');
+    expect(result.title).toBe(koreanTitle);
+    expect(storage.buildKey).toHaveBeenCalledWith('owner-1', `${koreanTitle}.pdf`);
     expect(prisma.document.create).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ title: '계약서' }) }),
+      expect.objectContaining({ data: expect.objectContaining({ title: koreanTitle }) }),
     );
   });
 
@@ -188,7 +192,7 @@ describe('DocumentsService — scheduled dispatch', () => {
     return {
       id: documentId,
       ownerId,
-      title: '예약 계약',
+      title: 'Scheduled Contract',
       storageKey: 'documents/owner-1/original.pdf',
       pageCount: 1,
       status,
@@ -239,7 +243,7 @@ describe('DocumentsService — scheduled dispatch', () => {
     return { service, prisma, queue, quota, notifications, email };
   }
 
-  const recipients = [{ email: 'signer@example.com', name: '서명자' }];
+  const recipients = [{ email: 'signer@example.com', name: 'Signer' }];
 
   it('stores SCHEDULED data only after adding a delayed job', async () => {
     const { service, prisma, queue } = setup(DocumentStatus.DRAFT);
@@ -315,7 +319,7 @@ describe('DocumentsService — scheduled dispatch', () => {
       documentId,
       ownerId,
       jobId: 'old-job',
-      recipients: [{ email: 'signer@example.com', name: '서명자', order: 0, index: 0 }],
+      recipients: [{ email: 'signer@example.com', name: 'Signer', order: 0, index: 0 }],
     };
     queue.remove.mockResolvedValueOnce(queuedJob);
     prisma.document.updateMany.mockRejectedValueOnce(new Error('database unavailable'));
@@ -353,7 +357,7 @@ describe('DocumentsService — scheduled dispatch', () => {
     const next = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
 
     await expect(service.updateSchedule(ownerId, documentId, { scheduledSendAt: next }))
-      .rejects.toThrow('예약이 변경되었어요');
+      .rejects.toThrow('The schedule has changed');
 
     const [[, nextJobId]] = queue.replace.mock.calls as unknown as Array<[string, string]>;
     expect(queue.remove).toHaveBeenCalledWith(nextJobId);
@@ -365,7 +369,7 @@ describe('DocumentsService — scheduled dispatch', () => {
     prisma.document.updateMany.mockResolvedValueOnce({ count: 0 });
 
     await expect(service.send(ownerId, documentId, { recipients, scheduledSendAt: future }))
-      .rejects.toThrow('이미 발송된 계약이에요.');
+      .rejects.toThrow(MESSAGES.send.alreadySent);
 
     const [[job]] = queue.add.mock.calls as unknown as Array<[{ jobId: string }]>;
     expect(queue.remove).toHaveBeenCalledWith(job.jobId);
@@ -379,7 +383,7 @@ describe('DocumentsService — scheduled dispatch', () => {
         recipients,
         scheduledSendAt: new Date(Date.now() - 1000).toISOString(),
       }),
-    ).rejects.toThrow('예약 발송 시각은 현재보다 미래여야 해요.');
+    ).rejects.toThrow('The scheduled send time must be in the future.');
 
     expect(queue.add).not.toHaveBeenCalled();
     expect(prisma.document.updateMany).not.toHaveBeenCalled();
@@ -388,7 +392,7 @@ describe('DocumentsService — scheduled dispatch', () => {
   it('dispatches a due job through the normal send path and notifies its sender', async () => {
     const { service, prisma, notifications } = setup(DocumentStatus.SCHEDULED);
     const scheduled = document(DocumentStatus.SCHEDULED, {
-      owner: { email: 'owner@example.com', name: '발신자' },
+      owner: { email: 'owner@example.com', name: 'Sender' },
     });
     prisma.document.findUnique.mockResolvedValue(scheduled);
     const dispatch = jest.fn(async () => undefined);
@@ -398,7 +402,7 @@ describe('DocumentsService — scheduled dispatch', () => {
       documentId,
       ownerId,
       jobId: 'old-job',
-      recipients: [{ email: 'signer@example.com', name: '서명자', order: 0, index: 0 }],
+      recipients: [{ email: 'signer@example.com', name: 'Signer', order: 0, index: 0 }],
     });
 
     expect(dispatch).toHaveBeenCalledWith(
@@ -419,7 +423,7 @@ describe('DocumentsService — scheduled dispatch', () => {
   it('moves a due scheduled document to IN_PROGRESS before notifying its sender', async () => {
     const { service, prisma, notifications, quota } = setup(DocumentStatus.SCHEDULED);
     const scheduled = document(DocumentStatus.SCHEDULED, {
-      owner: { email: 'owner@example.com', name: '발신자' },
+      owner: { email: 'owner@example.com', name: 'Sender' },
     });
     prisma.document.findUnique.mockResolvedValue(scheduled);
     const transaction = {
@@ -444,7 +448,7 @@ describe('DocumentsService — scheduled dispatch', () => {
       documentId,
       ownerId,
       jobId: 'old-job',
-      recipients: [{ email: 'signer@example.com', name: '서명자', order: 0, index: 0 }],
+      recipients: [{ email: 'signer@example.com', name: 'Signer', order: 0, index: 0 }],
     });
 
     expect(quota.assertWithinQuota).toHaveBeenCalledWith(ownerId, transaction);
@@ -475,7 +479,7 @@ describe('DocumentsService — scheduled dispatch', () => {
     prisma.document.findUnique.mockResolvedValue(
       document(DocumentStatus.SCHEDULED, {
         scheduledJobId: 'replacement-job',
-        owner: { email: 'owner@example.com', name: '발신자' },
+        owner: { email: 'owner@example.com', name: 'Sender' },
       }),
     );
     const dispatch = jest.fn(async () => undefined);
@@ -485,7 +489,7 @@ describe('DocumentsService — scheduled dispatch', () => {
       documentId,
       ownerId,
       jobId: 'old-job',
-      recipients: [{ email: 'signer@example.com', name: '서명자', order: 0, index: 0 }],
+      recipients: [{ email: 'signer@example.com', name: 'Signer', order: 0, index: 0 }],
     });
 
     expect(dispatch).not.toHaveBeenCalled();
@@ -498,7 +502,7 @@ describe('DocumentsService — scheduled dispatch', () => {
       document(DocumentStatus.DRAFT, {
         scheduledSendAt: null,
         scheduledJobId: null,
-        owner: { email: 'owner@example.com', name: '발신자' },
+        owner: { email: 'owner@example.com', name: 'Sender' },
       }),
     );
     const dispatch = jest.fn(async () => undefined);
@@ -508,7 +512,7 @@ describe('DocumentsService — scheduled dispatch', () => {
       documentId,
       ownerId,
       jobId: 'old-job',
-      recipients: [{ email: 'signer@example.com', name: '서명자', order: 0, index: 0 }],
+      recipients: [{ email: 'signer@example.com', name: 'Signer', order: 0, index: 0 }],
     });
 
     expect(dispatch).not.toHaveBeenCalled();
@@ -518,7 +522,7 @@ describe('DocumentsService — scheduled dispatch', () => {
   it('does not let a worker that read an old reservation dispatch after a replacement', async () => {
     const { service, prisma, notifications } = setup(DocumentStatus.SCHEDULED);
     const scheduled = document(DocumentStatus.SCHEDULED, {
-      owner: { email: 'owner@example.com', name: '발신자' },
+      owner: { email: 'owner@example.com', name: 'Sender' },
     });
     prisma.document.findUnique.mockResolvedValue(scheduled);
     const transaction = {
@@ -540,8 +544,8 @@ describe('DocumentsService — scheduled dispatch', () => {
       documentId,
       ownerId,
       jobId: 'old-job',
-      recipients: [{ email: 'signer@example.com', name: '서명자', order: 0, index: 0 }],
-    })).rejects.toThrow('이미 발송된 계약이에요.');
+      recipients: [{ email: 'signer@example.com', name: 'Signer', order: 0, index: 0 }],
+    })).rejects.toThrow(MESSAGES.send.alreadySent);
 
     expect(transaction.document.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -558,7 +562,7 @@ describe('DocumentsService — scheduled dispatch', () => {
     const { service, prisma, notifications, email } = setup(DocumentStatus.SCHEDULED);
     prisma.document.findUnique.mockResolvedValue(
       document(DocumentStatus.SCHEDULED, {
-        owner: { email: 'owner@example.com', name: '발신자' },
+        owner: { email: 'owner@example.com', name: 'Sender' },
       }),
     );
 
@@ -571,9 +575,9 @@ describe('DocumentsService — scheduled dispatch', () => {
 
     expect(email.send).toHaveBeenCalledWith(
       expect.objectContaining({
-        to: [{ email: 'owner@example.com', name: '발신자' }],
-        subject: expect.stringContaining('예약 발송에 실패'),
-        text: expect.stringContaining('다시 예약하거나 지금 발송'),
+        to: [{ email: 'owner@example.com', name: 'Sender' }],
+        subject: expect.stringContaining('Scheduled send failed'),
+        text: expect.stringContaining('schedule a new send time or send it now'),
       }),
     );
     expect(notifications.enqueueMany).not.toHaveBeenCalled();

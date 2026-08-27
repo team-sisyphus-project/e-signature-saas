@@ -3,7 +3,7 @@ import { cn } from '../cn';
 
 /**
  * SuccessCheck — an animated success mark for completion moments
- * (e.g. "계약 발송이 완료되었습니다!").
+ * (e.g. "Your contract has been sent!").
  *
  * The ring and tick are SVG strokes drawn on with the `checkmark-draw` keyframe
  * (stroke-dashoffset → 0). Under reduced-motion the strokes render fully drawn
@@ -19,7 +19,7 @@ export const SuccessCheck = React.forwardRef<HTMLSpanElement, SuccessCheckProps>
     <span
       ref={ref}
       role="img"
-      aria-label="완료"
+      aria-label="Done"
       className={cn('inline-flex', className)}
       style={{ width: size, height: size }}
       {...props}

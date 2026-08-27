@@ -28,7 +28,7 @@ export const SHARE_LABEL_MAX_LENGTH = 60;
  * is hashed at rest — the plaintext is never persisted, returned, or logged.
  */
 export class CreateShareLinkDto {
-  /** Set true for "만료 없음" (no expiry). Mutually exclusive with a window. */
+  /** Set true for "no expiry". Mutually exclusive with a window. */
   @IsOptional()
   @IsBoolean()
   noExpiry?: boolean;

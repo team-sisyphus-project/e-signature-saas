@@ -168,7 +168,7 @@ export function FieldCanvas({
         setError(
           err instanceof PdfRenderError
             ? err.message
-            : 'PDF를 읽을 수 없어요. 파일이 손상되지 않았는지 확인해 주세요.',
+            : 'We could not read the PDF. Please check that the file is not damaged.',
         );
         setStatus('error');
       }
@@ -344,7 +344,7 @@ export function FieldCanvas({
         <canvas
           ref={canvasRef}
           role="img"
-          aria-label={`계약 PDF ${page}페이지`}
+          aria-label={`Contract PDF page ${page}`}
           className="pointer-events-none absolute inset-0 rounded-sm border border-border bg-surface shadow-sm"
         />
 
@@ -457,7 +457,7 @@ function FieldBox({
     <div
       role="button"
       tabIndex={0}
-      aria-label={`${meta.label} 필드. 방향키로 이동, Shift+방향키로 크기 조절, Delete로 삭제`}
+      aria-label={`${meta.label} field. Arrow keys to move, Shift+arrows to resize, Delete to remove`}
       aria-pressed={selected}
       onPointerEnter={onPointerEnter}
       onPointerLeave={onPointerLeave}
@@ -488,7 +488,7 @@ function FieldBox({
       {selected ? (
         <button
           type="button"
-          aria-label={`${meta.label} 필드 삭제`}
+          aria-label={`Delete ${meta.label} field`}
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => {
             e.stopPropagation();

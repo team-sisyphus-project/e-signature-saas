@@ -11,7 +11,7 @@ import { ShareSessionService } from './share-session.service';
 import { LinkPasswordCipher } from './link-password-cipher';
 import { SigningService } from '../signing/signing.service';
 import { SendQuotaService } from '../common/send-quota.service';
-import { FREE_PLAN_MONTHLY_LIMIT, SHARE_UNLOCK_MAX_ATTEMPTS } from '../common/messages';
+import { FREE_PLAN_MONTHLY_LIMIT, MESSAGES, SHARE_UNLOCK_MAX_ATTEMPTS } from '../common/messages';
 
 /**
  * Integration-style coverage of the link-sharing flow, wiring the REAL
@@ -231,12 +231,12 @@ function setup(): Harness {
   );
 
   // Seed an owner + a DRAFT document with two unassigned fields.
-  const owner = { id: 'owner_1', email: 'sender@toss.im', name: '토스' };
+  const owner = { id: 'owner_1', email: 'sender@toss.im', name: 'Acme Inc.' };
   prisma._users.set(owner.id, owner);
   const document = {
     id: 'doc_1',
     ownerId: owner.id,
-    title: '용역 계약서',
+    title: 'Service Agreement',
     status: 'DRAFT',
     pageCount: 1,
     storageKey: 'documents/owner_1/orig.pdf',
@@ -264,12 +264,12 @@ describe('SharingService — link creation', () => {
     const view = await h.sharing.createLink(h.ownerId, h.documentId, {
       password: 'secret12',
       expiresInDays: 3,
-      label: '거래처 A',
+      label: 'Client A',
     });
 
     expect(view.requiresPassword).toBe(true);
     expect(view.status).toBe('active');
-    expect(view.label).toBe('거래처 A');
+    expect(view.label).toBe('Client A');
     expect(view.token).toHaveLength(48);
     expect(view.expiresAt).not.toBeNull();
 
@@ -335,13 +335,13 @@ describe('SharingService — link creation', () => {
     );
   });
 
-  it('dispatches the DRAFT contract on the first link (진행 중 + sentAt), idempotently', async () => {
+  it('dispatches the DRAFT contract on the first link (in-progress + sentAt), idempotently', async () => {
     const h = setup();
     const doc = h.prisma._documents.get(h.documentId)!;
     expect(doc.status).toBe('DRAFT');
 
     await h.sharing.createLink(h.ownerId, h.documentId, {});
-    // DRAFT → 진행 중 with a sentAt stamp so the dashboard + quota see a dispatch.
+    // DRAFT → in-progress with a sentAt stamp so the dashboard + quota see a dispatch.
     expect(doc.status).toBe('IN_PROGRESS');
     expect(doc.sentAt).toBeInstanceOf(Date);
 
@@ -359,7 +359,7 @@ describe('SharingService — link creation', () => {
       h.prisma._documents.set(`sent_${i}`, {
         id: `sent_${i}`,
         ownerId: h.ownerId,
-        title: `보낸 계약 ${i}`,
+        title: `Sent contract ${i}`,
         status: 'IN_PROGRESS',
         sentAt: new Date(),
       });
@@ -379,9 +379,9 @@ describe('SharingService — pre-auth meta', () => {
     const link = await h.sharing.createLink(h.ownerId, h.documentId, { password: 'secret12' });
     const meta = await h.sharing.meta(link.token);
 
-    expect(meta.documentTitle).toBe('용역 계약서');
+    expect(meta.documentTitle).toBe('Service Agreement');
     expect(meta.requiresPassword).toBe(true);
-    expect(meta.sender.name).toBe('토스');
+    expect(meta.sender.name).toBe('Acme Inc.');
     expect(meta).not.toHaveProperty('fields');
     expect(meta).not.toHaveProperty('pdfPath');
   });
@@ -494,14 +494,14 @@ describe('SharingService — fill & submit (reuses the completion machine)', () 
     await h.sharing.saveFields(signRequestId, {
       fields: [
         { fieldId: 'f1', value: PNG_1x1 },
-        { fieldId: 'f2', value: '홍길동' },
+        { fieldId: 'f2', value: 'Jane Doe' },
       ],
     });
 
     const result = await h.sharing.submit(signRequestId, '203.0.113.5', 'jest');
     expect(result.status).toBe('SIGNED');
     expect(result.documentCompleted).toBe(true);
-    expect(result.message).toBe('제출이 완료되었습니다!');
+    expect(result.message).toBe(MESSAGES.share.submitted);
 
     // The document flipped to COMPLETED and completion post-processing (which
     // notifies the sender) was enqueued exactly once.
@@ -523,7 +523,7 @@ describe('SharingService — fill & submit (reuses the completion machine)', () 
     await h.sharing.saveFields(signRequestId, {
       fields: [
         { fieldId: 'f1', value: PNG_1x1 },
-        { fieldId: 'f2', value: '홍길동' },
+        { fieldId: 'f2', value: 'Jane Doe' },
       ],
     });
     await h.sharing.submit(signRequestId);
@@ -533,7 +533,7 @@ describe('SharingService — fill & submit (reuses the completion machine)', () 
   });
 });
 
-describe('SharingService — password 확인/수정 (sender dashboard)', () => {
+describe('SharingService — password view/update (sender dashboard)', () => {
   it('reveals the recoverable plaintext to the owner', async () => {
     const h = setup();
     const link = await h.sharing.createLink(h.ownerId, h.documentId, { password: 'secret12' });
@@ -594,7 +594,7 @@ describe('SharingService — password 확인/수정 (sender dashboard)', () => {
     const { sessionToken } = await h.sharing.unlock(link.token, 'brandnew9');
     expect(h.shareSessions.verify(sessionToken).signRequestId).toBe(link.id);
 
-    // Round-trips through 확인: the stored value is the new plaintext.
+    // Round-trips through the owner view: the stored value is the new plaintext.
     const view = await h.sharing.getLinkPassword(h.ownerId, h.documentId, link.id);
     expect(view.password).toBe('brandnew9');
   });

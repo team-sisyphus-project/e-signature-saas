@@ -1,25 +1,25 @@
 'use client';
 
 /**
- * ShareLinkBody — the reusable '링크로 공유' settings + generation body
+ * ShareLinkBody — the reusable "Share via link" settings + generation body
  * (design-spec `components/share-link-dialog/base.md`, copy
  * `messaging/share-link.md`).
  *
  * This is the shared core behind two containers: the detail screen's
  * `ShareLinkDialog` modal and the create wizard's `LinkShareStep`. Both surface
- * the exact same task — pick access settings (유효기간 단일 선택 + 비밀번호 보호),
+ * the exact same task — pick access settings (a single validity preset + password protection),
  * generate a unique open/fill link, then copy it — so the settings/generate/
  * result flow lives here once and is composed into each container.
  *
  * The body flips between two phases on one surface:
- *   • configuring → validity preset + password toggle/field + '링크 만들기'
- *   • generated   → '공유 링크' text + 복사 버튼/확인 피드백 + 만료 안내
+ *   • configuring → validity preset + password toggle/field + "Create link"
+ *   • generated   → share-link text + copy button/confirmation feedback + expiry note
  *
  * Containers inject what differs:
  *   • `beforeCreate` runs after validation, before `createShareLink` — the wizard
  *     uses it to persist its in-memory fields first (so `createLink` binds them).
  *   • `resultFooter` renders under the generated link — the wizard uses it for
- *     its "대시보드로 가기" hand-off; the modal omits it (Esc/overlay dismiss).
+ *     its "Go to dashboard" hand-off; the modal omits it (Esc/overlay dismiss).
  *
  * Security: the password lives only in this component's state and the create
  * request body. It is never persisted, logged, or rendered after generation —

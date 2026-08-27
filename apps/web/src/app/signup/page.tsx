@@ -38,25 +38,25 @@ function validate(
 
   const trimmed = email.trim();
   if (!trimmed) {
-    errors.email = '이메일을 입력해 주세요.';
+    errors.email = 'Enter your email address.';
   } else if (!EMAIL_RE.test(trimmed)) {
-    errors.email = '이메일 형식을 다시 확인해 주세요.';
+    errors.email = 'Check your email address.';
   }
 
   if (!password) {
-    errors.password = '비밀번호를 입력해 주세요.';
+    errors.password = 'Enter your password.';
   } else if (password.length < PASSWORD_MIN) {
-    errors.password = `비밀번호는 ${PASSWORD_MIN}자 이상으로 입력해 주세요.`;
+    errors.password = `Your password must be at least ${PASSWORD_MIN} characters.`;
   }
 
   if (!passwordConfirm) {
-    errors.passwordConfirm = '비밀번호를 한 번 더 입력해 주세요.';
+    errors.passwordConfirm = 'Enter your password one more time.';
   } else if (password !== passwordConfirm) {
-    errors.passwordConfirm = '비밀번호가 일치하지 않아요. 다시 확인해 주세요.';
+    errors.passwordConfirm = 'The passwords do not match. Please check again.';
   }
 
   if (!agreed) {
-    errors.terms = '약관에 동의해야 가입할 수 있어요.';
+    errors.terms = 'You must agree to the terms to sign up.';
   }
 
   return errors;
@@ -158,8 +158,8 @@ export default function SignupPage() {
         <Card className="motion-stagger relative z-10 flex w-full max-w-[420px] flex-col items-center gap-md p-xl text-center shadow-lg sm:p-2xl">
           <SuccessCheck />
           <div role="status" aria-live="polite" className="flex flex-col gap-xs">
-            <h1 className="text-2xl font-bold text-foreground">가입이 완료되었습니다!</h1>
-            <p className="text-base text-foreground-subtle">대시보드로 이동하고 있어요.</p>
+            <h1 className="text-2xl font-bold text-foreground">Your account is ready!</h1>
+            <p className="text-base text-foreground-subtle">Taking you to your dashboard.</p>
           </div>
         </Card>
       </main>
@@ -172,15 +172,15 @@ export default function SignupPage() {
 
       <Card className="motion-stagger relative z-10 w-full max-w-[420px] p-xl shadow-lg sm:p-2xl">
         <header className="mb-xl flex flex-col gap-xs">
-          <span className="text-sm font-bold tracking-tight text-primary">전자계약</span>
-          <h1 className="text-2xl font-bold text-foreground">시작해 볼까요</h1>
+          <span className="text-sm font-bold tracking-tight text-primary">eSign</span>
+          <h1 className="text-2xl font-bold text-foreground">Let&apos;s get started</h1>
           <p className="text-base text-foreground-subtle">
-            이메일과 비밀번호로 계정을 만들어 주세요.
+            Create an account with your email and password.
           </p>
         </header>
 
         <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-lg">
-          <Field label="이메일" htmlFor="email" error={touched.email ? fieldErrors.email : undefined}>
+          <Field label="Email" htmlFor="email" error={touched.email ? fieldErrors.email : undefined}>
             <Input
               id="email"
               name="email"
@@ -206,10 +206,10 @@ export default function SignupPage() {
           </Field>
 
           <Field
-            label="비밀번호"
+            label="Password"
             htmlFor="password"
             hint={
-              touched.password && fieldErrors.password ? undefined : `${PASSWORD_MIN}자 이상 입력해 주세요.`
+              touched.password && fieldErrors.password ? undefined : `Use at least ${PASSWORD_MIN} characters.`
             }
             error={touched.password ? fieldErrors.password : undefined}
           >
@@ -217,7 +217,7 @@ export default function SignupPage() {
               id="password"
               name="password"
               autoComplete="new-password"
-              placeholder="비밀번호"
+              placeholder="Password"
               value={password}
               invalid={touched.password && Boolean(fieldErrors.password)}
               aria-describedby={touched.password && fieldErrors.password ? 'password-message' : undefined}
@@ -235,7 +235,7 @@ export default function SignupPage() {
           </Field>
 
           <Field
-            label="비밀번호 확인"
+            label="Confirm password"
             htmlFor="passwordConfirm"
             error={touched.passwordConfirm ? fieldErrors.passwordConfirm : undefined}
           >
@@ -243,7 +243,7 @@ export default function SignupPage() {
               id="passwordConfirm"
               name="passwordConfirm"
               autoComplete="new-password"
-              placeholder="비밀번호를 다시 입력해 주세요"
+              placeholder="Enter your password again"
               value={passwordConfirm}
               invalid={touched.passwordConfirm && Boolean(fieldErrors.passwordConfirm)}
               aria-describedby={
@@ -280,8 +280,8 @@ export default function SignupPage() {
                 revalidate(email, password, passwordConfirm, next);
               }}
             >
-              <span className="font-medium text-foreground">이용약관</span> 및{' '}
-              <span className="font-medium text-foreground">개인정보 처리방침</span>에 동의해요.
+              I agree to the <span className="font-medium text-foreground">Terms of Service</span> and{' '}
+              <span className="font-medium text-foreground">Privacy Policy</span>.
             </Checkbox>
             {touched.terms && fieldErrors.terms ? (
               <p id="terms-message" role="alert" className="text-sm text-danger">
@@ -300,7 +300,7 @@ export default function SignupPage() {
           ) : null}
 
           <Button type="submit" size="lg" fullWidth isLoading={submitting} disabled={googleLoading}>
-            {submitting ? '가입 중' : '가입하기'}
+            {submitting ? 'Signing up' : 'Sign up'}
           </Button>
         </form>
 
@@ -316,7 +316,7 @@ export default function SignupPage() {
               </p>
             ) : null}
             <GoogleButton
-              label="Google로 시작하기"
+              label="Continue with Google"
               isLoading={googleLoading}
               disabled={submitting}
               onClick={handleGoogle}
@@ -325,12 +325,12 @@ export default function SignupPage() {
         ) : null}
 
         <p className="mt-xl text-center text-sm text-foreground-subtle">
-          이미 계정이 있으신가요?{' '}
+          Already have an account?{' '}
           <Link
             href="/login"
             className="font-semibold text-primary underline-offset-4 hover:underline focus-visible:rounded-xs focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus"
           >
-            로그인
+            Sign in
           </Link>
         </p>
       </Card>

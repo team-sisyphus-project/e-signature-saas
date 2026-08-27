@@ -19,15 +19,15 @@ function makeService(env: Record<string, string | undefined>): EmailService {
 
 const message: EmailMessage = {
   to: [
-    { email: 'sender@example.com', name: '발신자' },
-    { email: 'signer@example.com', name: '서명자' },
+    { email: 'sender@example.com', name: 'Sender' },
+    { email: 'signer@example.com', name: 'Signer' },
   ],
-  subject: '[근로계약서] 계약이 모두 완료되었어요',
-  html: '<p>완료</p>',
-  text: '완료',
+  subject: '[Employment Agreement] Contract completed',
+  html: '<p>Done</p>',
+  text: 'Done',
   attachments: [
-    { filename: '최종 계약서.pdf', content: Buffer.from('A') },
-    { filename: '감사 추적 인증서.pdf', content: Buffer.from('B') },
+    { filename: 'Final contract.pdf', content: Buffer.from('A') },
+    { filename: 'Audit trail certificate.pdf', content: Buffer.from('B') },
   ],
 };
 
@@ -63,7 +63,7 @@ describe('EmailService (console fallback)', () => {
 describe('EmailService (SES path)', () => {
   it('sends raw MIME with both attachments and returns the message id', async () => {
     sendMock.mockResolvedValue({ MessageId: 'mid-123' });
-    const svc = makeService({ SES_FROM_EMAIL: 'noreply@esign.kr', SES_FROM_NAME: '전자계약', AWS_REGION: 'ap-northeast-2' });
+    const svc = makeService({ SES_FROM_EMAIL: 'noreply@esign.kr', SES_FROM_NAME: 'eContract', AWS_REGION: 'ap-northeast-2' });
     jest.spyOn((svc as unknown as { logger: { log: () => void } }).logger, 'log').mockImplementation();
 
     const result = await svc.send(message);
@@ -92,7 +92,7 @@ describe('EmailService (SES path)', () => {
     const result = await svc.send(message);
 
     expect(result).toMatchObject({ delivered: false, channel: 'console' });
-    expect(result.reason).toContain('SES 발송 실패');
+    expect(result.reason).toContain('SES send failed');
     expect(logSpy).toHaveBeenCalled();
   });
 

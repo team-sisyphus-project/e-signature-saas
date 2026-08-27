@@ -13,15 +13,22 @@ describe('korean-font util', () => {
     const doc = await PDFDocument.create();
     const font = await embedKoreanFont(doc);
     // Korean text must measure to a real (non-zero) width — i.e. the glyphs
-    // exist in the font, so they will not render as tofu.
-    expect(font.widthOfTextAtSize('서명 계약 완료', 12)).toBeGreaterThan(0);
+    // exist in the font, so they will not render as tofu. The escapes decode to
+    // Hangul for "signature contract completed".
+    expect(font.widthOfTextAtSize('\uC11C\uBA85 \uACC4\uC57D \uC644\uB8CC', 12)).toBeGreaterThan(0);
   });
 
   it('drawing Hangul does not throw and produces a valid PDF', async () => {
     const doc = await PDFDocument.create();
     const page = doc.addPage([400, 200]);
     const font = await embedKoreanFont(doc);
-    page.drawText('홍길동 — 서명 완료 (계약)', { x: 20, y: 100, size: 16, font });
+    // Hangul sample: a Korean name ("Hong Gildong") plus "signing completed (contract)".
+    page.drawText('\uD64D\uAE38\uB3D9 — \uC11C\uBA85 \uC644\uB8CC (\uACC4\uC57D)', {
+      x: 20,
+      y: 100,
+      size: 16,
+      font,
+    });
     const bytes = await doc.save();
     expect(bytes.byteLength).toBeGreaterThan(0);
   });

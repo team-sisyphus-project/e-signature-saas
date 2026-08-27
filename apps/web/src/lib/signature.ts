@@ -107,7 +107,7 @@ export function smoothWidth(prev: number, target: number, smoothing = 0.5): numb
 /** A selectable typed-signature font. */
 export interface SignatureFont {
   id: 'script' | 'serif' | 'sans';
-  /** Short Korean chip label. */
+  /** Short chip label. */
   label: string;
   /**
    * CSS font-family stack. Mirrors the `tailwind.config.ts` fontFamily tokens
@@ -119,14 +119,14 @@ export interface SignatureFont {
 
 /**
  * The three typed-signature fonts: a Korean-capable handwriting script, a
- * serif (명조), and the app's sans (고딕, Pretendard). Order is the chip order.
+ * serif, and the app's sans (Pretendard). Order is the chip order.
  */
 export const SIGNATURE_FONTS: readonly SignatureFont[] = [
-  { id: 'script', label: '손글씨', fontFamily: "'Nanum Pen Script', cursive" },
-  { id: 'serif', label: '명조', fontFamily: "'Nanum Myeongjo', serif" },
+  { id: 'script', label: 'Handwriting', fontFamily: "'Nanum Pen Script', cursive" },
+  { id: 'serif', label: 'Serif', fontFamily: "'Nanum Myeongjo', serif" },
   {
     id: 'sans',
-    label: '고딕',
+    label: 'Sans',
     fontFamily:
       "'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif",
   },

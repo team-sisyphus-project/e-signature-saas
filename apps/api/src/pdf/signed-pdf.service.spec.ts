@@ -23,7 +23,7 @@ describe('SignedPdfService.compose', () => {
     const fields: SignFieldInput[] = [
       { type: 'SIGNATURE', page: 1, x: 0.1, y: 0.1, width: 0.3, height: 0.1, value: PNG_1X1 },
       { type: 'DATE', page: 1, x: 0.1, y: 0.3, width: 0.2, height: 0.04, value: '2026-06-23' },
-      { type: 'TEXT', page: 1, x: 0.1, y: 0.5, width: 0.5, height: 0.05, value: '홍길동 (계약 동의)' },
+      { type: 'TEXT', page: 1, x: 0.1, y: 0.5, width: 0.5, height: 0.05, value: 'Jane Doe (agreed to contract)' },
     ];
 
     const out = await service.compose(original, fields);
@@ -37,7 +37,9 @@ describe('SignedPdfService.compose', () => {
   it('renders Korean text without throwing (no tofu)', async () => {
     const original = await makePdf(1);
     const out = await service.compose(original, [
-      { type: 'TEXT', page: 1, x: 0.1, y: 0.4, width: 0.6, height: 0.05, value: '대한민국 전자서명 완료' },
+      // "Republic of Korea e-signature completed" in Hangul (escaped so this
+      // file stays ASCII while still exercising CJK glyph rendering).
+      { type: 'TEXT', page: 1, x: 0.1, y: 0.4, width: 0.6, height: 0.05, value: '\uB300\uD55C\uBBFC\uAD6D \uC804\uC790\uC11C\uBA85 \uC644\uB8CC' },
     ]);
     await expect(PDFDocument.load(out)).resolves.toBeDefined();
   });
@@ -45,7 +47,7 @@ describe('SignedPdfService.compose', () => {
   it('places fields on a rotated page without error and preserves page count', async () => {
     const original = await makePdf(2, true);
     const fields: SignFieldInput[] = [
-      { type: 'TEXT', page: 2, x: 0.1, y: 0.1, width: 0.4, height: 0.05, value: '회전 페이지 서명' },
+      { type: 'TEXT', page: 2, x: 0.1, y: 0.1, width: 0.4, height: 0.05, value: 'Signature on a rotated page' },
       { type: 'SIGNATURE', page: 2, x: 0.5, y: 0.5, width: 0.3, height: 0.1, value: PNG_1X1 },
     ];
     const out = await service.compose(original, fields);

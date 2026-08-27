@@ -80,7 +80,7 @@ export class DocumentsService {
     }
 
     // Multer decodes multipart field values (incl. the file name) as latin1, so
-    // a UTF-8 name (한글·이모지 등) arrives as mojibake. Normalize it once up
+    // a UTF-8 name (Korean, emoji, etc.) arrives as mojibake. Normalize it once up
     // front and feed the corrected name to every downstream step — type check,
     // storage key, and title — so they all agree on the same value.
     const originalname = this.normalizeUploadFilename(file.originalname);
@@ -174,7 +174,7 @@ export class DocumentsService {
 
   /**
    * Dispatch the contract: enforce the Free-plan quota, create one SignRequest
-   * per recipient, map fields to recipients, flip the document to 진행 중,
+   * per recipient, map fields to recipients, flip the document to in-progress,
    * write the audit trail, and enqueue notifications.
    */
   async send(
@@ -204,7 +204,7 @@ export class DocumentsService {
   ): Promise<DocumentSummary> {
     const document = await this.requireOwnedDocument(ownerId, documentId);
     if (document.status !== DocumentStatus.SCHEDULED || !document.scheduledJobId) {
-      throw new BadRequestException('예약된 계약만 예약 시간을 변경할 수 있어요.');
+      throw new BadRequestException('Only a scheduled contract can have its send time changed.');
     }
     const scheduledFor = this.parseFutureSchedule(dto.scheduledSendAt);
     const nextJobId = this.newScheduledJobId(documentId);
@@ -232,7 +232,7 @@ export class DocumentsService {
     }
     if (claimed.count !== 1) {
       await this.scheduledSendQueue.remove(nextJobId).catch(() => undefined);
-      throw new BadRequestException('예약이 변경되었어요. 목록을 새로고침한 뒤 다시 시도해 주세요.');
+      throw new BadRequestException('The schedule has changed. Refresh the list and try again.');
     }
     const updated: Document = {
       ...document,
@@ -240,7 +240,7 @@ export class DocumentsService {
       scheduledJobId: nextJobId,
     };
     await this.scheduledSendQueue.remove(document.scheduledJobId).catch((err) => {
-      this.logger.warn(`기존 예약 발송 잡 제거 실패: docId=${documentId}: ${String(err)}`);
+      this.logger.warn(`Failed to remove the previous scheduled-send job: docId=${documentId}: ${String(err)}`);
     });
     await this.writeAudit({
       documentId,
@@ -260,7 +260,7 @@ export class DocumentsService {
   ): Promise<DocumentSummary> {
     const document = await this.requireOwnedDocument(ownerId, documentId);
     if (document.status !== DocumentStatus.SCHEDULED || !document.scheduledJobId) {
-      throw new BadRequestException('예약된 계약만 예약을 취소할 수 있어요.');
+      throw new BadRequestException('Only a scheduled contract can be canceled.');
     }
     // Cancel the delayed job before returning the document to DRAFT. If Redis
     // rejects removal (for example, the job has just become active), the
@@ -288,13 +288,13 @@ export class DocumentsService {
       // the DB write fails so a SCHEDULED record is never left without a job.
       if (removedJob && document.scheduledSendAt) {
         await this.scheduledSendQueue.add(removedJob, document.scheduledSendAt).catch((restoreErr) => {
-          this.logger.error(`예약 발송 잡 복구 실패: docId=${documentId}: ${String(restoreErr)}`);
+          this.logger.error(`Failed to restore the scheduled-send job: docId=${documentId}: ${String(restoreErr)}`);
         });
       }
       throw err;
     }
     if (claimed.count !== 1) {
-      throw new BadRequestException('예약이 변경되었어요. 목록을 새로고침한 뒤 다시 시도해 주세요.');
+      throw new BadRequestException('The schedule has changed. Refresh the list and try again.');
     }
     const updated: Document = {
       ...document,
@@ -546,18 +546,18 @@ export class DocumentsService {
     const title = escapeHtml(document.title);
     const message: EmailMessage = {
       to: [{ email: document.owner.email, name: document.owner.name }],
-      subject: `[전자계약] 예약 발송에 실패했어요 — ${document.title}`,
+      subject: `[eContract] Scheduled send failed — ${document.title}`,
       html: [
-        '<p>예약하신 계약서 발송을 완료하지 못했어요.</p>',
+        '<p>Your scheduled contract could not be sent.</p>',
         `<p><strong>${title}</strong></p>`,
-        '<p>수신자에게는 아직 발송되지 않았습니다. 계약서를 확인한 뒤 발송 시각을 다시 예약하거나 지금 발송해 주세요.</p>',
-        `<p><a href="${escapeHtml(documentUrl)}">계약서 확인 및 재발송</a></p>`,
+        '<p>It has not been sent to the recipients yet. Review the contract, then schedule a new send time or send it now.</p>',
+        `<p><a href="${escapeHtml(documentUrl)}">Review and resend the contract</a></p>`,
       ].join(''),
       text: [
-        '예약하신 계약서 발송을 완료하지 못했어요.',
+        'Your scheduled contract could not be sent.',
         document.title,
-        '수신자에게는 아직 발송되지 않았습니다. 계약서를 확인한 뒤 발송 시각을 다시 예약하거나 지금 발송해 주세요.',
-        `계약서 확인 및 재발송: ${documentUrl}`,
+        'It has not been sent to the recipients yet. Review the contract, then schedule a new send time or send it now.',
+        `Review and resend the contract: ${documentUrl}`,
       ].join('\n\n'),
     };
     await this.email.send(message);
@@ -688,7 +688,7 @@ export class DocumentsService {
   private parseFutureSchedule(value: string): Date {
     const scheduledFor = new Date(value);
     if (Number.isNaN(scheduledFor.getTime()) || scheduledFor.getTime() <= Date.now()) {
-      throw new BadRequestException('예약 발송 시각은 현재보다 미래여야 해요.');
+      throw new BadRequestException('The scheduled send time must be in the future.');
     }
     return scheduledFor;
   }
@@ -739,7 +739,7 @@ export class DocumentsService {
       const pdf = await PDFDocument.load(buffer, { updateMetadata: false });
       return pdf.getPageCount();
     } catch (err) {
-      this.logger.warn(`PDF 페이지 수 계산 실패: ${String(err)}`);
+      this.logger.warn(`Failed to count PDF pages: ${String(err)}`);
       throw new BadRequestException(MESSAGES.document.corruptPdf);
     }
   }
@@ -748,13 +748,13 @@ export class DocumentsService {
    * Repair a file name that Multer may have mis-decoded before it is used.
    *
    * Multipart field values (the file name included) are decoded as latin1, so a
-   * UTF-8 name — 한글, 이모지, 그 밖의 비ASCII — surfaces as mojibake: every
+   * UTF-8 name — Korean, emoji, any other non-ASCII — surfaces as mojibake: every
    * original UTF-8 byte became one latin1 code point. We re-encode those code
    * points back to bytes and read them as UTF-8, but ONLY when that is provably
    * safe, so already-valid names are never double-encoded:
    *   - pure ASCII names have nothing to fix and are returned untouched;
    *   - names that already hold real Unicode (code point > 0xFF, e.g. a
-   *     correctly decoded `계약서.pdf`) were decoded fine — re-encoding would
+   *     correctly decoded Korean file name) were decoded fine — re-encoding would
    *     corrupt them, so they are returned untouched;
    *   - otherwise the latin1 bytes are re-read as UTF-8 and adopted only if they
    *     form a valid UTF-8 sequence that round-trips exactly. That rules out
@@ -785,7 +785,7 @@ export class DocumentsService {
 
   private deriveTitle(originalName: string): string {
     const base = originalName.replace(/\.pdf$/i, '').trim();
-    return base.length > 0 ? base.slice(0, 200) : '제목 없는 계약';
+    return base.length > 0 ? base.slice(0, 200) : 'Untitled contract';
   }
 
   /**
@@ -823,7 +823,7 @@ export class DocumentsService {
       createdAt: document.createdAt.toISOString(),
       completedAt: document.completedAt ? document.completedAt.toISOString() : null,
       // The dashboard download area only appears once post-processing has stored
-      // both artifacts; until then it shows a "준비 중" placeholder.
+      // both artifacts; until then it shows a "Preparing" placeholder.
       downloadsReady:
         document.status === DocumentStatus.COMPLETED &&
         Boolean(document.signedStorageKey) &&

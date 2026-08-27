@@ -19,13 +19,13 @@ import {
 import { TEMPLATE_ACTIONS_COPY, TEMPLATES_COPY } from '@/lib/templates-copy';
 
 /**
- * `/templates` — the sender's saved-template list ("내 템플릿"), the destination
- * the save-template dialog promises ('다음에 내 템플릿에서 바로 불러올 수 있어요').
+ * `/templates` — the sender's saved-template list ("My templates"), the destination
+ * the save-template dialog promises ("Next time, load it straight from My templates").
  *
- * Lists the owner's templates (name · 페이지 수 · 필드 수 · 저장일) newest-first via
+ * Lists the owner's templates (name · page count · field count · saved date) newest-first via
  * `listTemplates()`, with loading / empty / error states. Each card carries the
- * management cluster (manageable Extension): 미리보기 (PDF preview modal) · 이름
- * 수정 (rename modal) · 삭제 (delete-confirm modal) · '이 템플릿으로 시작' (→
+ * management cluster (manageable Extension): preview (PDF preview modal) · rename
+ * (rename modal) · delete (delete-confirm modal) · "Start from this template" (→
  * `/contracts/new?template=id`). Rename and delete are applied **optimistically**:
  * the list updates instantly and, if the server rejects, rolls back and surfaces a
  * dismissible banner. A 401/403 clears the session and bounces to login, mirroring
@@ -73,7 +73,7 @@ export default function TemplatesPage() {
         return;
       }
       setError(
-        err instanceof ApiError ? err.message : '문제가 생겼어요. 잠시 후 다시 시도해 주세요.',
+        err instanceof ApiError ? err.message : 'Something went wrong. Please try again shortly.',
       );
     }
   }, [router]);

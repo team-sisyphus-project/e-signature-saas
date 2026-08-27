@@ -31,9 +31,9 @@ export default function HomePage() {
       <BlobBackground />
 
       <div role="status" aria-busy="true" className="relative z-10 flex flex-col items-center gap-md">
-        <span className="text-sm font-bold tracking-tight text-primary">전자계약</span>
+        <span className="text-sm font-bold tracking-tight text-primary">eSign</span>
         <Spinner />
-        <span className="sr-only">로그인 상태를 확인하고 있어요.</span>
+        <span className="sr-only">Checking your sign-in status.</span>
       </div>
     </main>
   );

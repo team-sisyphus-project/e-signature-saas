@@ -4,7 +4,7 @@
  * new users see on the dashboard).
  *
  * Source of truth for tone: design-spec/messaging/recording.md (project base
- * voice) — 해요체, no blame, always give the next action, and stay calm (never
+ * voice) — no blame, always give the next action, and stay calm (never
  * manufacture urgency). Per base voice principle 6, every user-facing string lives
  * in one place (`lib/*-copy.ts`), mirroring `lib/todo-copy.ts`; the OnboardingGuide
  * component takes these as props and never owns the wording itself.
@@ -15,9 +15,9 @@
 
 /** One numbered step in the first-contract walkthrough. */
 export interface OnboardingStep {
-  /** Short verb-phrase heading, e.g. "계약서 올리기". */
+  /** Short verb-phrase heading, e.g. "Upload your contract". */
   title: string;
-  /** One calm 해요체 sentence describing the step. */
+  /** One calm sentence describing the step. */
   description: string;
 }
 
@@ -27,7 +27,7 @@ export interface OnboardingCopy {
   title: string;
   /** One-line lead under the heading. */
   description: string;
-  /** The ordered steps (①업로드 ②서명 요청 ③완료 추적). */
+  /** The ordered steps (1. upload, 2. request signatures, 3. track completion). */
   steps: OnboardingStep[];
   /** Primary CTA label that triggers `onCreate` (start the first real contract). */
   cta: string;
@@ -36,25 +36,25 @@ export interface OnboardingCopy {
 /**
  * Default onboarding copy. The three steps mirror the real product flow a new
  * user is about to take — upload → request signature → track completion — kept to
- * one calm sentence each. Base voice: invite the next action ("만들어 보세요"),
- * never pressure.
+ * one calm sentence each. Base voice: invite the next action, never pressure.
  */
 export const ONBOARDING_COPY: OnboardingCopy = {
-  title: '3단계로 첫 계약을 보내요',
-  description: '이렇게 계약서를 보내고 서명을 받을 수 있어요. 준비되면 첫 계약을 만들어 보세요.',
+  title: 'Send your first contract in 3 steps',
+  description:
+    'Here is how you send a contract and collect signatures. When you are ready, create your first contract.',
   steps: [
     {
-      title: '계약서 올리기',
-      description: '서명받을 PDF 계약서를 업로드해요.',
+      title: 'Upload your contract',
+      description: 'Upload the PDF contract you need signed.',
     },
     {
-      title: '서명 요청 보내기',
-      description: '받는 분에게 서명 위치를 지정하고 발송해요.',
+      title: 'Send a signature request',
+      description: 'Place the signature fields for each recipient and send it off.',
     },
     {
-      title: '완료까지 추적하기',
-      description: '서명 요청부터 완료까지 대시보드에서 한눈에 확인해요.',
+      title: 'Track it to completion',
+      description: 'Follow everything from request to completion at a glance on the dashboard.',
     },
   ],
-  cta: '첫 계약 만들기',
+  cta: 'Create your first contract',
 };

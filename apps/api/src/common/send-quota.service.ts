@@ -13,7 +13,7 @@ import { FREE_PLAN_MONTHLY_LIMIT, MESSAGES } from './messages';
  * is injected wherever a dispatch happens (avoids drift between the two paths).
  *
  * A document is counted at most once: the quota is derived from `Document.sentAt`
- * (set on the DRAFT → 진행 중 transition), so additional links on an already
+ * (set on the DRAFT → in-progress transition), so additional links on an already
  * dispatched document don't consume more allowance.
  */
 @Injectable()

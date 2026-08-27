@@ -4,12 +4,12 @@
  * ShareLinksSection — the contract detail screen's share-link area.
  *
  * Two parts (design-spec components/contract-detail):
- *   1. The '링크로 공유' primary action — the entry point that opens the
+ *   1. The "Share via link" primary action — the entry point that opens the
  *      ShareLinkDialog (its settings + generation live in `share-link-dialog`).
  *   2. The link list — a summary of the contract's existing share links fetched
- *      via `lib/sharing.ts`. Each row shows its lifecycle state (사용 중 / 만료됨 /
- *      중지됨 / 제출 완료), an expiry note, a copy action, and — for still-active
- *      links — a 사용 중지(revoke) action. When the contract has no links yet, the
+ *      via `lib/sharing.ts`. Each row shows its lifecycle state (active / expired /
+ *      revoked / submitted), an expiry note, a copy action, and — for still-active
+ *      links — a revoke action. When the contract has no links yet, the
  *      "no links" rest state shows so the section reads as intentional.
  *
  * The list refreshes after the dialog creates a link (`onCreated`) and after a
@@ -60,7 +60,7 @@ export function ShareLinksSection({ documentId, documentTitle }: ShareLinksSecti
   }, [refresh]);
 
   /**
-   * Optimistic revoke: flip the row to 중지됨 the instant the owner clicks, then
+   * Optimistic revoke: flip the row to revoked the instant the owner clicks, then
    * confirm with the server. On success we refetch for the authoritative view;
    * on failure we restore the row to its prior status and rethrow so the row can
    * surface the error. Mutating only the targeted link (not a whole snapshot)
@@ -85,7 +85,7 @@ export function ShareLinksSection({ documentId, documentTitle }: ShareLinksSecti
   );
 
   // Replace a row with the server's authoritative link view (e.g. after a
-  // password change) so its 비밀번호 tag and status reflect the update at once.
+  // password change) so its password tag and status reflect the update at once.
   const applyLinkUpdate = React.useCallback((updated: ShareLink) => {
     setLinks((cur) => (cur ? cur.map((l) => (l.id === updated.id ? updated : l)) : cur));
   }, []);
@@ -183,7 +183,7 @@ function ShareLinkRow({
     setRevoking(true);
     setRevokeError(null);
     try {
-      // Optimistic: the section flips this row to 중지됨 immediately; we only need
+      // Optimistic: the section flips this row to revoked immediately; we only need
       // to surface an error if the server rejects (the section rolls the row back).
       await onRevoke(link);
     } catch (err) {
@@ -210,7 +210,7 @@ function ShareLinkRow({
       <p className="min-w-0 truncate text-sm text-foreground" title={link.url}>
         {link.url}
       </p>
-      {/* Only active links carry the forward-looking "…까지 열 수 있어요" note; for
+      {/* Only active links carry the forward-looking "open until …" note; for
           expired/revoked/completed rows the state pill already tells the story. */}
       {isActive ? <p className="text-xs text-foreground-subtle">{expiryNote(link)}</p> : null}
 
@@ -253,7 +253,7 @@ function ShareLinkRow({
         ) : null}
       </div>
 
-      {/* Inline 비밀번호 확인·수정 panel — active links only. Mounts fresh on open
+      {/* Inline view/change-password panel — active links only. Mounts fresh on open
           so it always fetches the link's current password state. */}
       {isActive && pwOpen ? (
         <ShareLinkPasswordEditor

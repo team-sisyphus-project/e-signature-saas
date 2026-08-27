@@ -1,15 +1,15 @@
 'use client';
 
 /**
- * CompletionDownload — the "완료 문서" download area (design-spec
+ * CompletionDownload — the completed-documents download area (design-spec
  * `components/completion-download/base.md`).
  *
  * Presentational + self-contained per-row loading/error state; the caller
  * supplies `onDownload(kind)` wired to its own auth (owner JWT on the dashboard,
  * signer session on the completion screen). Reuses the existing StatusBadge and
  * Button — no new visual primitives. Until the artifacts are stored the rows
- * show a skeleton-shimmer placeholder ("준비 중"); once ready they become two
- * download rows (최종 계약서 / 감사 추적 인증서).
+ * show a skeleton-shimmer placeholder ("Preparing"); once ready they become two
+ * download rows (final contract / audit trail certificate).
  */
 
 import * as React from 'react';
@@ -25,11 +25,11 @@ import {
 import { useLocale } from '@/components/locale-provider';
 
 export interface CompletionDownloadProps {
-  /** Whether artifacts are stored and downloadable; false → "준비 중" skeleton. */
+  /** Whether artifacts are stored and downloadable; false → "Preparing" skeleton. */
   ready: boolean;
   /** ISO completion timestamp for the notice (optional). */
   completedAt?: string | null;
-  /** Korean status label for the badge (single source: server `statusLabel`). */
+  /** Status label for the badge (single source: server `statusLabel`). */
   statusLabel?: string;
   /** Show the COMPLETED status badge beside the section title. */
   showBadge?: boolean;
@@ -49,7 +49,7 @@ export function CompletionDownload({
   const { locale } = useLocale();
   const copy = completionDownloadCopyFor(locale);
   const completedLabel = formatKstDateTime(completedAt ?? null);
-  const resolvedStatusLabel = statusLabel ?? (locale === 'en' ? 'Completed' : '완료됨');
+  const resolvedStatusLabel = statusLabel ?? 'Completed';
 
   return (
     <section

@@ -1,5 +1,13 @@
 import { buildRawMime, encodeHeaderText, formatAddress } from './mime';
 
+/* Hangul fixtures are written as \uXXXX escapes so this file stays ASCII while
+ * still exercising the non-ASCII (UTF-8 Korean) encoding paths end-to-end. */
+const KO_DONE = '\uC644\uB8CC'; // "completed"
+const KO_SUBJECT = '\uACC4\uC57D \uC644\uB8CC'; // "contract completed"
+const KO_NAME = '\uD64D\uAE38\uB3D9'; // a common Korean full name
+const KO_FILE_FINAL = '\uCD5C\uC885 \uACC4\uC57D\uC11C.pdf'; // "final contract.pdf"
+const KO_FILE_CERT = '\uAC10\uC0AC \uCD94\uC801 \uC778\uC99D\uC11C.pdf'; // "audit trail certificate.pdf"
+
 /** Pull the raw bytes of a base64-encoded MIME part back to a UTF-8 string. */
 function decodeBase64Block(message: string, afterMarker: RegExp): string {
   const idx = message.search(afterMarker);
@@ -18,14 +26,14 @@ describe('encodeHeaderText', () => {
   });
 
   it('encodes Korean as RFC 2047 base64 words', () => {
-    const out = encodeHeaderText('계약 완료');
+    const out = encodeHeaderText(KO_SUBJECT);
     expect(out).toMatch(/^=\?UTF-8\?B\?[A-Za-z0-9+/=]+\?=/);
     // Round-trips back to the original.
     const decoded = out
       .split(/\r\n /)
       .map((w) => Buffer.from(w.replace(/^=\?UTF-8\?B\?|\?=$/g, ''), 'base64').toString('utf8'))
       .join('');
-    expect(decoded).toBe('계약 완료');
+    expect(decoded).toBe(KO_SUBJECT);
   });
 });
 
@@ -39,25 +47,25 @@ describe('formatAddress', () => {
   });
 
   it('encodes a non-ASCII display name', () => {
-    expect(formatAddress('a@b.com', '홍길동')).toMatch(/^=\?UTF-8\?B\?.+\?= <a@b\.com>$/);
+    expect(formatAddress('a@b.com', KO_NAME)).toMatch(/^=\?UTF-8\?B\?.+\?= <a@b\.com>$/);
   });
 });
 
 describe('buildRawMime', () => {
   const base = {
-    from: formatAddress('noreply@esign.kr', '전자계약'),
-    to: [formatAddress('signer@example.com', '서명자')],
-    subject: '[근로계약서] 계약이 모두 완료되었어요',
-    html: '<p>완료</p>',
-    text: '완료',
+    from: formatAddress('noreply@esign.kr', 'eContract'),
+    to: [formatAddress('signer@example.com', KO_NAME)],
+    subject: `[Employment Agreement] ${KO_SUBJECT}`,
+    html: `<p>${KO_DONE}</p>`,
+    text: KO_DONE,
   };
 
   it('builds a multipart/mixed message with two attachments', () => {
     const raw = buildRawMime({
       ...base,
       attachments: [
-        { filename: '최종 계약서.pdf', content: Buffer.from('PDF-A') },
-        { filename: '감사 추적 인증서.pdf', content: Buffer.from('PDF-B') },
+        { filename: KO_FILE_FINAL, content: Buffer.from('PDF-A') },
+        { filename: KO_FILE_CERT, content: Buffer.from('PDF-B') },
       ],
     }).toString('utf8');
 
@@ -78,8 +86,8 @@ describe('buildRawMime', () => {
     expect(raw).toContain('Content-Type: multipart/alternative; boundary=');
     const text = decodeBase64Block(raw, /Content-Type: text\/plain/);
     const html = decodeBase64Block(raw, /Content-Type: text\/html/);
-    expect(text).toBe('완료');
-    expect(html).toBe('<p>완료</p>');
+    expect(text).toBe(KO_DONE);
+    expect(html).toBe(`<p>${KO_DONE}</p>`);
   });
 
   it('preserves attachment bytes through base64', () => {

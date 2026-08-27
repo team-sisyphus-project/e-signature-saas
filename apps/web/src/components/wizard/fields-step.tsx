@@ -3,7 +3,7 @@
 /**
  * Wizard step 2 — place sign fields on the contract (desktop only).
  *
- * A toolbar of three field tools (서명 / 날짜 / 텍스트) sits above an interactive
+ * A toolbar of three field tools (signature / date / text) sits above an interactive
  * PDF page. Tools are dragged onto the page to drop a field where the cursor is,
  * or clicked/Enter-ed to drop one at page center (keyboard path). The page can be
  * paged through and zoomed; fields are stored as normalized, page-relative boxes
@@ -85,9 +85,9 @@ export function FieldsStep() {
     <div className="flex flex-col gap-md">
       <div className="flex flex-wrap items-start justify-between gap-md">
         <div className="flex flex-col gap-2xs">
-          <h2 className="text-xl font-bold text-foreground">서명 필드를 배치해 주세요</h2>
+          <h2 className="text-xl font-bold text-foreground">Place the signature fields</h2>
           <p className="text-sm text-foreground-subtle">
-            받는 분이 서명할 위치에 필드를 끌어다 놓으세요. 클릭하면 가운데에 추가돼요.
+            Drag fields to where each recipient should sign. Click a tool to add one at the center.
           </p>
         </div>
         <Button
@@ -96,7 +96,7 @@ export function FieldsStep() {
           onClick={() => setSaveOpen(true)}
           disabled={!canSaveTemplate}
         >
-          템플릿으로 저장
+          Save as template
         </Button>
       </div>
 
@@ -116,7 +116,7 @@ export function FieldsStep() {
           <FieldTool key={type} type={type} onAdd={() => addAtCenter(type)} />
         ))}
         <span className="ml-auto text-xs font-medium text-foreground-subtle">
-          이 페이지에 {pageFieldCount}개 · 전체 {fields.length}개
+          {pageFieldCount} on this page · {fields.length} total
         </span>
       </div>
 
@@ -124,7 +124,7 @@ export function FieldsStep() {
       <div className="flex items-center justify-between gap-sm rounded-md border border-border bg-surface px-sm py-2xs">
         <div className="flex items-center gap-2xs">
           <IconButton
-            label="이전 페이지"
+            label="Previous page"
             disabled={page <= 1}
             onClick={() => {
               setSelectedId(null);
@@ -134,10 +134,10 @@ export function FieldsStep() {
             <ChevronIcon dir="left" />
           </IconButton>
           <span className="min-w-[72px] text-center text-sm font-medium text-foreground tabular-nums">
-            {page} / {total} 페이지
+            Page {page} / {total}
           </span>
           <IconButton
-            label="다음 페이지"
+            label="Next page"
             disabled={page >= total}
             onClick={() => {
               setSelectedId(null);
@@ -150,7 +150,7 @@ export function FieldsStep() {
 
         <div className="flex items-center gap-2xs">
           <IconButton
-            label="축소"
+            label="Zoom out"
             disabled={zoom <= ZOOM_MIN}
             onClick={() => setZoom((z) => Math.max(ZOOM_MIN, +(z - ZOOM_STEP).toFixed(2)))}
           >
@@ -160,7 +160,7 @@ export function FieldsStep() {
             {Math.round(zoom * 100)}%
           </span>
           <IconButton
-            label="확대"
+            label="Zoom in"
             disabled={zoom >= ZOOM_MAX}
             onClick={() => setZoom((z) => Math.min(ZOOM_MAX, +(z + ZOOM_STEP).toFixed(2)))}
           >
@@ -186,13 +186,13 @@ export function FieldsStep() {
 
         {fields.length === 0 ? (
           <p className="pointer-events-none absolute inset-x-0 bottom-md text-center text-xs font-medium text-foreground-subtle">
-            위 도구를 PDF 위로 끌어다 놓아 필드를 배치하세요
+            Drag a tool above onto the PDF to place a field
           </p>
         ) : null}
       </div>
 
       <p className="text-xs text-foreground-subtle">
-        필드를 선택한 뒤 방향키로 이동, Shift+방향키로 크기 조절, Delete로 삭제할 수 있어요.
+        Select a field, then use the arrow keys to move, Shift+arrows to resize, and Delete to remove it.
       </p>
     </div>
   );
@@ -210,7 +210,7 @@ function FieldTool({ type, onAdd }: { type: SignFieldType; onAdd: () => void }) 
         e.dataTransfer.effectAllowed = 'copy';
       }}
       onClick={onAdd}
-      aria-label={`${meta.label} 필드 추가 (끌어다 놓거나 클릭)`}
+      aria-label={`Add ${meta.label} field (drag onto the page or click)`}
       className={cn(
         'inline-flex cursor-grab items-center gap-xs rounded-md border border-border bg-surface px-sm py-2xs',
         'text-sm font-semibold text-foreground shadow-xs',
@@ -234,9 +234,9 @@ function DesktopOnlyFallback() {
         <DesktopIcon />
       </span>
       <div className="flex flex-col gap-2xs">
-        <h2 className="text-lg font-bold text-foreground">데스크톱에서 필드를 배치해 주세요</h2>
+        <h2 className="text-lg font-bold text-foreground">Please place fields on a desktop</h2>
         <p className="max-w-[420px] text-sm text-foreground-subtle">
-          서명 필드 배치는 마우스가 있는 큰 화면에 맞춰져 있어요. 데스크톱에서 이어서 진행해 주세요.
+          Field placement is designed for a large screen with a mouse. Please continue on a desktop.
         </p>
       </div>
     </div>

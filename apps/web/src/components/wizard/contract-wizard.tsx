@@ -14,7 +14,7 @@
  * read the active branch rather than a fixed step list.
  *
  * Navigation is centralized: a step never advances itself. It writes to wizard
- * state, and `canProceed()` decides whether "다음" unlocks — so as later grains
+ * state, and `canProceed()` decides whether "Next" unlocks — so as later grains
  * add their data, the gate lights up without touching this shell.
  */
 
@@ -63,9 +63,9 @@ function WizardShell() {
     <div className="flex min-h-[100dvh] flex-col bg-background">
       <header className="sticky top-0 z-30 border-b border-border bg-surface">
         <div className="mx-auto flex w-full max-w-[760px] items-center justify-between px-md py-sm">
-          <span className="text-base font-bold tracking-tight text-primary">전자계약</span>
-          <Button variant="ghost" size="sm" onClick={exit} aria-label="계약 생성 나가기">
-            나가기
+          <span className="text-base font-bold tracking-tight text-primary">eSign</span>
+          <Button variant="ghost" size="sm" onClick={exit} aria-label="Exit contract creation">
+            Exit
           </Button>
         </div>
       </header>
@@ -91,15 +91,15 @@ function WizardShell() {
             size="md"
             onClick={state.step === 0 ? exit : goBack}
           >
-            {state.step === 0 ? '취소' : '이전'}
+            {state.step === 0 ? 'Cancel' : 'Back'}
           </Button>
 
           {!lastStep ? (
             <Button size="md" onClick={goNext} disabled={!proceed} className="min-w-[120px]">
-              다음
+              Next
             </Button>
           ) : (
-            // Terminal steps ('발송 검토' / '링크 공유') render their own CTA in
+            // Terminal steps (review & send / share link) render their own CTA in
             // their slot, so the shell leaves its footer-right empty here.
             <span aria-hidden="true" />
           )}

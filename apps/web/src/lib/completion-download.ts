@@ -20,7 +20,7 @@ export type CompletionArtifact = 'signed' | 'certificate';
 export const COMPLETION_DOWNLOAD_COPY = {
   /** Section title. */
   sectionTitle: '완료 문서',
-  /** Completion notice — `{완료일시}` is `YYYY.MM.DD HH:mm (KST)`. */
+  /** Completion notice — the completion timestamp label is `YYYY.MM.DD HH:mm (KST)`. */
   notice: (completedAtLabel: string): string =>
     `${completedAtLabel}에 완료됐어요. 참여자 모두에게 메일로도 보내 드렸어요.`,
   /** Per-artifact name + one-line description. */

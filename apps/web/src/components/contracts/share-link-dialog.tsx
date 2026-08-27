@@ -1,11 +1,11 @@
 'use client';
 
 /**
- * ShareLinkDialog — the '링크로 공유' settings modal (design-spec
+ * ShareLinkDialog — the "Share via link" settings modal (design-spec
  * `components/share-link-dialog/base.md`, copy `messaging/share-link.md`).
  *
- * One modal, one task: the sender picks access settings (유효기간 단일 선택 +
- * 비밀번호 보호), generates a unique open/fill link, then copies it — all on the
+ * One modal, one task: the sender picks access settings (a single validity
+ * preset + password protection), generates a unique open/fill link, then copies it — all on the
  * same surface. The settings/generate/result flow lives in the shared
  * `ShareLinkBody`; this container only wraps it in `@repo/ui` Dialog (focus trap,
  * scroll lock, Esc/overlay dismiss, accessible title/description). The same body

@@ -86,7 +86,7 @@ export class SigningController {
 
   /**
    * ⑦ Download a completed contract's artifact (session required).
-   * `:artifact` is `signed` (최종 계약서) or `certificate` (감사 추적 인증서).
+   * `:artifact` is `signed` (final contract) or `certificate` (audit trail certificate).
    * Only resolves once the document is COMPLETED and the artifacts are stored.
    */
   @Get(':token/download/:artifact')

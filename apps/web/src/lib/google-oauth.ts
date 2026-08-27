@@ -33,9 +33,9 @@ export function isGoogleConfigured(): boolean {
 export type GoogleAuthErrorKind = 'cancelled' | 'popup_blocked' | 'connect';
 
 const GOOGLE_AUTH_MESSAGES: Record<GoogleAuthErrorKind, string> = {
-  cancelled: 'Google 로그인을 취소했어요. 다시 시도해 주세요.',
-  popup_blocked: '팝업이 차단됐어요. 브라우저에서 팝업을 허용한 뒤 다시 시도해 주세요.',
-  connect: 'Google에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.',
+  cancelled: 'Google sign-in was cancelled. Please try again.',
+  popup_blocked: 'The popup was blocked. Allow popups in your browser and try again.',
+  connect: 'We could not connect to Google. Please try again shortly.',
 };
 
 /**

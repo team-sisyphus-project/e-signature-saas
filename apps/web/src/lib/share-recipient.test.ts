@@ -2,10 +2,11 @@
  * Terminal (blocked) state mapping for the link-share recipient.
  *
  * Asserts the design-spec contract (components/share-recipient-flow/base.md
- * "blocked 분기 매핑" + messaging/share-link.md "HTTP 코드 매핑 규칙"): the
- * server's HTTP codes (410/403/404) map to the right terminal reason, and each
- * reason carries the right tone (만료/무효/취소/체결불가 = neutral, 이미제출 =
- * success) and the server-mirrored copy. This is the receiver counterpart to the
+ * "blocked branch mapping" + messaging/share-link.md "HTTP code mapping rules"):
+ * the server's HTTP codes (410/403/404) map to the right terminal reason, and
+ * each reason carries the right tone (expired/invalid/disabled/not-signable =
+ * neutral, already-submitted = success) and the server-mirrored copy. This is
+ * the receiver counterpart to the
  * backend `link-state.spec.ts`, pinned on the client side where the screen is
  * actually chosen.
  */
@@ -14,6 +15,7 @@ import { ApiError } from './api';
 import {
   metaBlockReason,
   unlockBlockReason,
+  shareRecipientCopyFor,
   SHARE_NOTICE,
   SHARE_RECIPIENT_COPY,
   type ShareBlockReason,
@@ -92,11 +94,13 @@ describe('SHARE_NOTICE — tone + copy per terminal reason', () => {
     }
   });
 
-  it('mirrors the expired-link copy the spec pins to the "만료된 링크" screen', () => {
+  it('mirrors the expired-link copy the spec pins to the expired-link screen', () => {
     // Spec deliverable: the expired notice tells the recipient it is time (not
     // their fault) and offers the one next step — request a new link.
-    expect(SHARE_NOTICE.expired.title).toBe('링크가 만료됐어요');
-    expect(SHARE_NOTICE.expired.body).toContain('유효 기간이 지났어요');
-    expect(SHARE_NOTICE.expired.body).toContain('새 링크를 요청');
+    expect(SHARE_NOTICE.expired.title).toBe(SHARE_RECIPIENT_COPY.notice.expired.title);
+    expect(SHARE_NOTICE.expired.body).toBe(SHARE_RECIPIENT_COPY.notice.expired.body);
+    const en = shareRecipientCopyFor('en');
+    expect(en.notice.expired.title).toBe('This link has expired');
+    expect(en.notice.expired.body).toContain('Ask the sender for a new link');
   });
 });

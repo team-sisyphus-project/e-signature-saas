@@ -1,13 +1,13 @@
 'use client';
 
 /**
- * BrandingPreview — the read-only right panel of the 설정 → 브랜딩 screen.
+ * BrandingPreview — the read-only right panel of the Settings → Branding screen.
  *
  * A presentation-only component: the parent (BrandingForm) owns the picked files,
- * the saved asset URLs, and the current 대표 색상, and passes them straight in.
+ * the saved asset URLs, and the current brand color, and passes them straight in.
  * This renders three live mockups of how those choices land across the service:
- *   1. Header mockup — the app top bar with the logo (or 전자계약 wordmark) and a
- *      brand-colored 설정 action, mirroring DashboardHeader.
+ *   1. Header mockup — the app top bar with the logo (or the service wordmark)
+ *      and a brand-colored settings action, mirroring DashboardHeader.
  *   2. Browser-tab mockup — a tab showing the favicon (or a brand-colored
  *      monogram) beside the service name.
  *   3. Accent-color sample — a primary button/link/chip that re-skins to the
@@ -21,7 +21,7 @@
  * picked files are managed by `createObjectUrlLifecycle`, so previews never leak
  * (revoke on replace and on unmount) — the same guarantee the uploader gives.
  *
- * No network, no form state, no layout ownership (the 2-단 grid + sticky wrapper
+ * No network, no form state, no layout ownership (the 2-column grid + sticky wrapper
  * are the form's concern, a later grain). All chrome reuses existing `globals.css`
  * tokens; the only literal color anywhere is the user's own picked value carried
  * by `brandStyle`, which is data, not a token. The mockups are decorative
@@ -48,7 +48,7 @@ export interface BrandingPreviewProps {
   /** URL of the favicon already saved on the server, or `null`/absent. */
   faviconSavedUrl?: string | null;
   /**
-   * The current 대표 색상 (`#rgb` / `#rrggbb`), or empty when unset. Applied via
+   * The current brand color (`#rgb` / `#rrggbb`), or empty when unset. Applied via
    * `brandStyle`, which no-ops on an invalid value so the default tokens hold.
    */
   color: string;

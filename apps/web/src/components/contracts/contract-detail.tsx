@@ -5,8 +5,8 @@
  * (design-spec components/contract-detail/base.md).
  *
  * Presentational: the route owns data fetching and the loading/error/404 states.
- * Renders the title + status, a summary definition list (받는 분 · 분량 · 날짜),
- * and the ShareLinksSection ('링크로 공유' entry point + link list slot). Completed
+ * Renders the title + status, a summary definition list (recipients · length · dates),
+ * and the ShareLinksSection ("Share via link" entry point + link list slot). Completed
  * contracts also surface the existing CompletionDownload area so the owner can
  * grab the finished artifacts from the detail view.
  */

@@ -18,9 +18,9 @@ import {
  *
  * Brand mark: when a branding logo is set it renders as an image (alt text from
  * copy, height-constrained to the header line, `object-contain`); otherwise the
- * 전자계약 wordmark shows. Either way it links home and shares one focus ring.
+ * service wordmark shows. Either way it links home and shares one focus ring.
  * Layout/tone reuse the established token language (sticky surface bar with a
- * bottom border, `max-w-[960px]` content column). The `설정` entry is a ghost
+ * bottom border, `max-w-[960px]` content column). The Settings entry is a ghost
  * link to the settings section — the single doorway into `/settings` from the
  * authenticated app.
  */
@@ -60,7 +60,7 @@ export function DashboardHeader({
             <Link href={SETTINGS_DEFAULT_ROUTE}>{SETTINGS_ENTRY_LABEL}</Link>
           </Button>
           <Button variant="ghost" size="sm" onClick={onLogout}>
-            로그아웃
+            Sign out
           </Button>
         </div>
       </div>

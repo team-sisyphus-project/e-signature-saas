@@ -78,13 +78,19 @@ describe('Completion post-processing (e2e)', () => {
   });
 
   it('drives a contract to the last signature and post-processes it', async () => {
-    // 1) Sender registers.
+    // 1) Sender registers and switches to English (the completion pipeline
+    //    localizes its artifacts/emails from the sender's persisted locale).
     const reg = await request(app.getHttpServer())
       .post('/api/auth/register')
-      .send({ email, password, name: '발신자주식회사' })
+      .send({ email, password, name: 'Sender Corp' })
       .expect(201);
     token = reg.body.accessToken;
     userId = reg.body.user.id;
+    await request(app.getHttpServer())
+      .post('/api/auth/locale')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ locale: 'en' })
+      .expect(201);
 
     // 2) Upload a 2-page PDF.
     const pdf = await makePdf(2);
@@ -106,7 +112,7 @@ describe('Completion post-processing (e2e)', () => {
     await request(app.getHttpServer())
       .post(`/api/documents/${documentId}/send`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ recipients: [{ email: signerEmail, name: '서명자' }] })
+      .send({ recipients: [{ email: signerEmail, name: 'Signer' }] })
       .expect(200);
 
     const signRequest = await prisma.signRequest.findFirstOrThrow({ where: { documentId } });
@@ -149,7 +155,7 @@ describe('Completion post-processing (e2e)', () => {
     const signedPdf = await PDFDocument.load(signedBytes);
     expect(signedPdf.getPageCount()).toBe(2);
     const certPdf = await PDFDocument.load(certBytes);
-    expect(certPdf.getTitle()).toBe('감사 추적 인증서');
+    expect(certPdf.getTitle()).toBe('Audit Trail Certificate');
   });
 
   it('is idempotent — re-running post-processing does not change the record', async () => {
@@ -157,7 +163,7 @@ describe('Completion post-processing (e2e)', () => {
 
     // Directly re-enqueue (inline fallback runs it now).
     const queue = app.get(CompletionQueue);
-    await queue.enqueue(documentId, 'ko');
+    await queue.enqueue(documentId, 'en');
 
     const after = await prisma.document.findUniqueOrThrow({ where: { id: documentId } });
     expect(after.completedAt?.getTime()).toBe(before.completedAt?.getTime());
@@ -215,7 +221,7 @@ describe('Completion post-processing (e2e)', () => {
     // A different signed-in user cannot reach someone else's contract → 403.
     const other = await request(app.getHttpServer())
       .post('/api/auth/register')
-      .send({ email: `intruder_${Date.now()}@example.com`, password, name: '침입자' })
+      .send({ email: `intruder_${Date.now()}@example.com`, password, name: 'Intruder' })
       .expect(201);
     await request(app.getHttpServer())
       .get(`/api/documents/${documentId}/download/signed`)

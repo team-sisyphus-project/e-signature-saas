@@ -1,59 +1,59 @@
-# 전자계약 SaaS — Monorepo
+# eSign SaaS — Monorepo
 
-한국형 전자계약 SaaS MVP. Turborepo 기반 모노레포.
+An e-signature SaaS MVP. Turborepo-based monorepo.
 
-## 구성
+## Structure
 
-| 위치 | 패키지 | 설명 |
+| Path | Package | Description |
 |---|---|---|
-| `apps/web` | `@repo/web` | Next.js 15 (App Router) + Tailwind CSS + Radix UI 프론트엔드 |
-| `apps/api` | `@repo/api` | NestJS API 서버 (`/health` 헬스체크 포함) |
-| `packages/db` | `@repo/db` | Prisma 스키마 + PostgreSQL 클라이언트 |
-| `packages/ui` | `@repo/ui` | 공용 UI 프리미티브 (`cn` 헬퍼 등) |
-| `packages/tsconfig` | `@repo/tsconfig` | 공유 TypeScript 설정 |
-| `packages/eslint-config` | `@repo/eslint-config` | 공유 ESLint 설정 |
+| `apps/web` | `@repo/web` | Next.js 15 (App Router) + Tailwind CSS + Radix UI frontend |
+| `apps/api` | `@repo/api` | NestJS API server (includes a `/health` health check) |
+| `packages/db` | `@repo/db` | Prisma schema + PostgreSQL client |
+| `packages/ui` | `@repo/ui` | Shared UI primitives (`cn` helper, etc.) |
+| `packages/tsconfig` | `@repo/tsconfig` | Shared TypeScript configuration |
+| `packages/eslint-config` | `@repo/eslint-config` | Shared ESLint configuration |
 
-## 요구 사항
+## Requirements
 
 - Node.js >= 20
-- pnpm 9 (`corepack enable` 또는 `npm i -g pnpm@9`)
-- Docker (로컬 Postgres/Redis 용, 선택)
+- pnpm 9 (`corepack enable` or `npm i -g pnpm@9`)
+- Docker (for local Postgres/Redis, optional)
 
-## 시작하기
+## Getting started
 
 ```bash
-# 1. 의존성 설치
+# 1. Install dependencies
 pnpm install
 
-# 2. 환경 변수 준비
+# 2. Prepare environment variables
 cp .env.example .env
 
-# 3. 로컬 인프라 기동 (Postgres + Redis)
+# 3. Start local infrastructure (Postgres + Redis)
 docker compose up -d
 
-# 4. Prisma 클라이언트 생성 및 마이그레이션
+# 4. Generate the Prisma client and run migrations
 pnpm db:generate
 pnpm db:migrate
 
-# 5. 개발 서버 동시 기동 (web + api)
+# 5. Start the dev servers concurrently (web + api)
 pnpm dev
 ```
 
 - web: http://localhost:3000
 - api: http://localhost:3001 (health: http://localhost:3001/health)
 
-## 주요 스크립트 (repo 루트)
+## Key scripts (repo root)
 
-| 명령 | 설명 |
+| Command | Description |
 |---|---|
-| `pnpm dev` | turbo로 web/api 동시 기동 |
-| `pnpm build` | 전체 빌드 |
-| `pnpm lint` | 전체 린트 |
-| `pnpm typecheck` | 전체 타입 체크 |
-| `pnpm db:generate` | Prisma 클라이언트 생성 |
-| `pnpm db:migrate` | Prisma 마이그레이션 (dev) |
+| `pnpm dev` | Run web/api concurrently via turbo |
+| `pnpm build` | Build everything |
+| `pnpm lint` | Lint everything |
+| `pnpm typecheck` | Type-check everything |
+| `pnpm db:generate` | Generate the Prisma client |
+| `pnpm db:migrate` | Run Prisma migrations (dev) |
 
-## 비고
+## Notes
 
-- 애니메이션은 `framer-motion` 없이 CSS `transition`/`animation`만 사용한다.
-- AWS S3 / SES, 카카오 알림톡 연동은 환경 변수 미설정 시 콘솔 로그로 대체되도록 후속 그레인에서 스텁을 채운다.
+- Animations use CSS `transition`/`animation` only — no `framer-motion`.
+- AWS S3 / SES and KakaoTalk AlimTalk integrations fall back to console logging when their environment variables are unset; the stubs are filled in by follow-up grains.

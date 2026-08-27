@@ -22,7 +22,7 @@
  * cursor, but it indexes into `stepSequence(deliveryMethod)`.
  *
  * Steps never advance themselves: they populate state, and `canProceed()`
- * derives whether the shell's "다음" button unlocks. This keeps the gating in
+ * derives whether the shell's "Next" button unlocks. This keeps the gating in
  * one declarative place as later grains fill in their slots.
  */
 
@@ -63,12 +63,12 @@ export type StepKey = 'upload' | 'fields' | 'delivery' | 'recipients' | 'review'
 
 /** Human labels for each step. These surface in the StepIndicator. */
 export const STEP_LABELS: Record<StepKey, string> = {
-  upload: '업로드',
-  fields: '필드 배치',
-  delivery: '전달 방법',
-  recipients: '받는 분',
-  review: '발송 검토',
-  link: '링크 공유',
+  upload: 'Upload',
+  fields: 'Place fields',
+  delivery: 'Delivery method',
+  recipients: 'Recipients',
+  review: 'Review & send',
+  link: 'Share link',
 };
 
 /** Steps every contract passes through, up to the delivery-method fork. */
@@ -80,7 +80,7 @@ const LINK_STEPS: readonly StepKey[] = ['link'];
 
 /**
  * The ordered step keys for the current delivery choice. Until a method is
- * picked the sequence stops at 'delivery'; `canProceed()` keeps "다음" locked
+ * picked the sequence stops at 'delivery'; `canProceed()` keeps "Next" locked
  * there so the flow can't run past an unmade branch decision.
  */
 export function stepSequence(deliveryMethod: DeliveryMethod | null): readonly StepKey[] {
@@ -190,10 +190,10 @@ export function currentStepKey(state: WizardState): StepKey {
 
 /**
  * Whether the active step is the terminal step of a chosen delivery branch.
- * Terminal steps ('발송 검토' / '링크 공유') render their own CTA, so the shell
- * hides its footer "다음" there. The 'delivery' fork is never terminal — even
+ * Terminal steps ('Review & send' / 'Share link') render their own CTA, so the shell
+ * hides its footer "Next" there. The 'delivery' fork is never terminal — even
  * though it is transiently the last entry while no method is chosen, it still
- * needs "다음" to move into the selected branch.
+ * needs "Next" to move into the selected branch.
  */
 export function isLastStep(state: WizardState): boolean {
   if (state.deliveryMethod === null) return false;
@@ -245,7 +245,7 @@ export function canProceed(state: WizardState): boolean {
     case 'fields':
       return state.fields.length > 0;
     case 'delivery':
-      // Locks "다음" until the user picks how the contract is delivered.
+      // Locks "Next" until the user picks how the contract is delivered.
       return state.deliveryMethod !== null;
     case 'recipients':
       // Need ≥1 recipient and every recipient passing inline validation

@@ -13,7 +13,7 @@
  * template: it only *reads* the stored geometry.
  *
  * Its own state machine — loading → (ready | error) — keeps it independent of the
- * list: a failed load surfaces the server's Korean copy with a 다시 시도 path, and
+ * list: a failed load surfaces the server's copy with a "Try again" path, and
  * a 401 bounces to /login like the rest of the app.
  */
 

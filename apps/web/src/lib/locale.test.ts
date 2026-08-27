@@ -21,8 +21,8 @@ describe('web locale resolver', () => {
     expect(resolveLocale({ senderLocale: 'en', browserLanguages: ['ko-KR'] })).toBe('en');
   });
 
-  it('uses the first supported browser language and safely defaults to Korean', () => {
+  it('uses the first supported browser language and safely defaults to English', () => {
     expect(localeFromBrowserLanguages(['fr-FR', 'en-GB', 'ko-KR'])).toBe('en');
-    expect(resolveLocale({ browserLanguages: ['fr-FR', 'ja-JP'] })).toBe('ko');
+    expect(resolveLocale({ browserLanguages: ['fr-FR', 'ja-JP'] })).toBe('en');
   });
 });

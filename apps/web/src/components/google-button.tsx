@@ -18,7 +18,7 @@ import { cn } from '@repo/ui';
  */
 export interface GoogleButtonProps
   extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'children'> {
-  /** Screen-specific label, e.g. "Google로 로그인" / "Google로 시작하기". */
+  /** Screen-specific label, e.g. "Sign in with Google" / "Get started with Google". */
   label: string;
   /** Show a spinner and block interaction (popup open / code exchange). */
   isLoading?: boolean;

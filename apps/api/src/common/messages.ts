@@ -1,156 +1,157 @@
 /**
- * Centralized, user-facing API messages (Korean).
+ * Centralized, user-facing API messages.
  *
  * Tone follows the Toss-inspired voice defined in the design spec
  * (`design-spec/messaging/recording.md`):
- *   - 사용자를 탓하지 않고, 다음 행동을 부드럽게 안내한다.
- *   - 해요체 + 정중한 "~해 주세요" / "~할 수 없어요" / "다시 확인해 주세요".
- *   - 성공 헤드라인은 spec에 명시된 형식("…완료되었습니다!")을 따른다.
- *   - 시스템 내부 사정(스택/원인)을 그대로 노출하지 않는다.
+ *   - Never blame the user; gently guide them to the next action.
+ *   - Calm, polite phrasing ("Please…", "Check… and try again", "…can't be done right now").
+ *   - Success headlines follow the format specified in the spec ("… is complete!").
+ *   - Never expose internal system details (stack traces / root causes).
  *
  * Keep every user-visible string here so copy stays consistent and auditable.
  */
 export const MESSAGES = {
   auth: {
-    // 로그인 실패 — 어느 쪽이 틀렸는지 특정하지 않아 보안·말투 모두 부드럽게.
-    invalidCredentials: '이메일 또는 비밀번호를 다시 확인해 주세요.',
-    emailTaken: '이미 가입된 이메일이에요. 로그인해 주세요.',
-    unauthorized: '로그인이 필요해요. 다시 로그인해 주세요.',
-    sessionExpired: '로그인 정보가 만료됐어요. 다시 로그인해 주세요.',
-    // Google 소셜 인증 실패 — 잘못/만료된 인가 코드, 토큰 교환·검증 실패 등.
-    // 실패 원인(코드 만료/검증 오류 등 내부 사정)을 특정하지 않고 다음 행동만 안내.
-    googleAuthFailed: 'Google 로그인에 실패했어요. 다시 시도해 주세요.',
-    // Google 계정의 이메일이 아직 인증되지 않음 — 다음 행동(이메일 인증)을 안내.
-    googleEmailUnverified: 'Google 계정의 이메일 인증이 필요해요. 이메일 인증을 마친 뒤 다시 시도해 주세요.',
-    // 서버에 Google 자격증명이 설정되지 않아 일시적으로 사용할 수 없음 —
-    // 내부 설정 사정을 노출하지 않고 일시적 불가로만 안내(503).
-    googleUnavailable: '지금은 Google 로그인을 사용할 수 없어요. 잠시 후 다시 시도해 주세요.',
+    // Login failure — don't specify which part was wrong, for both security and tone.
+    invalidCredentials: 'Check your email or password and try again.',
+    emailTaken: 'This email is already registered. Please sign in instead.',
+    unauthorized: 'You need to sign in. Please sign in again.',
+    sessionExpired: 'Your session has expired. Please sign in again.',
+    // Google social auth failure — invalid/expired authorization code, token exchange or verification failure, etc.
+    // Don't specify the failure cause (code expiry / verification error and other internals); only guide the next action.
+    googleAuthFailed: 'Google sign-in failed. Please try again.',
+    // The Google account's email is not verified yet — guide the next action (verify the email).
+    googleEmailUnverified:
+      'Your Google account email needs to be verified. Verify your email, then try again.',
+    // Google credentials are not configured on the server, so sign-in is temporarily unavailable —
+    // don't expose internal configuration details; present it only as temporarily unavailable (503).
+    googleUnavailable: 'Google sign-in is unavailable right now. Please try again later.',
   },
   document: {
-    notFound: '요청한 계약을 찾을 수 없어요.',
-    forbidden: '이 계약에 접근할 권한이 없어요.',
-    // 완료 후처리(최종본·인증서)가 아직 끝나지 않아 내려받을 수 없을 때.
-    artifactNotReady: '완료 문서가 아직 준비되지 않았어요. 잠시 후 다시 시도해 주세요.',
-    invalidFileType: 'PDF 파일만 업로드할 수 있어요.',
-    emptyFile: '파일이 비어 있어요. 다른 PDF로 다시 시도해 주세요.',
-    corruptPdf: 'PDF를 읽을 수 없어요. 파일이 손상되지 않았는지 확인해 주세요.',
-    fileTooLarge: '파일이 너무 커요. 20MB 이하의 PDF로 올려 주세요.',
+    notFound: 'The requested contract could not be found.',
+    forbidden: 'You do not have permission to access this contract.',
+    // Completion post-processing (final contract / certificate) is not finished yet, so it can't be downloaded.
+    artifactNotReady: 'The completed documents are not ready yet. Please try again shortly.',
+    invalidFileType: 'Only PDF files can be uploaded.',
+    emptyFile: 'This file is empty. Try again with a different PDF.',
+    corruptPdf: 'This PDF could not be read. Check that the file is not corrupted.',
+    fileTooLarge: 'This file is too large. Upload a PDF of 20MB or less.',
   },
   field: {
-    outOfRange: '서명 필드 위치가 올바르지 않아요. 문서 안에 배치해 주세요.',
+    outOfRange: 'The signature field position is not valid. Place it inside the document.',
   },
-  // 재사용 템플릿(자주 보내는 양식) 관리 카피 — document 톤과 동일하게
-  // 탓하지 않는 해요체로, 무슨 일 + 다음 행동을 부드럽게 안내한다.
+  // Reusable template (frequently sent forms) management copy — same tone as document:
+  // no blame, calmly state what happened and gently guide the next action.
   template: {
-    // 없거나 이미 삭제된 템플릿 조회/수정/삭제 요청.
-    notFound: '요청한 템플릿을 찾을 수 없어요.',
-    // 다른 사용자의 템플릿에 접근(소유자 스코프 위반).
-    forbidden: '이 템플릿에 접근할 권한이 없어요.',
-    // 플랜별 저장 가능 개수 초과 — 한도를 알리고 다음 행동(삭제/업그레이드)을 안내.
+    // Viewing/editing/deleting a template that doesn't exist or was already deleted.
+    notFound: 'The requested template could not be found.',
+    // Accessing another user's template (owner-scope violation).
+    forbidden: 'You do not have permission to access this template.',
+    // Plan storage limit exceeded — state the limit and guide the next action (delete or upgrade).
     limitReached:
-      '저장할 수 있는 템플릿 수를 모두 채웠어요. 기존 템플릿을 지우거나 플랜을 업그레이드해 주세요.',
+      'You have used all of your template slots. Delete an existing template or upgrade your plan.',
   },
-  // 서비스 전역 브랜딩(로고·파비콘·대표 색상) 관리 카피.
-  // 형식·크기 위반 문구는 클라이언트 가드(`apps/web/src/lib/image-validation.ts`의
-  // `IMAGE_VALIDATION_COPY`)와 **글자까지 동일**하게 맞춰, 웹·API 어느 경로로 걸리든
-  // 사용자가 같은 안내를 본다(비난 없이 무슨 일 + 다음 행동).
+  // Service-wide branding (logo, favicon, brand color) management copy.
+  // Format/size violation copy must match the client guard (`IMAGE_VALIDATION_COPY` in
+  // `apps/web/src/lib/image-validation.ts`) **word for word**, so users see the same
+  // guidance whether the check fires on the web or the API (no blame; what happened + next action).
   branding: {
-    // 허용 형식(SVG/PNG) 위반 — mimetype·확장자·매직바이트 재검증 실패.
-    invalidType: 'SVG 또는 PNG 파일만 올릴 수 있어요. 다른 파일로 다시 시도해 주세요.',
-    // 빈(0바이트) 파일.
-    emptyFile: '파일이 비어 있어요. 다른 파일로 다시 시도해 주세요.',
-    // 1MB 초과.
-    fileTooLarge: '파일이 너무 커요. 1MB 이하의 SVG 또는 PNG 파일로 올려 주세요.',
-    // 업로드 자체가 실패(형식·크기 외 예기치 못한 업로드 오류) — 내부 사정 비노출.
-    uploadFailed: '이미지를 올리지 못했어요. 다른 파일로 다시 시도해 주세요.',
-    // 대표 색상 HEX 형식 위반 — 컬러 피커 가드(`BRAND_COLOR_COPY`)와 동일 톤.
-    invalidColor: '색상 코드를 확인해 주세요. #163AF2처럼 3자리 또는 6자리로 입력해요.',
-    // 아직 설정되지 않은/찾을 수 없는 브랜딩 이미지 서빙 요청.
-    assetNotFound: '요청한 브랜딩 이미지를 찾을 수 없어요.',
+    // Allowed format (SVG/PNG) violation — mimetype, extension, or magic-byte re-validation failure.
+    invalidType: 'Only SVG or PNG files can be uploaded. Try again with a different file.',
+    // Empty (0-byte) file.
+    emptyFile: 'This file is empty. Try again with a different file.',
+    // Over 1MB.
+    fileTooLarge: 'This file is too large. Upload an SVG or PNG file of 1MB or less.',
+    // The upload itself failed (unexpected upload error beyond format/size) — no internal details.
+    uploadFailed: 'The image could not be uploaded. Try again with a different file.',
+    // Brand color HEX format violation — same tone as the color picker guard (`BRAND_COLOR_COPY`).
+    invalidColor: 'Check the color code. Enter 3 or 6 digits, like #163AF2.',
+    // Request to serve a branding image that is not set yet or can't be found.
+    assetNotFound: 'The requested branding image could not be found.',
   },
   send: {
-    noRecipients: '받는 분을 한 명 이상 추가해 주세요.',
-    alreadySent: '이미 발송된 계약이에요.',
-    noFields: '서명 필드를 한 개 이상 배치한 뒤 발송해 주세요.',
-    // Free 플랜 월 5건 초과 — 한도를 명확히 알리고 다음 행동(업그레이드/다음 달)을 안내.
+    noRecipients: 'Add at least one recipient.',
+    alreadySent: 'This contract has already been sent.',
+    noFields: 'Place at least one signature field before sending.',
+    // Free plan monthly limit of 5 exceeded — state the limit clearly and guide the next action (upgrade / next month).
     quotaExceeded:
-      '이번 달 무료 발송 5건을 모두 사용했어요. 다음 달에 다시 발송하거나 플랜을 업그레이드해 주세요.',
+      'You have used all 5 free sends for this month. Send again next month or upgrade your plan.',
   },
-  // 서명자 대면 메시지 — 링크로 접속한 외부 서명자가 보는 카피.
-  // 발신자 톤과 동일하게: 탓하지 않고 다음 행동을 부드럽게 안내한다.
+  // Signer-facing messages — copy shown to external signers who open the link.
+  // Same tone as the sender side: no blame, gently guide the next action.
   signing: {
-    // 잘못된/없는 서명 링크 — 토큰 자체가 유효하지 않을 때.
-    invalidLink: '서명 링크가 올바르지 않아요. 발신자에게 링크를 다시 요청해 주세요.',
-    // 6자리 코드 불일치 — 어느 자리가 틀렸는지 특정하지 않는다.
-    codeMismatch: '인증 코드가 일치하지 않아요. 다시 확인해 주세요.',
-    // 형식 오류(6자리 숫자가 아님).
-    codeFormat: '6자리 인증 코드를 정확히 입력해 주세요.',
-    // 연속 실패로 인한 일시 잠금 — 완화는 시간 경과로 자동 해제됨을 알린다.
-    locked: '인증을 여러 번 실패했어요. 잠시 후 다시 시도해 주세요.',
-    // 서명자 세션(단기 토큰) 만료 — 코드 재입력으로 부드럽게 안내.
-    sessionExpired: '본인확인 후 시간이 지났어요. 인증 코드를 다시 입력해 주세요.',
-    // 이미 서명을 마친 계약에 다시 접근.
-    alreadySigned: '이미 서명을 완료한 계약이에요.',
-    // 더 이상 서명할 수 없는 상태(취소/만료된 계약 등).
-    notSignable: '더 이상 서명할 수 없는 계약이에요. 발신자에게 문의해 주세요.',
-    // 서명/입력 값이 형식에 맞지 않음.
-    invalidFieldValue: '입력한 값을 다시 확인해 주세요.',
-    // 배정된 서명 항목 중 빈 항목이 남아 완료 불가.
-    fieldsIncomplete: '아직 작성하지 않은 항목이 있어요. 모두 채운 뒤 완료해 주세요.',
-    // 완료 성공 헤드라인 — spec의 "…완료되었습니다!" 형식.
-    completed: '서명이 완료되었습니다!',
+    // Invalid/missing signing link — the token itself is not valid.
+    invalidLink: 'This signing link is invalid. Ask the sender for a new link.',
+    // 6-digit code mismatch — don't specify which digit was wrong.
+    codeMismatch: 'The verification code does not match. Please check and try again.',
+    // Format error (not a 6-digit number).
+    codeFormat: 'Enter the 6-digit verification code exactly.',
+    // Temporary lock after repeated failures — the lock lifts automatically as time passes.
+    locked: 'Verification failed too many times. Please try again later.',
+    // Signer session (short-lived token) expired — gently guide them to re-enter the code.
+    sessionExpired: 'Some time has passed since identity verification. Enter the verification code again.',
+    // Re-accessing a contract that has already been signed.
+    alreadySigned: 'This contract has already been signed.',
+    // A state where signing is no longer possible (canceled/expired contract, etc.).
+    notSignable: 'This contract can no longer be signed. Please contact the sender.',
+    // The signature/input value does not match the expected format.
+    invalidFieldValue: 'Check the value you entered and try again.',
+    // Assigned signature fields are still empty, so completion is not possible.
+    fieldsIncomplete: 'Some fields are still blank. Fill them all in before finishing.',
+    // Completion success headline — the spec's "… is complete!" format.
+    completed: 'Signing is complete!',
   },
-  // 링크 공유 — 발신자가 만든 고유 열람/기입 링크로 접속한 수신자가 보는 카피.
-  // `design-spec/messaging/share-link.md` 톤 가이드(탓하지 않는 해요체,
-  // 다음 행동만 부드럽게 안내, 시스템 내부 사정 비노출)를 그대로 따른다.
+  // Link sharing — copy shown to recipients who open a unique view/fill link created by the sender.
+  // Follows the `design-spec/messaging/share-link.md` tone guide exactly (no blame,
+  // gently guide only the next action, never expose internal system details).
   share: {
-    // 토큰 자체가 없거나 LINK 링크가 아님 — 다음 행동(링크 재요청)을 안내.
-    invalidLink: '링크가 올바르지 않아요. 보낸 분에게 링크를 다시 요청해 주세요.',
-    // 유효 기간이 지난 링크(`linkExpiresAt` 경과) — spec notice-screen `expired`.
-    expired: '이 링크는 유효 기간이 지났어요. 보낸 분에게 새 링크를 요청해 주세요.',
-    // 보낸 분이 사용 중지한 링크(`linkRevokedAt`) — spec notice-screen `disabled`.
-    revoked: '보낸 분이 이 링크를 사용 중지했어요. 보낸 분에게 문의해 주세요.',
-    // 비밀번호가 필요한 링크인데 비밀번호가 비어 있음 — spec password-gate placeholder.
-    passwordRequired: '비밀번호를 입력해 주세요.',
-    // 비밀번호 불일치 — 어느 자리가 틀렸는지 특정하지 않는다. spec password-gate 오류.
-    wrongPassword: '비밀번호가 일치하지 않아요. 다시 확인해 주세요.',
-    // 연속 실패로 인한 일시 잠금 — 완화는 시간 경과로 자동 해제됨을 알린다.
-    locked: '비밀번호를 여러 번 잘못 입력했어요. 잠시 후 다시 시도해 주세요.',
-    // 단기 share 세션(접속 확인 후 토큰) 만료 — 링크 재진입으로 부드럽게 안내.
-    sessionExpired: '접속 시간이 만료됐어요. 링크를 다시 열어 주세요.',
-    // 더 이상 작성할 수 없는 상태(취소된 계약 등).
-    notSignable: '지금은 작성할 수 없는 계약이에요. 보낸 분에게 문의해 주세요.',
-    // 이미 제출을 마친 링크에 다시 접근.
-    alreadySubmitted: '이미 제출을 완료한 계약이에요.',
-    // 제출 성공 헤드라인 — spec completion-screen 헤드라인.
-    submitted: '제출이 완료되었습니다!',
+    // The token itself is missing or this is not a LINK link — guide the next action (request a new link).
+    invalidLink: 'This link is invalid. Ask the sender for a new link.',
+    // The link's validity period has passed (`linkExpiresAt` elapsed) — spec notice-screen `expired`.
+    expired: 'This link has expired. Ask the sender for a new link.',
+    // The sender disabled this link (`linkRevokedAt`) — spec notice-screen `disabled`.
+    revoked: 'The sender has disabled this link. Please contact the sender.',
+    // The link requires a password but the password is empty — spec password-gate placeholder.
+    passwordRequired: 'Please enter the password.',
+    // Password mismatch — don't specify which character was wrong. Spec password-gate error.
+    wrongPassword: 'The password does not match. Please check and try again.',
+    // Temporary lock after repeated failures — the lock lifts automatically as time passes.
+    locked: 'The password was entered incorrectly too many times. Please try again later.',
+    // Short-lived share session (post-access token) expired — gently guide them to reopen the link.
+    sessionExpired: 'Your session has expired. Please open the link again.',
+    // A state where filling in is no longer possible (canceled contract, etc.).
+    notSignable: 'This contract cannot be filled in right now. Please contact the sender.',
+    // Re-accessing a link that has already been submitted.
+    alreadySubmitted: 'This contract has already been submitted.',
+    // Submission success headline — spec completion-screen headline.
+    submitted: 'Submission is complete!',
   },
 } as const;
 
 /**
- * 서명자 본인확인(6자리 코드) 보호 정책.
- * 연속 실패가 잠금 임계치에 도달하면 잠금 창(window) 동안 인증을 차단하고,
- * 시간이 지나면 자동으로 완화(해제)된다.
+ * Signer identity-verification (6-digit code) protection policy.
+ * When consecutive failures reach the lock threshold, verification is blocked
+ * for the lock window, then automatically released as time passes.
  */
 export const SIGNER_VERIFY_MAX_ATTEMPTS = 5;
-/** 잠금 창 — 이 시간(분) 내 실패 횟수로 잠금 여부를 판단한다. */
+/** Lock window — failures within this many minutes determine whether to lock. */
 export const SIGNER_VERIFY_LOCK_WINDOW_MINUTES = 15;
-/** 서명자 세션(단기 토큰) 유효 시간. */
+/** Signer session (short-lived token) time to live. */
 export const SIGNER_SESSION_TTL_MINUTES = 30;
 
 /**
- * 링크 공유 비밀번호 보호 정책 — signer 본인확인 정책을 그대로 참고하되
- * (`policy` 재사용) share 접근에만 최소 적용한다. 연속 실패가 임계치에 도달하면
- * 잠금 창 동안 잠그고, 시간이 지나면 자동 완화된다.
+ * Share-link password protection policy — mirrors the signer verification policy
+ * (reusing `policy`) but applies minimally to share access only. When consecutive
+ * failures reach the threshold, lock for the lock window, then automatically release.
  */
 export const SHARE_UNLOCK_MAX_ATTEMPTS = SIGNER_VERIFY_MAX_ATTEMPTS;
-/** 잠금 창 — 이 시간(분) 내 실패 횟수로 잠금 여부를 판단한다. */
+/** Lock window — failures within this many minutes determine whether to lock. */
 export const SHARE_UNLOCK_LOCK_WINDOW_MINUTES = SIGNER_VERIFY_LOCK_WINDOW_MINUTES;
-/** 링크 공유 단기 세션(접속 확인 후 토큰) 유효 시간. */
+/** Share-link short-lived session (post-access token) time to live. */
 export const SHARE_SESSION_TTL_MINUTES = SIGNER_SESSION_TTL_MINUTES;
-/** 링크 유효기간 기본값(1주일) — spec 모달 기본 선택과 일치. */
+/** Default link validity period (1 week) — matches the spec modal's default selection. */
 export const SHARE_LINK_DEFAULT_EXPIRY_DAYS = 7;
-/** 링크 유효기간 상한(일). */
+/** Maximum link validity period (days). */
 export const SHARE_LINK_MAX_EXPIRY_DAYS = 365;
 
 /** Free plan monthly send limit. */

@@ -39,7 +39,7 @@ async function getPdfjs(): Promise<PdfjsModule> {
 
 /** Raised when a file can't be parsed as a PDF (corrupt / not a real PDF). */
 export class PdfRenderError extends Error {
-  constructor(message = 'PDF를 읽을 수 없어요. 파일이 손상되지 않았는지 확인해 주세요.') {
+  constructor(message = 'We could not read the PDF. Please check that the file is not damaged.') {
     super(message);
     this.name = 'PdfRenderError';
   }

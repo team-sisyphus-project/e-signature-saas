@@ -59,7 +59,7 @@ export default function ContractDetailPage() {
       setError({
         kind: 'generic',
         message:
-          err instanceof ApiError ? err.message : '문제가 생겼어요. 잠시 후 다시 시도해 주세요.',
+          err instanceof ApiError ? err.message : 'Something went wrong. Please try again shortly.',
       });
     }
   }, [id, router]);
@@ -153,7 +153,7 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
     <Card className="flex flex-col items-center gap-md px-lg py-3xl text-center">
       <p className="text-base text-foreground-muted">{message}</p>
       <Button variant="secondary" onClick={onRetry}>
-        다시 시도
+        Try again
       </Button>
     </Card>
   );

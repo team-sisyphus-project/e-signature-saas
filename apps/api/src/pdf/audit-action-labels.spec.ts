@@ -3,6 +3,7 @@ import {
   AUDIT_ACTION_FALLBACK_LABEL,
   auditActionLabel,
 } from './audit-action-labels';
+import { SERVER_TRANSLATIONS } from '../i18n/server-translations';
 
 describe('auditActionLabel', () => {
   it('maps every known audit-action code to a non-fallback localized label', () => {
@@ -25,7 +26,7 @@ describe('auditActionLabel', () => {
 
   it('falls back to a neutral label for unknown codes', () => {
     expect(auditActionLabel('en', 'SOME_FUTURE_ACTION')).toBe('Other activity');
-    expect(auditActionLabel('ko', '')).toBe('기타 활동');
+    expect(auditActionLabel('ko', '')).toBe(SERVER_TRANSLATIONS.ko.auditCertificate.actionFallback);
     expect(AUDIT_ACTION_FALLBACK_LABEL).toBe('auditCertificate.actionFallback');
   });
 });

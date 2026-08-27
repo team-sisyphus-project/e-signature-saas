@@ -111,8 +111,8 @@ const config: Config = {
           '"Noto Sans KR"',
           'sans-serif',
         ],
-        // Typed-signature font set: a serif (명조) and a handwriting script
-        // (손글씨), alongside `sans` (고딕). Loaded via @import in globals.css.
+        // Typed-signature font set: a serif (Myeongjo) and a handwriting script,
+        // alongside `sans` (Gothic). Loaded via @import in globals.css.
         serif: ['"Nanum Myeongjo"', 'serif'],
         script: ['"Nanum Pen Script"', 'cursive'],
       },

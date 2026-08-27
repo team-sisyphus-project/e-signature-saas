@@ -82,11 +82,11 @@ export class EmailService {
     const from = this.fromEmail;
 
     if (!from) {
-      return this.consoleFallback(message, recipients, 'SES_FROM_EMAIL 미설정');
+      return this.consoleFallback(message, recipients, 'SES_FROM_EMAIL is not set');
     }
     if (recipients.length === 0) {
       // Nothing to send to — log and report rather than calling SES with no dest.
-      return this.consoleFallback(message, recipients, '수신자 없음');
+      return this.consoleFallback(message, recipients, 'no recipients');
     }
 
     const attachments: MimeAttachment[] = (message.attachments ?? []).map((a) => ({
@@ -115,7 +115,7 @@ export class EmailService {
         }),
       );
       this.logger.log(
-        `완료 이메일 발송 → ${recipients.join(', ')} (첨부 ${attachments.length}건) messageId=${res.MessageId ?? '-'}`,
+        `Completion email sent → ${recipients.join(', ')} (${attachments.length} attachments) messageId=${res.MessageId ?? '-'}`,
       );
       return {
         delivered: true,
@@ -125,7 +125,7 @@ export class EmailService {
       };
     } catch (err) {
       // Degrade gracefully — the pipeline should not fail because SES is down.
-      return this.consoleFallback(message, recipients, `SES 발송 실패: ${String(err)}`);
+      return this.consoleFallback(message, recipients, `SES send failed: ${String(err)}`);
     }
   }
 
@@ -139,10 +139,10 @@ export class EmailService {
     recipients: string[],
     reason: string,
   ): EmailSendResult {
-    const attachmentNames = (message.attachments ?? []).map((a) => a.filename).join(', ') || '없음';
+    const attachmentNames = (message.attachments ?? []).map((a) => a.filename).join(', ') || 'none';
     this.logger.log(
-      `[이메일 폴백] (${reason}) → ${recipients.join(', ') || '수신자 없음'} ` +
-        `제목="${message.subject}" 첨부=[${attachmentNames}]`,
+      `[email fallback] (${reason}) → ${recipients.join(', ') || 'no recipients'} ` +
+        `subject="${message.subject}" attachments=[${attachmentNames}]`,
     );
     return { delivered: false, channel: 'console', recipients, reason };
   }

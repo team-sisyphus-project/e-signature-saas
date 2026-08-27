@@ -1,23 +1,23 @@
 'use client';
 
 /**
- * ShareLinkPasswordEditor — the inline "비밀번호 확인·수정" panel for one share
+ * ShareLinkPasswordEditor — the inline "view / change password" panel for one share
  * link row (design-spec conventions/share-link-password-admin.md, grain-3).
  *
- * Opened from a link row's 비밀번호 확인/설정 trigger. On mount it fetches the
+ * Opened from a link row's view/set-password trigger. On mount it fetches the
  * link's current password state (grain-2 owner-only API) and reflects one of the
  * three semantic states:
- *   • no password        → empty field, "설정된 비밀번호가 없어요…" hint.
+ *   • no password        → empty field, "No password is set…" hint.
  *   • confirmable        → field pre-filled with the plaintext (masked; the
  *                          shared PasswordInput's reveal toggle shows it on demand).
- *   • legacy (unrecoverable) → empty field, "이전에 설정한 비밀번호는 확인할 수
- *                          없어요…" hint — set a new one to make it confirmable again.
+ *   • legacy (unrecoverable) → empty field, "The previously set password can no
+ *                          longer be viewed…" hint — set a new one to make it confirmable again.
  *
- * The same field serves 확인 and 수정: the owner sees the current value (masked),
- * reveals it if they want, edits it, and saves — taking effect immediately (the
- * next unlock reads the fresh value). 저장 replaces the password; 비밀번호 해제
+ * The same field serves both viewing and changing: the owner sees the current value
+ * (masked), reveals it if they want, edits it, and saves — taking effect immediately
+ * (the next unlock reads the fresh value). Save replaces the password; "Remove password"
  * removes protection entirely. On success `onChanged` hands the updated link view
- * back to the section so the row's 비밀번호 tag stays in sync.
+ * back to the section so the row's password tag stays in sync.
  *
  * Security: the plaintext lives only in this component's local state while the
  * panel is open. It is dropped on close/remove and never persisted or logged; the
@@ -95,7 +95,7 @@ export function ShareLinkPasswordEditor({
   // (re-saving the same confirmable value would be a no-op). Removal is a
   // separate, explicit action so an accidental empty save can't drop protection.
   const canSave = busy === null && trimmed.length > 0 && value !== initial;
-  // Show 해제 whenever a password is currently set (disabled while any op runs),
+  // Show "Remove password" whenever a password is currently set (disabled while any op runs),
   // plus during its own removal so the button doesn't vanish mid-request.
   const showRemove = Boolean(view?.hasPassword) || busy === 'remove';
 

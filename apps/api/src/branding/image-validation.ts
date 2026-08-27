@@ -1,5 +1,5 @@
 /**
- * Server-side branding image validation (로고 · 파비콘).
+ * Server-side branding image validation (logo · favicon).
  *
  * The web client already validates a picked file (`apps/web/src/lib/
  * image-validation.ts`), but that guard is bypassable — so the API re-checks

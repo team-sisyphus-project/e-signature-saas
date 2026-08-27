@@ -1,11 +1,11 @@
 /**
  * Branding image-validation unit tests.
  *
- * Pins the rules the image uploader (로고 · 파비콘) rests on:
+ * Pins the rules the image uploader (logo and favicon) rests on:
  *   • accepted formats (SVG / PNG) by MIME and by extension fallback,
  *   • rejected formats,
  *   • empty vs oversize ordering and the 1MB boundary,
- *   • the exact Korean guard copy (single source, base voice).
+ *   • the exact guard copy (single source, base voice).
  *
  * Runs in the `node` jest environment: `validateImageFile` takes a plain
  * `{ name, type, size }`, so no DOM `File` is needed.

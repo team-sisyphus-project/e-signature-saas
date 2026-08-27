@@ -8,9 +8,9 @@
  *
  *   1. PUT  /documents/:id/fields  — replace the draft's sign fields (SaveFieldsDto)
  *   2. POST /documents/:id/send    — create one SignRequest per recipient, flip
- *                                    the document to 진행 중 (SendContractDto)
+ *                                    the document to IN_PROGRESS (SendContractDto)
  *
- * Both go through `apiFetch`, so the server's Korean error copy surfaces verbatim
+ * Both go through `apiFetch`, so the server's error copy surfaces verbatim
  * (quota, already-sent, no-fields…) and transport failures fall back to the
  * neutral generic line. See `apps/api/src/documents/documents.controller.ts`.
  */

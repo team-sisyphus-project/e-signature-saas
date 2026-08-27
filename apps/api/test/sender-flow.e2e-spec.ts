@@ -2,8 +2,8 @@
  * End-to-end happy path for the sender flow:
  *   register/login → upload PDF → save sign fields → send contract.
  *
- * Asserts the contract transitions to 진행 중 (IN_PROGRESS), an audit log is
- * written, and the Free-plan monthly quota returns a clear Korean error once
+ * Asserts the contract transitions to IN_PROGRESS, an audit log is
+ * written, and the Free-plan monthly quota returns a clear error once
  * five sends are used.
  */
 
@@ -67,7 +67,7 @@ describe('Sender flow (e2e)', () => {
   it('registers a new sender and returns a JWT', async () => {
     const res = await request(app.getHttpServer())
       .post('/api/auth/register')
-      .send({ email, password, name: '테스터' })
+      .send({ email, password, name: 'Tester' })
       .expect(201);
 
     expect(res.body.accessToken).toBeDefined();
@@ -115,12 +115,12 @@ describe('Sender flow (e2e)', () => {
     token = relogin.body.accessToken;
   });
 
-  it('rejects a wrong password with a Korean message', async () => {
+  it('rejects a wrong password with a friendly message', async () => {
     const res = await request(app.getHttpServer())
       .post('/api/auth/login')
       .send({ email, password: 'wrong-password' })
       .expect(401);
-    expect(res.body.message).toBe('이메일 또는 비밀번호를 다시 확인해 주세요.');
+    expect(res.body.message).toBe('Check your email or password and try again.');
   });
 
   it('blocks unauthenticated access to documents', async () => {
@@ -139,12 +139,12 @@ describe('Sender flow (e2e)', () => {
 
     expect(res.body.id).toBeDefined();
     expect(res.body.status).toBe('DRAFT');
-    expect(res.body.statusLabel).toBe('작성 중');
+    expect(res.body.statusLabel).toBe('Draft');
     expect(res.body.pageCount).toBe(2);
     documentId = res.body.id;
   });
 
-  it('rejects a non-PDF upload with a Korean message', async () => {
+  it('rejects a non-PDF upload with a friendly message', async () => {
     const res = await request(app.getHttpServer())
       .post('/api/documents/upload')
       .set('Authorization', `Bearer ${token}`)
@@ -153,7 +153,7 @@ describe('Sender flow (e2e)', () => {
         contentType: 'text/plain',
       })
       .expect(400);
-    expect(res.body.message).toBe('PDF 파일만 업로드할 수 있어요.');
+    expect(res.body.message).toBe('Only PDF files can be uploaded.');
   });
 
   it('supports the presign → local upload → create path', async () => {
@@ -176,7 +176,7 @@ describe('Sender flow (e2e)', () => {
     const created = await request(app.getHttpServer())
       .post('/api/documents')
       .set('Authorization', `Bearer ${token}`)
-      .send({ storageKey: presign.body.storageKey, title: '프리사인 계약' })
+      .send({ storageKey: presign.body.storageKey, title: 'Presigned contract' })
       .expect(201);
     expect(created.body.status).toBe('DRAFT');
     expect(created.body.pageCount).toBe(1);
@@ -196,15 +196,15 @@ describe('Sender flow (e2e)', () => {
     expect(res.body.count).toBe(2);
   });
 
-  it('sends the contract → 진행 중, with sign requests and an audit log', async () => {
+  it('sends the contract → IN_PROGRESS, with sign requests and an audit log', async () => {
     const res = await request(app.getHttpServer())
       .post(`/api/documents/${documentId}/send`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ recipients: [{ email: 'signer@example.com', name: '서명자' }] })
+      .send({ recipients: [{ email: 'signer@example.com', name: 'Signer' }] })
       .expect(200);
 
     expect(res.body.status).toBe('IN_PROGRESS');
-    expect(res.body.statusLabel).toBe('진행 중');
+    expect(res.body.statusLabel).toBe('In progress');
     expect(res.body.recipientCount).toBe(1);
     expect(res.body.sentAt).toBeTruthy();
 
@@ -225,14 +225,14 @@ describe('Sender flow (e2e)', () => {
     expect(sentAudit?.actorId).toBe(userId);
   });
 
-  it('lists the contract on the dashboard as 진행 중', async () => {
+  it('lists the contract on the dashboard as In progress', async () => {
     const res = await request(app.getHttpServer())
       .get('/api/documents')
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
     const found = res.body.find((d: { id: string }) => d.id === documentId);
     expect(found).toBeDefined();
-    expect(found.statusLabel).toBe('진행 중');
+    expect(found.statusLabel).toBe('In progress');
   });
 
   it('refuses to re-send an already sent contract', async () => {
@@ -241,7 +241,7 @@ describe('Sender flow (e2e)', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({ recipients: [{ email: 'signer@example.com' }] })
       .expect(400);
-    expect(res.body.message).toBe('이미 발송된 계약이에요.');
+    expect(res.body.message).toBe('This contract has already been sent.');
   });
 
   it('reports quota usage after one send', async () => {
@@ -254,13 +254,13 @@ describe('Sender flow (e2e)', () => {
     expect(res.body.remaining).toBe(4);
   });
 
-  it('blocks the 6th monthly send with a clear Korean quota message', async () => {
+  it('blocks the 6th monthly send with a clear quota message', async () => {
     // Seed four more "sent" documents this month to reach the limit of 5.
     for (let i = 0; i < 4; i += 1) {
       await prisma.document.create({
         data: {
           ownerId: userId,
-          title: `이전 계약 ${i}`,
+          title: `Earlier contract ${i}`,
           storageKey: `documents/${userId}/seed-${i}.pdf`,
           pageCount: 1,
           status: 'IN_PROGRESS',
@@ -291,7 +291,7 @@ describe('Sender flow (e2e)', () => {
       .expect(403);
 
     expect(res.body.message).toBe(
-      '이번 달 무료 발송 5건을 모두 사용했어요. 다음 달에 다시 발송하거나 플랜을 업그레이드해 주세요.',
+      'You have used all 5 free sends for this month. Send again next month or upgrade your plan.',
     );
 
     // The blocked document stays a draft.

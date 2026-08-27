@@ -17,7 +17,7 @@ import { SERVER_TRANSLATIONS, translate, type TranslationKey } from '../i18n/ser
 /* ────────────────────────────────────────────────────────────────────────────
  * Input boundary
  *
- * The service is pure: input is already-queried domain data plus the final/原본
+ * The service is pure: input is already-queried domain data plus the final/original
  * PDF hashes and the issue timestamp; output is the certificate PDF `Buffer`.
  * No DB / S3 / SES / queue access (grain-5). Output is deterministic — identical
  * input yields identical bytes; every timestamp comes from the input only.
@@ -32,7 +32,7 @@ export interface CertificateParticipant {
   email: string;
   /** 1-based signing order shown to the reader. */
   order: number;
-  /** Identity-verification method, already human-readable (e.g. "6자리 인증코드"). */
+  /** Identity-verification method, already human-readable (e.g. "6-digit verification code"). */
   verificationMethod: string;
   /** When this signer completed signing (input timestamp; null if not signed). */
   signedAt: Date | string | null;
@@ -40,7 +40,7 @@ export interface CertificateParticipant {
 
 /** One audit event for the chronological timeline. */
 export interface AuditEvent {
-  /** Persisted `AuditLog.action` code (mapped to a Korean label for display). */
+  /** Persisted `AuditLog.action` code (mapped to a localized label for display). */
   action: string;
   /** When the event occurred (input timestamp). */
   occurredAt: Date | string;
@@ -161,7 +161,7 @@ const HEX_COLOR = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 /**
  * Generates the audit-trail certificate PDF — a standalone legal record of a
  * contract's full history and integrity, laid out per the `audit-certificate`
- * Design Spec (cover → 계약 요약 → 참여자 → 이벤트 타임라인 → 무결성 지문).
+ * Design Spec (cover -> contract summary -> participants -> event timeline -> integrity fingerprint).
  *
  * Reuses the shared Korean-font util (grain-2) for Hangul and the cross-cutting
  * masking + audit-action-label modules. Storage, email and the status
@@ -257,7 +257,7 @@ export class AuditCertificateService {
     r.cursor -= SPACE.xl;
   }
 
-  /** 계약 요약: label/value pairs + completion status pill. */
+  /** Contract summary: label/value pairs + completion status pill. */
   private drawContractSummary(r: Renderer, input: AuditCertificateInput): void {
     r.startSection(t(input.locale, 'contractSummary'), 6 * (SIZE.body + SPACE.sm));
     r.drawLabelValue(t(input.locale, 'contractName'), input.document.title);
@@ -273,7 +273,7 @@ export class AuditCertificateService {
     r.cursor -= SPACE.xl;
   }
 
-  /** 참여자: one row per signer (name/email masked, order, method, signed-at). */
+  /** Participants: one row per signer (name/email masked, order, method, signed-at). */
   private drawParticipants(r: Renderer, input: AuditCertificateInput): void {
     r.startSection(t(input.locale, 'participants'), 3 * (SIZE.body + SIZE.timeline + SPACE.sm));
 
@@ -314,7 +314,7 @@ export class AuditCertificateService {
     r.cursor -= SPACE.xl - SPACE.sm;
   }
 
-  /** 이벤트 타임라인: ascending events with time axis + Korean action labels. */
+  /** Event timeline: ascending events with time axis + localized action labels. */
   private drawTimeline(r: Renderer, input: AuditCertificateInput): void {
     r.startSection(t(input.locale, 'timeline'), 2 * (SIZE.body + SIZE.timeline + SPACE.md));
 
@@ -352,7 +352,7 @@ export class AuditCertificateService {
     r.cursor -= SPACE.xl - SPACE.md;
   }
 
-  /** 문서 무결성 지문: algorithm + original & final SHA-256 (mono, wrapped). */
+  /** Document integrity fingerprint: algorithm + original & final SHA-256 (mono, wrapped). */
   private drawIntegrity(r: Renderer, input: AuditCertificateInput): void {
     r.startSection(t(input.locale, 'integrity'), 4 * (SIZE.mono + SPACE.sm));
     r.drawLabelValue(t(input.locale, 'hashAlgorithm'), 'SHA-256');
@@ -452,7 +452,7 @@ class Renderer {
     this.cursor -= SPACE.sm - SPACE.xs;
   }
 
-  /** Status row whose value is a success-toned pill (완료됨). */
+  /** Status row whose value is a success-toned pill ("Completed"). */
   drawStatusRow(label: string, value: string): void {
     this.ensureSpace(SIZE.body + SPACE.sm);
     const baseY = this.cursor - SIZE.body;
@@ -538,7 +538,7 @@ function mixWhite(color: Color, ratioBase: number): Color {
   return rgb(c.red * k + (1 - k), c.green * k + (1 - k), c.blue * k + (1 - k));
 }
 
-/** Display actor for a timeline event: sender raw, signer masked, else 시스템. */
+/** Display actor for a timeline event: sender raw, signer masked, else the system label. */
 function resolveActor(locale: SupportedLocale, e: AuditEvent): string {
   if (e.actorRole === 'SYSTEM') return t(locale, 'system');
   if (e.actorRole === 'SENDER') return e.actorName?.trim() || t(locale, 'senderFallback');

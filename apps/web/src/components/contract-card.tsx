@@ -22,7 +22,7 @@ import { nextActionCopy, pendingSignerLabel, urgencyLabel } from '@/lib/todo-cop
  *   elements are identical; the optional chevron and the inline download region are
  *   dropped, so the whole card is a single link to the detail screen (where the
  *   download lives). The StatusBadge is always shown here because there is no
- *   download region to carry the 완료됨 badge.
+ *   download region to carry the Completed badge.
  *
  * Copy is never owned here: labels come from the central copy module
  * (design-spec/messaging/todo-copy.md via lib/todo-copy.ts).
@@ -95,7 +95,7 @@ function CardHeaderRow({
   variant: ContractCardVariant;
 }) {
   const compact = variant === 'compact';
-  // The list's completed card carries the 완료됨 badge inside its download region,
+  // The list's completed card carries the Completed badge inside its download region,
   // so the title row omits it there to avoid a duplicate. The compact card has no
   // download region, so it always shows the status badge.
   const showStatusBadge = compact || !completed;
@@ -130,7 +130,7 @@ function CardHeaderRow({
 
 /**
  * The document's single next action as a compact hint (copy: todo-copy.md). CTAs
- * (발송하기 / 내려받기) read as a primary-tinted pill — the whole card is the
+ * (send / download) read as a primary-tinted pill — the whole card is the
  * link that opens the contract where the action lives, so this is a visual
  * affordance, not a nested interactive. `AWAITING_SIGN` is a passive status label
  * (no owner action right now — no reminder feature); CANCELLED renders nothing.
@@ -152,14 +152,15 @@ function NextActionHint({ action }: { action: NextAction | null }) {
 
 function metaLine(doc: DocumentSummary): string {
   const parts: string[] = [];
-  if (doc.recipientCount > 0) parts.push(`받는 분 ${doc.recipientCount}명`);
+  if (doc.recipientCount > 0)
+    parts.push(`${doc.recipientCount} recipient${doc.recipientCount === 1 ? '' : 's'}`);
   // Signers still awaited (omitted at 0 — see todo-copy.md).
   const pending = pendingSignerLabel(doc.pendingSignerCount);
   if (pending) parts.push(pending);
-  if (doc.pageCount > 0) parts.push(`${doc.pageCount}페이지`);
+  if (doc.pageCount > 0) parts.push(`${doc.pageCount} page${doc.pageCount === 1 ? '' : 's'}`);
   const sent = doc.status !== 'DRAFT' && doc.sentAt;
   const when = formatRelative(sent ? (doc.sentAt as string) : doc.createdAt);
-  parts.push(sent ? `${when} 발송` : `${when} 생성`);
+  parts.push(sent ? `Sent ${when}` : `Created ${when}`);
   return parts.join(' · ');
 }
 
@@ -168,12 +169,12 @@ function formatRelative(iso: string): string {
   if (Number.isNaN(then)) return '';
   const diffMs = Date.now() - then;
   const min = Math.floor(diffMs / 60000);
-  if (min < 1) return '방금 전';
-  if (min < 60) return `${min}분 전`;
+  if (min < 1) return 'just now';
+  if (min < 60) return `${min}m ago`;
   const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}시간 전`;
+  if (hr < 24) return `${hr}h ago`;
   const day = Math.floor(hr / 24);
-  if (day < 7) return `${day}일 전`;
+  if (day < 7) return `${day}d ago`;
   const d = new Date(then);
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
 }

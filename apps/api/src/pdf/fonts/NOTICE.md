@@ -2,7 +2,7 @@
 
 ## NanumGothic-Regular.ttf
 
-- **Family**: Nanum Gothic (나눔고딕)
+- **Family**: Nanum Gothic
 - **Role**: Korean gothic (sans) face embedded into server-generated PDFs
   (signed final document overlays + audit-trail certificate). It is the
   embeddable representative of the Design Spec `typography` gothic role

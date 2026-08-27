@@ -53,7 +53,7 @@ export class ShareSessionService {
 
   /**
    * Verify a bearer token and return the bound SignRequest id. Throws a
-   * Toss-tone "다시 열어 주세요" message on any failure (expired / malformed /
+   * Toss-tone "open the link again" message on any failure (expired / malformed /
    * wrong audience) so the recipient is guided back to the link.
    */
   verify(token: string | undefined): ShareSession {

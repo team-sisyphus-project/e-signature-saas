@@ -14,46 +14,46 @@ function makeInput(overrides: Partial<AuditCertificateInput> = {}): AuditCertifi
     locale: 'ko',
     document: {
       id: 'doc_abc123',
-      title: '용역 위탁 계약서',
+      title: 'Service Outsourcing Agreement',
       pageCount: 3,
       sentAt: '2026-06-20T01:00:00.000Z',
       completedAt: '2026-06-23T08:30:45.000Z',
     },
     sender: {
-      name: '주식회사 토스',
+      name: 'Acme Inc.',
       email: 'sender@toss.im',
       brandColor: null,
     },
     participants: [
       {
-        name: '홍길동',
+        name: 'Jane Doe',
         email: 'hong.gildong@example.com',
         order: 1,
-        verificationMethod: '6자리 인증코드',
+        verificationMethod: '6-digit verification code',
         signedAt: '2026-06-22T05:10:00.000Z',
       },
       {
-        name: '김영희',
+        name: 'John Smith',
         email: 'kim@sample.co.kr',
         order: 2,
-        verificationMethod: '6자리 인증코드',
+        verificationMethod: '6-digit verification code',
         signedAt: '2026-06-23T08:30:00.000Z',
       },
     ],
     events: [
-      { action: 'DOCUMENT_UPLOADED', occurredAt: '2026-06-19T23:00:00.000Z', actorName: '주식회사 토스', actorRole: 'SENDER', ipAddress: '203.0.113.7' },
-      { action: 'CONTRACT_SENT', occurredAt: '2026-06-20T01:00:00.000Z', actorName: '주식회사 토스', actorRole: 'SENDER', ipAddress: '203.0.113.7' },
-      { action: 'SIGN_REQUEST_VIEWED', occurredAt: '2026-06-22T05:00:00.000Z', actorName: '홍길동', actorRole: 'SIGNER', ipAddress: '198.51.100.23' },
-      { action: 'SIGN_REQUEST_VERIFIED', occurredAt: '2026-06-22T05:05:00.000Z', actorName: '홍길동', actorRole: 'SIGNER', ipAddress: '198.51.100.23' },
-      { action: 'SIGN_REQUEST_SIGNED', occurredAt: '2026-06-22T05:10:00.000Z', actorName: '홍길동', actorRole: 'SIGNER', ipAddress: '198.51.100.23' },
-      { action: 'SIGN_REQUEST_SIGNED', occurredAt: '2026-06-23T08:30:00.000Z', actorName: '김영희', actorRole: 'SIGNER', ipAddress: '2001:db8:85a3:0:0:8a2e:370:7334' },
+      { action: 'DOCUMENT_UPLOADED', occurredAt: '2026-06-19T23:00:00.000Z', actorName: 'Acme Inc.', actorRole: 'SENDER', ipAddress: '203.0.113.7' },
+      { action: 'CONTRACT_SENT', occurredAt: '2026-06-20T01:00:00.000Z', actorName: 'Acme Inc.', actorRole: 'SENDER', ipAddress: '203.0.113.7' },
+      { action: 'SIGN_REQUEST_VIEWED', occurredAt: '2026-06-22T05:00:00.000Z', actorName: 'Jane Doe', actorRole: 'SIGNER', ipAddress: '198.51.100.23' },
+      { action: 'SIGN_REQUEST_VERIFIED', occurredAt: '2026-06-22T05:05:00.000Z', actorName: 'Jane Doe', actorRole: 'SIGNER', ipAddress: '198.51.100.23' },
+      { action: 'SIGN_REQUEST_SIGNED', occurredAt: '2026-06-22T05:10:00.000Z', actorName: 'Jane Doe', actorRole: 'SIGNER', ipAddress: '198.51.100.23' },
+      { action: 'SIGN_REQUEST_SIGNED', occurredAt: '2026-06-23T08:30:00.000Z', actorName: 'John Smith', actorRole: 'SIGNER', ipAddress: '2001:db8:85a3:0:0:8a2e:370:7334' },
       { action: 'DOCUMENT_COMPLETED', occurredAt: '2026-06-23T08:30:45.000Z', actorRole: 'SYSTEM' },
     ],
     originalPdfSha256: SHA_A,
     finalPdfSha256: SHA_B,
     issuedAt: '2026-06-23T08:30:45.000Z',
     certificateId: 'CERT-20260623-0001',
-    serviceName: '전자계약',
+    serviceName: 'eContract',
     ...overrides,
   };
 }
@@ -67,7 +67,7 @@ describe('AuditCertificateService.generate', () => {
     expect(out.length).toBeGreaterThan(1000);
     const doc = await PDFDocument.load(out);
     expect(doc.getPageCount()).toBeGreaterThanOrEqual(1);
-    expect(doc.getTitle()).toBe('감사 추적 인증서');
+    expect(doc.getTitle()).toBe(SERVER_TRANSLATIONS.ko.auditCertificate.title);
   });
 
   it('uses English resources for an English audit certificate', async () => {
@@ -95,7 +95,7 @@ describe('AuditCertificateService.generate', () => {
     const doc = await PDFDocument.load(out);
 
     expect(doc.getTitle()).toBe('Audit Trail Certificate');
-    expect(Object.values(SERVER_TRANSLATIONS.en.auditCertificate).every((copy) => !/[가-힣]/.test(copy))).toBe(true);
+    expect(Object.values(SERVER_TRANSLATIONS.en.auditCertificate).every((copy) => !/[\uAC00-\uD7A3]/.test(copy))).toBe(true);
   });
 
   it('is deterministic — identical input yields byte-identical output', async () => {
@@ -106,8 +106,8 @@ describe('AuditCertificateService.generate', () => {
   });
 
   it('changes its bytes when the sender brand color changes', async () => {
-    const base = await service.generate(makeInput({ sender: { name: '주식회사 토스', email: 'sender@toss.im', brandColor: null } }));
-    const branded = await service.generate(makeInput({ sender: { name: '주식회사 토스', email: 'sender@toss.im', brandColor: '#e94560' } }));
+    const base = await service.generate(makeInput({ sender: { name: 'Acme Inc.', email: 'sender@toss.im', brandColor: null } }));
+    const branded = await service.generate(makeInput({ sender: { name: 'Acme Inc.', email: 'sender@toss.im', brandColor: '#e94560' } }));
     expect(base.equals(branded)).toBe(false);
   });
 
@@ -147,7 +147,7 @@ describe('AuditCertificateService.generate', () => {
         issuedAt: new Date('2026-06-23T08:30:45.000Z'),
         document: {
           id: 'doc_abc123',
-          title: '용역 위탁 계약서',
+          title: 'Service Outsourcing Agreement',
           pageCount: 3,
           sentAt: new Date('2026-06-20T01:00:00.000Z'),
           completedAt: new Date('2026-06-23T08:30:45.000Z'),

@@ -7,13 +7,13 @@
  * `activeFieldId`) and adapts to that field's type:
  *
  *   • SIGNATURE — a segmented toggle picks one of two ways to sign:
- *       ① 그리기 — draw on the high-DPI `SignaturePad` (variable-width pressure
- *         ink + smoothing), with a '다시' reset.
- *       ② 입력 — type a name and pick a handwriting / serif / sans font; the
+ *       (1) Draw — draw on the high-DPI `SignaturePad` (variable-width pressure
+ *         ink + smoothing), with a "Reset" action.
+ *       (2) Type — type a name and pick a handwriting / serif / sans font; the
  *         chosen rendering is rasterized to a PNG so it lands in the same field.
  *   • DATE / TEXT — a lightweight inline input variant (date picker / text box).
  *
- * '적용' captures the value into the signer context (so the page overlay reflects
+ * "Apply" captures the value into the signer context (so the page overlay reflects
  * it immediately) and persists it to the grain-1 `fields` endpoint before the
  * sheet closes. The Sheet/Button/Field primitives come from @repo/ui; every
  * visual value is a design token.

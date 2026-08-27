@@ -1,5 +1,5 @@
 /**
- * Client-side image validation for branding assets (로고 · 파비콘).
+ * Client-side image validation for branding assets (logo and favicon).
  *
  * Pure, DOM-free constants + a single validate function so the rules are unit
  * testable and shared by every image uploader. There is no network here — the
@@ -7,8 +7,8 @@
  * this only decides whether a picked file may be previewed and held locally.
  *
  * Guard copy mirrors the wizard PDF guard (see `GUARD` in
- * components/wizard/upload-step.tsx): plain fact + next action, no blame, plain
- * 해요체 — the project base voice (design-spec/messaging/recording.md).
+ * components/wizard/upload-step.tsx): plain fact + next action, no blame —
+ * the project base voice (design-spec/messaging/recording.md).
  */
 
 /** Accepted image MIME types for branding assets. */
@@ -22,7 +22,7 @@ export const ACCEPTED_IMAGE_TYPES = ['image/svg+xml', 'image/png'] as const;
 export const ACCEPTED_IMAGE_EXTENSIONS = ['.svg', '.png'] as const;
 
 /** Human-facing accepted formats, woven into hints/error copy. */
-export const ACCEPTED_IMAGE_LABEL = 'SVG 또는 PNG';
+export const ACCEPTED_IMAGE_LABEL = 'SVG or PNG';
 
 /** Maximum branding image size in bytes (1MB). */
 export const MAX_IMAGE_BYTES = 1024 * 1024;
@@ -41,17 +41,17 @@ export interface ValidatedFile {
 }
 
 /**
- * Guard copy — `{무슨 일이 있었는지(비난 없이)} + {다음 행동}`, plain 해요체.
+ * Guard copy — `{what happened (without blame)} + {next action}`.
  * The single source for the uploader's inline error messages.
  */
 export const IMAGE_VALIDATION_COPY = {
-  invalidType: `${ACCEPTED_IMAGE_LABEL} 파일만 올릴 수 있어요. 다른 파일로 다시 시도해 주세요.`,
-  empty: '파일이 비어 있어요. 다른 파일로 다시 시도해 주세요.',
-  tooLarge: `파일이 너무 커요. ${MAX_IMAGE_SIZE_LABEL} 이하의 ${ACCEPTED_IMAGE_LABEL} 파일로 올려 주세요.`,
+  invalidType: `Only ${ACCEPTED_IMAGE_LABEL} files can be uploaded. Please try again with a different file.`,
+  empty: 'The file is empty. Please try again with a different file.',
+  tooLarge: `The file is too large. Please upload a ${ACCEPTED_IMAGE_LABEL} file under ${MAX_IMAGE_SIZE_LABEL}.`,
 } as const;
 
 /** Constraint hint shown under the uploader by default (formats · max size). */
-export const IMAGE_CONSTRAINT_HINT = `${ACCEPTED_IMAGE_LABEL} · 최대 ${MAX_IMAGE_SIZE_LABEL}`;
+export const IMAGE_CONSTRAINT_HINT = `${ACCEPTED_IMAGE_LABEL} · up to ${MAX_IMAGE_SIZE_LABEL}`;
 
 /** The `accept` attribute value for the file input (MIME types + extensions). */
 export const IMAGE_ACCEPT_ATTR = [...ACCEPTED_IMAGE_TYPES, ...ACCEPTED_IMAGE_EXTENSIONS].join(',');
@@ -62,8 +62,8 @@ function hasAcceptedExtension(name: string): boolean {
 }
 
 /**
- * Validate a picked image against the branding constraints. Returns a Korean
- * guard message, or `null` when the file is acceptable.
+ * Validate a picked image against the branding constraints. Returns a guard
+ * message, or `null` when the file is acceptable.
  *
  * Order is deliberate — type → empty → size — so the most fundamental problem
  * surfaces first (a `.jpg` reads as "wrong format", not "too large").

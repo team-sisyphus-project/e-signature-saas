@@ -6,7 +6,7 @@
  * After access is granted, this renders the contract PDF fit-to-width as a
  * vertical, multi-page scroll (skeleton-shimmer per page while it rasterizes).
  * Each assigned field is overlaid on its page via `normToPx`: an unfilled field
- * breathes with a pulse highlight and a "여기에 …" affordance; a filled field
+ * breathes with a pulse highlight and a "Tap here" affordance; a filled field
  * shows its captured value inline. The contract body itself is a rasterized
  * image — only the overlaid fields are interactive, so the recipient can read
  * but never edit the document text (grain-6 constraint). A safe-area-aware

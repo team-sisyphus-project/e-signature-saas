@@ -3,6 +3,7 @@ import { CompletionService } from './completion.service';
 import { SignedPdfService } from '../pdf/signed-pdf.service';
 import { AuditCertificateService } from '../pdf/audit-certificate.service';
 import type { EmailMessage, EmailService } from '../email/email.service';
+import { SERVER_TRANSLATIONS } from '../i18n/server-translations';
 
 /** A tiny but valid 1×1 PNG, used as the captured signature value. */
 const PNG_1x1 =
@@ -19,18 +20,18 @@ function makeDocument(overrides: Record<string, unknown> = {}) {
   return {
     id: 'doc_xyz789',
     ownerId: 'user_1',
-    title: '용역 위탁 계약서',
+    title: 'Service Outsourcing Agreement',
     pageCount: 1,
     storageKey: 'documents/user_1/original.pdf',
     status: 'COMPLETED',
     sentAt: new Date('2026-06-20T01:00:00.000Z'),
     completedAt: null as Date | null,
-    owner: { name: '주식회사 토스', email: 'sender@toss.im', brandColor: null, brandLogoUrl: null },
+    owner: { name: 'Acme Inc.', email: 'sender@toss.im', brandColor: null, brandLogoUrl: null },
     signRequests: [
       {
         id: 'sr_1',
         recipientEmail: 'signer@example.com',
-        recipientName: '홍길동',
+        recipientName: 'Jane Doe',
         order: 0,
         signedAt: new Date('2026-06-23T08:30:00.000Z'),
         signFields: [
@@ -135,7 +136,7 @@ describe('CompletionService.runPostProcessing', () => {
     const signed = await PDFDocument.load(h.storage.get(signedKey)!);
     expect(signed.getPageCount()).toBe(1);
     const cert = await PDFDocument.load(h.storage.get(certKey)!);
-    expect(cert.getTitle()).toBe('감사 추적 인증서');
+    expect(cert.getTitle()).toBe(SERVER_TRANSLATIONS.ko.auditCertificate.title);
 
     // Sender + one signer emailed, each with both attachments.
     expect(h.emails).toHaveLength(2);
@@ -196,7 +197,7 @@ describe('CompletionService.runPostProcessing', () => {
         {
           id: 'sr_1',
           recipientEmail: 'sender@toss.im', // same as owner
-          recipientName: '주식회사 토스',
+          recipientName: 'Acme Inc.',
           order: 0,
           signedAt: new Date('2026-06-23T08:30:00.000Z'),
           signFields: [

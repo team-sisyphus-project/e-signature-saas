@@ -12,7 +12,7 @@ function makeCipher(key?: string): LinkPasswordCipher {
 describe('LinkPasswordCipher', () => {
   it('round-trips a password back to its original plaintext', () => {
     const cipher = makeCipher('a-strong-secret');
-    for (const pw of ['secret12', '한글비밀번호', 'p@ss w0rd!', '']) {
+    for (const pw of ['secret12', 'ünïcodé-pässwörd', 'p@ss w0rd!', '']) {
       const stored = cipher.encrypt(pw);
       expect(cipher.isCipherText(stored)).toBe(true);
       expect(stored).toContain('encv1:');

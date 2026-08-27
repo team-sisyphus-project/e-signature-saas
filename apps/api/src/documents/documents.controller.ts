@@ -110,7 +110,7 @@ export class DocumentsController {
 
   /**
    * Download a completed contract's artifact (owner only).
-   * `:artifact` is `signed` (최종 계약서) or `certificate` (감사 추적 인증서).
+   * `:artifact` is `signed` (final contract) or `certificate` (audit trail certificate).
    */
   @Get(':id/download/:artifact')
   async download(
@@ -143,7 +143,7 @@ export class DocumentsController {
     return this.documents.saveFields(user.id, id, dto);
   }
 
-  /** Dispatch the contract → 진행 중. */
+  /** Dispatch the contract → in-progress. */
   @Post(':id/send')
   @HttpCode(HttpStatus.OK)
   send(

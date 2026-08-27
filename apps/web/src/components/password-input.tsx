@@ -35,7 +35,7 @@ export const PasswordInput = React.forwardRef<HTMLInputElement, PasswordInputPro
             disabled={disabled}
             aria-pressed={revealed}
             aria-controls={id}
-            aria-label={revealed ? '비밀번호 숨기기' : '비밀번호 표시'}
+            aria-label={revealed ? 'Hide password' : 'Show password'}
             className={cn(
               'inline-flex h-8 w-8 items-center justify-center rounded-xs',
               'text-foreground-subtle transition-colors duration-fast ease-standard hover:text-foreground',

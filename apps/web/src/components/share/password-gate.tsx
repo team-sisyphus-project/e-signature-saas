@@ -7,7 +7,7 @@
  * header, document chip, centered column, full-width submit, and entry motion —
  * but the 6-digit OTP is replaced by a single password input (with the shared
  * show/hide reveal). Unlike the OTP screen there is no auto-submit; the recipient
- * presses 확인 explicitly, and the button is enabled only once the field is
+ * presses Confirm explicitly, and the button is enabled only once the field is
  * non-empty. A wrong/locked password paints the danger token, shakes the field
  * once, and surfaces the server's Toss-tone message — no blame, just retry.
  */

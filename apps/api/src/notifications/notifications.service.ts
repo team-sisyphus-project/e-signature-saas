@@ -34,7 +34,7 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
   async onModuleInit(): Promise<void> {
     const redisUrl = this.config.get<string>('REDIS_URL');
     if (!redisUrl) {
-      this.logger.log('REDIS_URL 미설정 — 알림은 콘솔 로그로 대체됩니다.');
+      this.logger.log('REDIS_URL is not set — notifications fall back to console logging.');
       return;
     }
 
@@ -50,10 +50,10 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
           enableOfflineQueue: false,
         },
       });
-      this.logger.log('알림 큐(BullMQ)가 활성화되었습니다.');
+      this.logger.log('Notification queue (BullMQ) is active.');
     } catch (err) {
       this.queue = null;
-      this.logger.warn(`알림 큐 초기화 실패 — 콘솔 로그로 대체합니다: ${String(err)}`);
+      this.logger.warn(`Notification queue init failed — falling back to console logging: ${String(err)}`);
     }
   }
 
@@ -80,7 +80,7 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
         });
         return;
       } catch (err) {
-        this.logger.warn(`알림 큐 적재 실패 — 콘솔 로그로 대체합니다: ${String(err)}`);
+        this.logger.warn(`Failed to enqueue notification — falling back to console logging: ${String(err)}`);
       }
     }
     this.logConsoleFallback(job);
@@ -88,7 +88,7 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
 
   private logConsoleFallback(job: NotificationJob): void {
     this.logger.log(
-      `[알림 폴백] ${job.channel} → ${job.to} (${job.toName ?? '이름없음'}) ` +
+      `[notification fallback] ${job.channel} → ${job.to} (${job.toName ?? 'unnamed'}) ` +
         `template=${job.template} data=${JSON.stringify(job.data)}`,
     );
   }

@@ -39,13 +39,13 @@ export function localeFromBrowserLanguages(
   return languages?.map(parseLocale).find((locale): locale is SupportedLocale => !!locale);
 }
 
-/** Resolve: signed-in user → public-link sender → browser → Korean. */
+/** Resolve: signed-in user → public-link sender → browser → English. */
 export function resolveLocale(input: LocaleResolutionInput = {}): SupportedLocale {
   return (
     parseLocale(input.userLocale) ??
     parseLocale(input.senderLocale) ??
     localeFromBrowserLanguages(input.browserLanguages) ??
-    'ko'
+    'en'
   );
 }
 

@@ -221,7 +221,7 @@ export class SigningService {
    * Open a completed contract's artifact (signed final PDF or audit certificate)
    * for a signer to download. Available only once the document is COMPLETED and
    * the post-processing (grain-5) has stored the artifact; otherwise a friendly
-   * "준비되지 않았어요" error. The session guard already binds this signRequest to
+   * "not ready yet" error. The session guard already binds this signRequest to
    * the link being accessed, so a signer can only reach their own contract.
    */
   async openArtifact(

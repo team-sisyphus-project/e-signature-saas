@@ -13,7 +13,7 @@
  * {@link FillProvider}: the components consume `useFill()` and never reach for a
  * flow-specific context or API client directly.
  *
- * This is the "안전하게 파라미터화" boundary from grain-6 — the signer state
+ * This is the "safely parameterized" boundary from grain-6 — the signer state
  * machine (`signer-context`) keeps owning the OTP path; the share state machine
  * (`share-context`) owns the password path; both project onto this one surface.
  */
@@ -53,9 +53,9 @@ export interface FillPayload {
 }
 
 /**
- * Flow-specific copy for the shared screens. The OTP flow speaks "서명"; the
- * share flow speaks "작성/제출" (the recipient may fill a name/date/address, not
- * only sign). Authored in each flow's copy catalog; the components stay neutral.
+ * Flow-specific copy for the shared screens. The OTP flow speaks "sign"; the
+ * share flow speaks "fill out / submit" (the recipient may fill a name/date/address,
+ * not only sign). Authored in each flow's copy catalog; the components stay neutral.
  */
 export interface FillCopy {
   /** Bottom CTA when unfilled fields remain (jumps to the next one). */

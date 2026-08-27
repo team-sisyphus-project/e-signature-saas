@@ -1,37 +1,36 @@
 'use client';
 
 /**
- * Wizard step — delivery method ("전달 방법").
+ * Wizard step — delivery method.
  *
  * The fork between the two ways a finished contract reaches its signer:
  * emailing a signature request, or sharing a link anyone can open. The step
  * presents two selection cards; picking one dispatches SET_DELIVERY_METHOD,
  * which extends the step sequence with the matching tail (see wizard-context)
- * and unlocks the shell's "다음" through canProceed. Routing to the next step
+ * and unlocks the shell's "Next" through canProceed. Routing to the next step
  * stays with the shell — this step only records the choice.
  *
  * The cards are a `role="radiogroup"` of two `role="radio"` options with roving
  * tabindex + arrow-key navigation, so the choice is reachable by keyboard alone.
- * All copy lives in the COPY constant (해요체, Toss-tone) so the voice stays in
- * one place.
+ * All copy lives in the COPY constant so the voice stays in one place.
  */
 
 import * as React from 'react';
 import { Card, cn } from '@repo/ui';
 import { useWizard, type DeliveryMethod } from './wizard-context';
 
-/** Single source of truth for this step's user-facing copy (해요체, Toss-tone). */
+/** Single source of truth for this step's user-facing copy. */
 const COPY = {
-  title: '어떻게 전달할까요?',
-  description: '완성한 계약서를 받는 분에게 전달할 방법을 선택하세요.',
+  title: 'How would you like to deliver it?',
+  description: 'Choose how the finished contract reaches its recipients.',
   options: {
     email: {
-      label: '이메일로 보내기',
-      description: '받는 분에게 서명 요청을 보내요.',
+      label: 'Send by email',
+      description: 'Send a signature request to each recipient.',
     },
     link: {
-      label: '링크로 공유하기',
-      description: '링크를 받은 누구나 열람하고 작성할 수 있어요.',
+      label: 'Share a link',
+      description: 'Anyone with the link can open and fill it out.',
     },
   },
 } as const;

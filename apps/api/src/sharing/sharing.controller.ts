@@ -44,7 +44,7 @@ export class SharingController {
   }
 
   /**
-   * Reveal a link's current access password to its owner (dashboard 확인).
+   * Reveal a link's current access password to its owner (dashboard view).
    * Owner-scoped; the plaintext is exposed only on this authenticated path.
    */
   @Get(':linkId/password')
@@ -57,7 +57,7 @@ export class SharingController {
     return this.sharing.getLinkPassword(user.id, documentId, linkId, ip);
   }
 
-  /** Replace or clear a link's access password (dashboard 수정). Takes effect at once. */
+  /** Replace or clear a link's access password (dashboard edit). Takes effect at once. */
   @Put(':linkId/password')
   updatePassword(
     @CurrentUser() user: AuthUser,

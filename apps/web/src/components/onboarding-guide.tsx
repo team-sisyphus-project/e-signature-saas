@@ -6,8 +6,8 @@ import type { OnboardingStep } from '@/lib/onboarding-copy';
 /**
  * OnboardingGuide — the first-run welcome guide that walks a brand-new user
  * (zero real contracts) through creating their first contract: a numbered
- * ①업로드 ②서명 요청 ③완료 추적 walkthrough plus one primary CTA that starts a
- * real contract.
+ * (1) upload (2) request signatures (3) track completion walkthrough plus one
+ * primary CTA that starts a real contract.
  *
  * Design decisions (design-spec/components/onboarding-guide/base.md):
  * - Visual language is shared with the dashboard's EmptyState and summary cards
@@ -32,7 +32,7 @@ export interface OnboardingGuideProps {
   title: string;
   /** One-line lead under the heading. */
   description: string;
-  /** The ordered walkthrough steps (①업로드 ②서명 요청 ③완료 추적). */
+  /** The ordered walkthrough steps (upload → request signatures → track completion). */
   steps: OnboardingStep[];
   /** Primary CTA label; clicking it calls {@link onCreate}. */
   ctaLabel: string;

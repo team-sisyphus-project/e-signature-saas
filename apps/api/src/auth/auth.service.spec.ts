@@ -80,7 +80,7 @@ function payload(overrides: Record<string, unknown> = {}) {
     sub: 'google-sub-1',
     email: 'New@Example.com',
     email_verified: true,
-    name: '홍길동',
+    name: 'Jane Doe',
     ...overrides,
   };
 }
@@ -100,7 +100,7 @@ describe('AuthService.loginWithGoogle', () => {
 
     expect(result).toEqual({
       accessToken: 'signed.jwt.token',
-      user: { id: 'user_1', email: 'new@example.com', name: '홍길동', plan: 'FREE', locale: 'ko' },
+      user: { id: 'user_1', email: 'new@example.com', name: 'Jane Doe', plan: 'FREE', locale: 'ko' },
     });
     expect(store[0].googleId).toBe('google-sub-1');
     expect(store[0].email).toBe('new@example.com');
@@ -115,7 +115,7 @@ describe('AuthService.loginWithGoogle', () => {
     const existing: MockUser = {
       id: 'user_99',
       email: 'new@example.com',
-      name: '기존',
+      name: 'Existing User',
       plan: 'PRO',
       locale: 'en',
       googleId: null,
@@ -128,14 +128,14 @@ describe('AuthService.loginWithGoogle', () => {
 
     expect(store).toHaveLength(1);
     expect(store[0].googleId).toBe('google-sub-1');
-    expect(result.user).toEqual({ id: 'user_99', email: 'new@example.com', name: '기존', plan: 'PRO', locale: 'en' });
+    expect(result.user).toEqual({ id: 'user_99', email: 'new@example.com', name: 'Existing User', plan: 'PRO', locale: 'en' });
   });
 
   it('logs in an already-linked Google account without creating a duplicate', async () => {
     const linked: MockUser = {
       id: 'user_7',
       email: 'new@example.com',
-      name: '홍길동',
+      name: 'Jane Doe',
       plan: 'FREE',
       locale: 'ko',
       googleId: 'google-sub-1',

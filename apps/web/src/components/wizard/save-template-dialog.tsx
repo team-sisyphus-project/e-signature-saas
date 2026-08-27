@@ -12,8 +12,8 @@
  *
  * State machine: idle → saving → (success | error). On success the form is
  * replaced by a confirmation so the sender gets unambiguous feedback before the
- * modal closes; on failure the server's Korean copy surfaces verbatim (e.g. the
- * plan's template limit — '저장할 수 있는 템플릿 수를 …') and the sender can retry.
+ * modal closes; on failure the server's copy surfaces verbatim (e.g. the
+ * plan's template limit — 'You have reached the number of templates …') and the sender can retry.
  * A 401 means the session lapsed, so we bounce to /login like the send flow.
  */
 
@@ -36,18 +36,18 @@ import { createTemplate } from '@/lib/templates';
 import type { SignFieldDraft } from './wizard-context';
 
 const COPY = {
-  title: '템플릿으로 저장',
-  description: '지금 배치한 필드 그대로 저장해 두면, 다음에 같은 양식을 바로 불러올 수 있어요.',
-  nameLabel: '템플릿 이름',
-  namePlaceholder: '예: 표준 근로계약서',
-  nameHint: '나중에 목록에서 찾기 쉬운 이름을 붙여 주세요.',
-  cancel: '취소',
-  save: '저장',
-  saving: '저장 중',
-  retry: '다시 시도',
-  successTitle: '템플릿을 저장했어요',
-  successBody: "다음에 '내 템플릿'에서 바로 불러올 수 있어요.",
-  successClose: '확인',
+  title: 'Save as template',
+  description: 'Save the fields exactly as you placed them, and you can reuse the same layout next time.',
+  nameLabel: 'Template name',
+  namePlaceholder: 'e.g. Standard employment contract',
+  nameHint: 'Choose a name that will be easy to find in your list later.',
+  cancel: 'Cancel',
+  save: 'Save',
+  saving: 'Saving',
+  retry: 'Try again',
+  successTitle: 'Template saved',
+  successBody: "You can load it right away from 'My templates' next time.",
+  successClose: 'OK',
 } as const;
 
 type SaveState = 'idle' | 'saving' | 'success' | 'error';

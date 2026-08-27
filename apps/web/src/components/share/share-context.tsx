@@ -234,7 +234,7 @@ export function ShareProvider({
   const fillValue = React.useMemo<FillContextValue>(() => {
     const documentTitle = state.payload?.documentTitle ?? state.meta?.documentTitle ?? '';
     return {
-      sender: state.meta?.sender ?? { name: null, brandColor: null, brandLogoUrl: null, locale: 'ko' },
+      sender: state.meta?.sender ?? { name: null, brandColor: null, brandLogoUrl: null, locale: 'en' },
       brandColor: state.meta?.sender.brandColor ?? null,
       documentTitle,
       payload: state.payload
@@ -272,7 +272,7 @@ export function useShare(): ShareContextValue {
   return ctx;
 }
 
-/** The recipient flow's copy for the shared fill surface (speaks "작성/제출"). */
+/** The recipient flow's copy for the shared fill surface (speaks "fill out / submit"). */
 function shareFillCopy(recipient: ReturnType<typeof shareRecipientCopyFor>, locale: 'ko' | 'en'): FillCopy {
   const signer = signerCopyFor(locale);
   return {

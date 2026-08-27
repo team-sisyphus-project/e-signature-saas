@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Wizard step 3 — recipients ("받는 분").
+ * Wizard step 3 — recipients ("Recipients").
  *
  * The sender lists the people who will sign, *in signing order*, and assigns each
  * placed field to one of them. Order is the list order: dragging a row up makes
@@ -10,9 +10,9 @@
  * assignments through the pure helpers — the component never touches index math
  * by hand.
  *
- * Validation is inline and forgiving in tone (해요체, "다시 확인해 주세요"): an
+ * Validation is inline and forgiving in tone ("Please double-check"): an
  * email error shows once its field has been touched, or once the user tries to
- * advance with an invalid list. The shell's "다음" button stays locked until
+ * advance with an invalid list. The shell's "Next" button stays locked until
  * `recipientsComplete` passes (wired through `canProceed`).
  *
  * Sending itself is grain-9 — this step only owns input + wizard state.
@@ -40,7 +40,7 @@ export function RecipientsStep() {
   const { recipients, fields } = state;
 
   // Show an email error once its field loses focus. Until then a freshly added,
-  // never-touched row stays quiet — the shell's "다음" gate already blocks
+  // never-touched row stays quiet — the shell's "Next" gate already blocks
   // advancing while the list is invalid, so we don't nag pre-emptively.
   const [touched, setTouched] = React.useState<Set<string>>(() => new Set());
   // Ids mid leave-animation; removed from state only when the collapse ends.
@@ -120,9 +120,9 @@ export function RecipientsStep() {
   return (
     <div className="flex flex-col gap-lg">
       <div className="flex flex-col gap-2xs">
-        <h2 className="text-xl font-bold text-foreground">받는 분을 입력해 주세요</h2>
+        <h2 className="text-xl font-bold text-foreground">Add your recipients</h2>
         <p className="text-sm text-foreground-subtle">
-          서명할 분의 이름과 이메일을 서명 받을 순서대로 추가하세요.
+          Add each signer's name and email in the order they should sign.
         </p>
       </div>
 
@@ -160,11 +160,11 @@ export function RecipientsStep() {
             className="self-start"
           >
             <PlusIcon />
-            받는 분 추가
+            Add recipient
           </Button>
           {atMax ? (
             <p className="text-xs text-foreground-subtle">
-              받는 분은 최대 {MAX_RECIPIENTS}명까지 추가할 수 있어요.
+              You can add up to {MAX_RECIPIENTS} recipients.
             </p>
           ) : null}
         </div>
@@ -249,14 +249,14 @@ function RecipientRow({
           {/* Signing-order badge */}
           <span
             className="mt-1.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-subtle text-sm font-bold text-primary tabular-nums"
-            aria-label={`서명 순서 ${index + 1}번째`}
+            aria-label={`Signing order ${index + 1}`}
           >
             {index + 1}
           </span>
 
           <div className="flex min-w-0 flex-1 flex-col gap-xs sm:flex-row">
             <Field
-              label="이름"
+              label="Name"
               htmlFor={nameId}
               className="sm:w-[36%]"
             >
@@ -264,13 +264,13 @@ function RecipientRow({
                 id={nameId}
                 value={recipient.name}
                 maxLength={MAX_NAME_LENGTH}
-                placeholder="홍길동"
+                placeholder="Jane Doe"
                 autoComplete="name"
                 onChange={(e) => onChange(recipient.id, { name: e.target.value })}
               />
             </Field>
             <Field
-              label="이메일"
+              label="Email"
               htmlFor={emailId}
               error={error}
               required
@@ -294,21 +294,21 @@ function RecipientRow({
           {/* Reorder + remove controls */}
           <div className="mt-1 flex shrink-0 items-center gap-2xs">
             <IconButton
-              label={`${recipientLabel(recipient, index)} 위로 이동`}
+              label={`Move ${recipientLabel(recipient, index)} up`}
               disabled={index === 0}
               onClick={onMoveUp}
             >
               <ArrowIcon dir="up" />
             </IconButton>
             <IconButton
-              label={`${recipientLabel(recipient, index)} 아래로 이동`}
+              label={`Move ${recipientLabel(recipient, index)} down`}
               disabled={index === total - 1}
               onClick={onMoveDown}
             >
               <ArrowIcon dir="down" />
             </IconButton>
             <IconButton
-              label={`${recipientLabel(recipient, index)} 삭제`}
+              label={`Remove ${recipientLabel(recipient, index)}`}
               onClick={onRemove}
               tone="danger"
             >
@@ -343,9 +343,9 @@ function FieldAssignments({
   return (
     <section className="flex flex-col gap-sm rounded-lg border border-border bg-surface-muted p-md">
       <div className="flex flex-col gap-2xs">
-        <h3 className="text-base font-bold text-foreground">필드 담당자</h3>
+        <h3 className="text-base font-bold text-foreground">Field assignees</h3>
         <p className="text-sm text-foreground-subtle">
-          각 서명 필드를 어떤 받는 분이 작성할지 지정하세요.
+          Choose which recipient fills in each signature field.
         </p>
       </div>
 
@@ -362,11 +362,11 @@ function FieldAssignments({
                 <span className="flex h-6 w-6 items-center justify-center rounded-sm bg-primary-subtle text-primary">
                   <FieldGlyph type={field.type} />
                 </span>
-                {meta.label} 필드 · {field.page}페이지
+                {meta.label} field · page {field.page}
               </span>
               <select
                 id={selectId}
-                aria-label={`${meta.label} 필드 담당자 선택`}
+                aria-label={`Choose the assignee for the ${meta.label} field`}
                 value={field.recipientIndex ?? 0}
                 onChange={(e) => onAssign(field.id, Number(e.target.value))}
                 className={cn(
@@ -396,14 +396,14 @@ function EmptyRecipients({ onAdd }: { onAdd: () => void }) {
         <PeopleIcon />
       </span>
       <div className="flex flex-col gap-2xs">
-        <h3 className="text-lg font-bold text-foreground">아직 받는 분이 없어요</h3>
+        <h3 className="text-lg font-bold text-foreground">No recipients yet</h3>
         <p className="max-w-[420px] text-sm text-foreground-subtle">
-          서명을 받을 분을 추가해 주세요. 추가한 순서대로 서명 요청이 전달돼요.
+          Add the people you need signatures from. Signature requests go out in the order you add them.
         </p>
       </div>
       <Button type="button" size="md" onClick={onAdd}>
         <PlusIcon />
-        받는 분 추가
+        Add recipient
       </Button>
     </div>
   );

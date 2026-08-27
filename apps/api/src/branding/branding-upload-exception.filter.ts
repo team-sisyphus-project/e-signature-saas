@@ -23,8 +23,8 @@ interface MulterLikeError {
  * when it's exceeded. `@nestjs/platform-express` translates that Multer
  * `LIMIT_FILE_SIZE` abort into a `PayloadTooLargeException` (413) with a
  * generic English message; older setups may surface the raw MulterError
- * instead. Either way this filter rewrites it into the same "파일이 너무 커요…"
- * copy the client guard shows, so an over-limit upload is rejected with the
+ * instead. Either way this filter rewrites it into the same "This file is too
+ * large…" copy the client guard shows, so an over-limit upload is rejected with the
  * project's Toss-tone copy no matter where it's caught.
  *
  * Scoped to the branding upload routes only. Intentional `HttpException`s

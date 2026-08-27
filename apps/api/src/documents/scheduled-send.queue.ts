@@ -30,7 +30,7 @@ export class ScheduledSendQueue implements OnModuleInit, OnModuleDestroy {
   async onModuleInit(): Promise<void> {
     const redisUrl = this.config.get<string>('REDIS_URL');
     if (!redisUrl) {
-      this.logger.warn('REDIS_URL 미설정 — 예약 발송을 사용할 수 없습니다.');
+      this.logger.warn('REDIS_URL is not set — scheduled send is unavailable.');
       return;
     }
 
@@ -41,7 +41,7 @@ export class ScheduledSendQueue implements OnModuleInit, OnModuleDestroy {
       });
     } catch (err) {
       this.queue = null;
-      this.logger.error(`예약 발송 큐 초기화 실패: ${String(err)}`);
+      this.logger.error(`Scheduled-send queue init failed: ${String(err)}`);
     }
   }
 
@@ -53,7 +53,7 @@ export class ScheduledSendQueue implements OnModuleInit, OnModuleDestroy {
   async add(data: ScheduledSendJobData, scheduledFor: Date): Promise<void> {
     const queue = this.requireQueue();
     const delay = scheduledFor.getTime() - Date.now();
-    if (delay <= 0) throw new ServiceUnavailableException('예약 발송 시각이 이미 지났어요.');
+    if (delay <= 0) throw new ServiceUnavailableException('The scheduled send time has already passed.');
     await queue.add(SCHEDULED_SEND_JOB, data, {
       jobId: data.jobId,
       delay,
@@ -67,10 +67,10 @@ export class ScheduledSendQueue implements OnModuleInit, OnModuleDestroy {
   async replace(jobId: string, nextJobId: string, scheduledFor: Date): Promise<void> {
     const queue = this.requireQueue();
     const current = await queue.getJob(jobId);
-    if (!current) throw new ServiceUnavailableException('예약 발송 잡을 찾을 수 없어요. 다시 예약해 주세요.');
+    if (!current) throw new ServiceUnavailableException('The scheduled send job could not be found. Please schedule it again.');
     const nextJob = { ...current.data, jobId: nextJobId } as ScheduledSendJobData;
     const delay = scheduledFor.getTime() - Date.now();
-    if (delay <= 0) throw new ServiceUnavailableException('예약 발송 시각이 이미 지났어요.');
+    if (delay <= 0) throw new ServiceUnavailableException('The scheduled send time has already passed.');
 
     // Keep the current job in place until the service persists the new job ID.
     // During that short overlap, the document's persisted ID makes the old job
@@ -101,7 +101,7 @@ export class ScheduledSendQueue implements OnModuleInit, OnModuleDestroy {
 
   private requireQueue(): Queue {
     if (!this.queue) {
-      throw new ServiceUnavailableException('예약 발송 서비스를 지금 사용할 수 없어요. 잠시 후 다시 시도해 주세요.');
+      throw new ServiceUnavailableException('Scheduled send is unavailable right now. Please try again later.');
     }
     return this.queue;
   }

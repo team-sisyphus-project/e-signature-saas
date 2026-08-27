@@ -5,7 +5,7 @@
  *
  * Renders page 1 into a <canvas> via `pdfjs-dist` (lib/pdf.ts), showing a
  * shimmering skeleton while the document parses and a guard message if it can't
- * be read. The page count is reported up so the wizard can show "{n}페이지".
+ * be read. The page count is reported up so the wizard can show "{n} pages".
  */
 
 import * as React from 'react';
@@ -53,7 +53,7 @@ export function PdfPreview({ file, onPageCount, className }: PdfPreviewProps) {
         setError(
           err instanceof PdfRenderError
             ? err.message
-            : 'PDF를 읽을 수 없어요. 파일이 손상되지 않았는지 확인해 주세요.',
+            : 'We could not read the PDF. Please check that the file is not damaged.',
         );
         setStatus('error');
       });
@@ -79,7 +79,7 @@ export function PdfPreview({ file, onPageCount, className }: PdfPreviewProps) {
       <canvas
         ref={canvasRef}
         role="img"
-        aria-label="업로드한 PDF 첫 페이지 미리보기"
+        aria-label="Preview of the first page of the uploaded PDF"
         className={cn(
           'mx-auto block rounded-md border border-border shadow-sm',
           status === 'ready' ? 'animate-fade-in' : 'hidden',

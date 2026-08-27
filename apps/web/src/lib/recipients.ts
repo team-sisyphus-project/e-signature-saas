@@ -1,5 +1,5 @@
 /**
- * Recipient list logic — pure, DOM-free helpers for the wizard's "받는 분" step.
+ * Recipient list logic — pure, DOM-free helpers for the wizard's "Recipients" step.
  *
  * The recipients step lets the sender add/remove/reorder signers and assign each
  * placed field to one of them. Two invariants make the rest of the UI simple:
@@ -54,7 +54,7 @@ export function createRecipient(): RecipientDraft {
 /** Display name for a recipient, falling back to an order-based label. */
 export function recipientLabel(recipient: RecipientDraft, index: number): string {
   const name = recipient.name.trim();
-  return name.length > 0 ? name : `받는 분 ${index + 1}`;
+  return name.length > 0 ? name : `Recipient ${index + 1}`;
 }
 
 export type RecipientFieldKey = 'email';
@@ -64,9 +64,9 @@ export interface RecipientError {
 }
 
 export const RECIPIENT_MESSAGES = {
-  emailRequired: '이메일을 입력해 주세요.',
-  emailInvalid: '이메일 형식을 다시 확인해 주세요.',
-  emailDuplicate: '이미 추가된 이메일이에요.',
+  emailRequired: 'Please enter an email address.',
+  emailInvalid: 'Please check the email address format.',
+  emailDuplicate: 'This email has already been added.',
 } as const;
 
 /**

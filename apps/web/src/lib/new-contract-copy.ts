@@ -7,7 +7,7 @@
  * step renders. Kept here (mirroring `lib/templates-copy.ts` / `lib/settings-copy.ts`)
  * so structure/tone stay consistent and auditable.
  *
- * Tone follows the project base voice: plain 해요체, calm, action-forward, never
+ * Tone follows the project base voice: plain, calm, action-forward, never
  * blaming the user. Server-sent errors (template not found / forbidden, session
  * expiry) surface verbatim from the API; only transport failures fall back to the
  * neutral generic line, so no error *wording* is authored here.
@@ -15,42 +15,43 @@
 export const NEW_CONTRACT_COPY = {
   // --- start choice -------------------------------------------------------
   /** H1 above the two start options. */
-  chooseTitle: '새 계약을 만들어요',
+  chooseTitle: 'Create a new contract',
   /** One-line prompt under the title. */
-  chooseSubtitle: '어떻게 시작할지 골라 주세요.',
+  chooseSubtitle: 'Choose how you would like to start.',
   /** Option 1 — the existing from-scratch upload path. */
-  uploadTitle: '새로 업로드',
-  uploadBody: 'PDF를 올리고 서명 필드를 직접 배치해요.',
+  uploadTitle: 'Upload a new file',
+  uploadBody: 'Upload a PDF and place the signature fields yourself.',
   /** Option 2 — start from a saved template (this grain). */
-  fromTemplateTitle: '내 템플릿에서 시작',
-  fromTemplateBody: '저장해 둔 양식을 불러와 수신자만 입력하면 돼요.',
+  fromTemplateTitle: 'Start from my templates',
+  fromTemplateBody: 'Load a saved form — all you need to add are the recipients.',
 
   // --- template picker ----------------------------------------------------
   /** H1 of the template-selection view. */
-  pickTitle: '템플릿을 선택해 주세요',
+  pickTitle: 'Choose a template',
   /** Sub-line explaining what selecting does. */
-  pickSubtitle: '고르면 PDF와 필드 배치를 그대로 불러와요. 수신자만 입력하면 바로 발송할 수 있어요.',
+  pickSubtitle:
+    'Selecting one loads the PDF and field layout as saved. Just add the recipients and you can send right away.',
   /** Back to the start choice. */
-  pickBack: '뒤로',
+  pickBack: 'Back',
   /** Accessible name for the list landmark. */
-  listLabel: '템플릿 목록',
-  /** a11y label for a selectable template card, e.g. `표준 근로계약서 템플릿으로 시작`. */
-  selectLabel: (name: string) => `${name} 템플릿으로 시작`,
+  listLabel: 'Template list',
+  /** a11y label for a selectable template card, e.g. `Start from the Standard Employment Agreement template`. */
+  selectLabel: (name: string) => `Start from the ${name} template`,
 
   // --- empty (no saved templates) -----------------------------------------
-  emptyTitle: '아직 저장한 템플릿이 없어요',
+  emptyTitle: 'No saved templates yet',
   emptyBody:
-    '자주 쓰는 양식을 템플릿으로 저장해 두면, 다음부터는 필드 배치 없이 바로 발송할 수 있어요.',
+    'Save your frequently used forms as templates, and next time you can send right away without placing fields.',
   /** Empty-state CTA → fall back to the upload path. */
-  emptyCta: '새로 업로드',
+  emptyCta: 'Upload a new file',
 
   // --- preparing (loading the chosen template into the wizard) ------------
-  preparingTitle: '템플릿을 불러오고 있어요',
-  preparingBody: 'PDF와 필드 배치를 준비하고 있어요. 잠시만 기다려 주세요.',
+  preparingTitle: 'Loading the template',
+  preparingBody: 'We are preparing the PDF and field layout. This will only take a moment.',
 
   // --- shared actions -----------------------------------------------------
   /** Retry a failed load (list fetch or template prepare). */
-  retry: '다시 시도',
+  retry: 'Try again',
   /** Bail out of a failed prepare back to the start choice. */
-  startOver: '다른 방법으로 시작',
+  startOver: 'Start a different way',
 } as const;

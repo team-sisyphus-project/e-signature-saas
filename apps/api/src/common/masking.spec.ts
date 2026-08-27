@@ -2,10 +2,10 @@ import { maskEmail, maskIp, maskName } from './masking';
 
 describe('maskName', () => {
   it('masks the middle, keeping first and last (voice.md §3)', () => {
-    expect(maskName('홍길동')).toBe('홍*동');
-    expect(maskName('김철수영')).toBe('김**영');
-    expect(maskName('홍길')).toBe('홍*');
-    expect(maskName('홍')).toBe('*');
+    expect(maskName('Amy')).toBe('A*y');
+    expect(maskName('Jane')).toBe('J**e');
+    expect(maskName('Jo')).toBe('J*');
+    expect(maskName('J')).toBe('*');
   });
 
   it('returns a placeholder for empty input', () => {

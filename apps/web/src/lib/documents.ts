@@ -7,7 +7,7 @@
  *
  * The "sent signal" is the hand-off contract with the (future) send wizard
  * (grain-6~9): right before it routes back to `/dashboard`, the wizard stashes
- * the just-sent contract here so the list can show it as '진행 중' immediately —
+ * the just-sent contract here so the list can show it as "In progress" immediately —
  * an optimistic prepend that survives even before the network re-fetch lands.
  */
 

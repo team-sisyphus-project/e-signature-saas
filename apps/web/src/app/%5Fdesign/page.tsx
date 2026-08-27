@@ -62,7 +62,7 @@ const TYPE_SCALE = ['display', '3xl', '2xl', 'xl', 'lg', 'md', 'base', 'sm', 'xs
 const RADII = ['xs', 'sm', 'md', 'lg', 'xl', '2xl'] as const;
 const SHADOWS = ['xs', 'sm', 'md', 'lg', 'xl'] as const;
 
-const STEPS = ['문서 업로드', '서명란 배치', '수신자 입력', '발송'];
+const STEPS = ['Upload document', 'Place signature fields', 'Add recipients', 'Send'];
 
 export default function DesignSystemPage() {
   const [step, setStep] = React.useState(1);
@@ -80,14 +80,15 @@ export default function DesignSystemPage() {
     <main className="mx-auto flex max-w-5xl flex-col gap-3xl px-lg py-2xl">
       <header className="flex flex-col gap-xs">
         <p className="text-sm font-semibold text-primary">Design System</p>
-        <h1 className="text-3xl font-bold text-foreground">토스 스타일 디자인 시스템 데모</h1>
+        <h1 className="text-3xl font-bold text-foreground">Toss-style design system demo</h1>
         <p className="text-base text-foreground-muted">
-          토큰 · 모션 · 코어 프리미티브. 모든 모션은 시스템의 <code>prefers-reduced-motion</code>{' '}
-          설정을 따르며, 줄임 모드에서는 정적 폴백으로 전환됩니다.
+          Tokens · motion · core primitives. All motion honors the system{' '}
+          <code>prefers-reduced-motion</code> setting and falls back to a static
+          presentation when reduction is on.
         </p>
       </header>
 
-      <Section title="Color tokens" hint="시맨틱 색상 토큰. 값은 CSS 변수에서 옵니다.">
+      <Section title="Color tokens" hint="Semantic color tokens. Values come from CSS variables.">
         <div className="grid grid-cols-2 gap-md sm:grid-cols-3 md:grid-cols-4">
           {TOKEN_SWATCHES.map((s) => (
             <div key={s.name} className="flex items-center gap-xs">
@@ -100,13 +101,13 @@ export default function DesignSystemPage() {
         </div>
       </Section>
 
-      <Section title="Typography" hint="Pretendard 기반 타입 스케일">
+      <Section title="Typography" hint="Pretendard-based type scale">
         <div className="flex flex-col gap-xs">
           {TYPE_SCALE.map((size) => (
             <div key={size} className="flex items-baseline gap-md">
               <span className="w-16 shrink-0 text-xs text-foreground-subtle">{size}</span>
               <span className={`text-${size} font-semibold text-foreground`}>
-                다람쥐 헌 쳇바퀴에 타고파 Aa 123
+                The quick brown fox jumps over Aa 123
               </span>
             </div>
           ))}
@@ -132,14 +133,14 @@ export default function DesignSystemPage() {
         </div>
       </Section>
 
-      <Section title="Button" hint="hover 색 전환 + active 시 scale 프레스(탭 피드백)">
+      <Section title="Button" hint="Color transition on hover + scale press on active (tap feedback)">
         <div className="flex flex-wrap items-center gap-md">
-          <Button variant="primary">기본</Button>
-          <Button variant="secondary">보조</Button>
-          <Button variant="ghost">고스트</Button>
-          <Button variant="danger">위험</Button>
-          <Button isLoading>발송 중</Button>
-          <Button disabled>비활성</Button>
+          <Button variant="primary">Primary</Button>
+          <Button variant="secondary">Secondary</Button>
+          <Button variant="ghost">Ghost</Button>
+          <Button variant="danger">Danger</Button>
+          <Button isLoading>Sending</Button>
+          <Button disabled>Disabled</Button>
         </div>
         <div className="flex flex-wrap items-center gap-md">
           <Button size="sm">small</Button>
@@ -148,56 +149,56 @@ export default function DesignSystemPage() {
         </div>
       </Section>
 
-      <Section title="Input & Field" hint="라벨 · 도움말 · 에러 상태 / 포커스 링(WCAG AA)">
+      <Section title="Input & Field" hint="Label · hint · error states / focus ring (WCAG AA)">
         <div className="grid gap-lg sm:grid-cols-2">
-          <Field label="이메일" htmlFor="demo-email" hint="수신자에게 서명 요청이 발송됩니다." required>
+          <Field label="Email" htmlFor="demo-email" hint="The signature request is sent to the recipient." required>
             <Input id="demo-email" type="email" placeholder="name@company.com" />
           </Field>
-          <Field label="이름" htmlFor="demo-name" error="이름을 입력해 주세요." required>
-            <Input id="demo-name" invalid placeholder="홍길동" />
+          <Field label="Name" htmlFor="demo-name" error="Enter a name." required>
+            <Input id="demo-name" invalid placeholder="Jane Doe" />
           </Field>
         </div>
       </Section>
 
-      <Section title="Card" hint="interactive 카드는 hover 시 lift(상승 + 그림자 심화)">
+      <Section title="Card" hint="Interactive cards lift on hover (raise + deeper shadow)">
         <div className="grid gap-md sm:grid-cols-2">
           <Card>
             <CardHeader>
-              <CardTitle>정적 카드</CardTitle>
-              <CardDescription>기본 surface 카드입니다.</CardDescription>
+              <CardTitle>Static card</CardTitle>
+              <CardDescription>The default surface card.</CardDescription>
             </CardHeader>
-            <CardContent className="text-base text-foreground-muted">콘텐츠 영역</CardContent>
+            <CardContent className="text-base text-foreground-muted">Content area</CardContent>
           </Card>
           <Card interactive>
             <CardHeader>
-              <CardTitle>인터랙티브 카드</CardTitle>
-              <CardDescription>마우스를 올려보세요 — hover lift.</CardDescription>
+              <CardTitle>Interactive card</CardTitle>
+              <CardDescription>Hover over it — hover lift.</CardDescription>
             </CardHeader>
-            <CardContent className="text-base text-foreground-muted">대시보드 항목 등에 사용</CardContent>
+            <CardContent className="text-base text-foreground-muted">Used for dashboard items and the like</CardContent>
           </Card>
         </div>
       </Section>
 
-      <Section title="StepIndicator" hint="활성 단계 진입 시 bounce, 완료 단계는 체크마크">
+      <Section title="StepIndicator" hint="The active step bounces on entry; completed steps show a checkmark">
         <Card>
           <CardContent className="pt-lg">
             <StepIndicator steps={STEPS} current={step} />
             <div className="flex justify-between pt-lg">
               <Button variant="secondary" size="sm" onClick={() => setStep((s) => Math.max(0, s - 1))}>
-                이전
+                Back
               </Button>
               <Button
                 size="sm"
                 onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}
               >
-                다음
+                Next
               </Button>
             </div>
           </CardContent>
         </Card>
       </Section>
 
-      <Section title="Skeleton" hint="shimmer 로딩 플레이스홀더">
+      <Section title="Skeleton" hint="Shimmer loading placeholder">
         <Card>
           <CardContent className="flex items-center gap-md pt-lg">
             <Skeleton shape="circle" className="h-12 w-12" />
@@ -209,23 +210,23 @@ export default function DesignSystemPage() {
         </Card>
       </Section>
 
-      <Section title="Dialog & Sheet" hint="Radix 기반 — 포커스 트랩 · Esc/오버레이 닫기 · 진입/이탈 모션">
+      <Section title="Dialog & Sheet" hint="Radix-based — focus trap · Esc/overlay dismiss · enter/exit motion">
         <div className="flex flex-wrap gap-md">
           <Dialog>
             <DialogTrigger asChild>
-              <Button variant="secondary">Dialog 열기</Button>
+              <Button variant="secondary">Open dialog</Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>계약을 발송할까요?</DialogTitle>
-                <DialogDescription>수신자에게 서명 요청 알림이 전송됩니다.</DialogDescription>
+                <DialogTitle>Send this contract?</DialogTitle>
+                <DialogDescription>The recipient will be notified with a signature request.</DialogDescription>
               </DialogHeader>
               <DialogFooter>
                 <DialogClose asChild>
-                  <Button variant="ghost">취소</Button>
+                  <Button variant="ghost">Cancel</Button>
                 </DialogClose>
                 <DialogClose asChild>
-                  <Button>발송</Button>
+                  <Button>Send</Button>
                 </DialogClose>
               </DialogFooter>
             </DialogContent>
@@ -233,19 +234,19 @@ export default function DesignSystemPage() {
 
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="secondary">BottomSheet 열기</Button>
+              <Button variant="secondary">Open bottom sheet</Button>
             </SheetTrigger>
             <SheetContent side="bottom">
               <SheetHeader>
-                <SheetTitle>서명 입력</SheetTitle>
-                <SheetDescription>모바일 서명자 플로우의 하단 시트입니다.</SheetDescription>
+                <SheetTitle>Add your signature</SheetTitle>
+                <SheetDescription>The bottom sheet used in the mobile signer flow.</SheetDescription>
               </SheetHeader>
               <div className="flex h-32 items-center justify-center rounded-md bg-surface-muted text-foreground-subtle">
-                서명 캔버스 영역
+                Signature canvas area
               </div>
               <SheetClose asChild>
                 <Button fullWidth className="mt-md">
-                  완료
+                  Done
                 </Button>
               </SheetClose>
             </SheetContent>
@@ -253,7 +254,7 @@ export default function DesignSystemPage() {
         </div>
       </Section>
 
-      <Section title="Motion · 그래디언트 블롭" hint="배경에서 느리게 흐르는 블롭(18s 루프)">
+      <Section title="Motion · gradient blobs" hint="Blobs drifting slowly in the background (18s loop)">
         <div className="relative h-48 overflow-hidden rounded-xl bg-grey-900">
           <span className="absolute -left-10 top-0 h-40 w-40 animate-blob rounded-full bg-primary opacity-60 blur-2xl" />
           <span
@@ -267,9 +268,9 @@ export default function DesignSystemPage() {
         </div>
       </Section>
 
-      <Section title="Motion · stagger fadeIn" hint="리스트/텍스트가 순차적으로 등장">
+      <Section title="Motion · stagger fadeIn" hint="Lists/text enter one after another">
         <ul key={`stagger-${reloadKey}`} className="motion-stagger flex flex-col gap-xs">
-          {['계약서_2026.pdf', 'NDA_상호비밀유지.pdf', '용역계약_최종.pdf', '근로계약서.pdf'].map((doc) => (
+          {['Contract_2026.pdf', 'Mutual_NDA.pdf', 'Services_Agreement_Final.pdf', 'Employment_Agreement.pdf'].map((doc) => (
             <li
               key={doc}
               className="rounded-md border border-border bg-surface px-md py-sm text-base text-foreground"
@@ -280,14 +281,14 @@ export default function DesignSystemPage() {
         </ul>
         <div>
           <Button variant="ghost" size="sm" onClick={() => setReloadKey((k) => k + 1)}>
-            다시 재생
+            Replay
           </Button>
         </div>
       </Section>
 
       <Section
-        title="Motion · 발송 완료 (체크마크 + confetti)"
-        hint="발신자 발송 완료 시의 와우 모먼트"
+        title="Motion · send complete (checkmark + confetti)"
+        hint="The wow moment when a sender finishes sending"
       >
         <Card>
           <CardContent className="relative flex flex-col items-center gap-md overflow-visible py-2xl">
@@ -295,13 +296,13 @@ export default function DesignSystemPage() {
             <div className="relative">
               {celebrate ? <SuccessCheck key={`check-${reloadKey}`} /> : <SuccessCheckPlaceholder />}
             </div>
-            <p className="text-lg font-bold text-foreground">계약 발송이 완료되었습니다!</p>
-            <Button onClick={replay}>이펙트 재생</Button>
+            <p className="text-lg font-bold text-foreground">Your contract has been sent!</p>
+            <Button onClick={replay}>Replay effect</Button>
           </CardContent>
         </Card>
       </Section>
 
-      <Section title="Brand override hook" hint="발신자 브랜딩 색상으로 primary 토큰을 런타임 교체">
+      <Section title="Brand override hook" hint="Swap the primary token for the sender's brand color at runtime">
         <div
           className="rounded-xl border border-border p-lg"
           style={{
@@ -314,8 +315,8 @@ export default function DesignSystemPage() {
           }}
         >
           <div className="flex flex-wrap items-center gap-md">
-            <Button>브랜드 버튼</Button>
-            <Button variant="secondary">보조</Button>
+            <Button>Brand button</Button>
+            <Button variant="secondary">Secondary</Button>
             <StepIndicator steps={['1', '2', '3']} current={1} className="max-w-xs" />
           </div>
         </div>

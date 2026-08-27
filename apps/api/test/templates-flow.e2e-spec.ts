@@ -52,7 +52,7 @@ describe('Templates flow (e2e)', () => {
 
     const res = await request(app.getHttpServer())
       .post('/api/auth/register')
-      .send({ email, password, name: '템플릿테스터' })
+      .send({ email, password, name: 'Template Tester' })
       .expect(201);
     token = res.body.accessToken;
     userId = res.body.user.id;
@@ -74,7 +74,7 @@ describe('Templates flow (e2e)', () => {
       .post('/api/templates')
       .set('Authorization', `Bearer ${token}`)
       .send({
-        name: '표준 근로계약서',
+        name: 'Standard Employment Agreement',
         storageKey: `templates/${userId}/std.pdf`,
         pageCount: 3,
         fields: sampleFields,
@@ -82,7 +82,7 @@ describe('Templates flow (e2e)', () => {
       .expect(201);
 
     expect(res.body.id).toBeDefined();
-    expect(res.body.name).toBe('표준 근로계약서');
+    expect(res.body.name).toBe('Standard Employment Agreement');
     expect(res.body.pageCount).toBe(3);
     expect(res.body.fieldCount).toBe(2);
     expect(res.body.fields).toHaveLength(2);
@@ -134,7 +134,7 @@ describe('Templates flow (e2e)', () => {
   it("forbids streaming another owner's template PDF (403)", async () => {
     const other = await request(app.getHttpServer())
       .post('/api/auth/register')
-      .send({ email: `filer_${Date.now()}@example.com`, password, name: '파일침입자' })
+      .send({ email: `filer_${Date.now()}@example.com`, password, name: 'File Intruder' })
       .expect(201);
     const otherToken = other.body.accessToken;
     const otherId = other.body.user.id;
@@ -151,23 +151,23 @@ describe('Templates flow (e2e)', () => {
     const res = await request(app.getHttpServer())
       .patch(`/api/templates/${templateId}`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ name: '수정된 계약서' })
+      .send({ name: 'Updated Agreement' })
       .expect(200);
-    expect(res.body.name).toBe('수정된 계약서');
+    expect(res.body.name).toBe('Updated Agreement');
   });
 
-  it('returns a Korean 404 for a missing template', async () => {
+  it('returns a friendly 404 for a missing template', async () => {
     const res = await request(app.getHttpServer())
       .get('/api/templates/nonexistent-id')
       .set('Authorization', `Bearer ${token}`)
       .expect(404);
-    expect(res.body.message).toBe('요청한 템플릿을 찾을 수 없어요.');
+    expect(res.body.message).toBe('The requested template could not be found.');
   });
 
   it("forbids access to another owner's template", async () => {
     const other = await request(app.getHttpServer())
       .post('/api/auth/register')
-      .send({ email: `other_${Date.now()}@example.com`, password, name: '다른사람' })
+      .send({ email: `other_${Date.now()}@example.com`, password, name: 'Someone Else' })
       .expect(201);
     const otherToken = other.body.accessToken;
     const otherId = other.body.user.id;
@@ -176,27 +176,27 @@ describe('Templates flow (e2e)', () => {
       .get(`/api/templates/${templateId}`)
       .set('Authorization', `Bearer ${otherToken}`)
       .expect(403);
-    expect(res.body.message).toBe('이 템플릿에 접근할 권한이 없어요.');
+    expect(res.body.message).toBe('You do not have permission to access this template.');
 
     await prisma.user.delete({ where: { id: otherId } }).catch(() => undefined);
   });
 
-  it('enforces the Free-plan template cap with a Korean message', async () => {
+  it('enforces the Free-plan template cap with a friendly message', async () => {
     // The Free cap is 3; one template already exists, so seed two more to reach it.
     for (let i = 0; i < 2; i += 1) {
       await request(app.getHttpServer())
         .post('/api/templates')
         .set('Authorization', `Bearer ${token}`)
-        .send({ name: `추가 ${i}`, storageKey: `templates/${userId}/x${i}.pdf`, fields: [] })
+        .send({ name: `Extra ${i}`, storageKey: `templates/${userId}/x${i}.pdf`, fields: [] })
         .expect(201);
     }
     const res = await request(app.getHttpServer())
       .post('/api/templates')
       .set('Authorization', `Bearer ${token}`)
-      .send({ name: '초과', storageKey: `templates/${userId}/over.pdf`, fields: [] })
+      .send({ name: 'One too many', storageKey: `templates/${userId}/over.pdf`, fields: [] })
       .expect(403);
     expect(res.body.message).toBe(
-      '저장할 수 있는 템플릿 수를 모두 채웠어요. 기존 템플릿을 지우거나 플랜을 업그레이드해 주세요.',
+      'You have used all of your template slots. Delete an existing template or upgrade your plan.',
     );
   });
 

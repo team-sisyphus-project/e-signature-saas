@@ -4,7 +4,7 @@
  * Wizard step 1 — upload the contract PDF.
  *
  * Drag-and-drop or file-pick a PDF, with client-side guards (type / size /
- * empty) that mirror the server's Korean copy (apps/api/src/common/messages.ts)
+ * empty) that mirror the server's copy (apps/api/src/common/messages.ts)
  * so the user gets the same wording instantly, before any round-trip. On a valid
  * pick the file uploads with a live progress bar; the resulting DRAFT document +
  * the local File land in wizard state, and the first page renders as a preview.
@@ -22,12 +22,12 @@ const MAX_BYTES = 20 * 1024 * 1024;
 
 /** Client-side guard copy — kept in lockstep with the server messages. */
 const GUARD = {
-  invalidType: 'PDF 파일만 업로드할 수 있어요.',
-  tooLarge: '파일이 너무 커요. 20MB 이하의 PDF로 올려 주세요.',
-  empty: '파일이 비어 있어요. 다른 PDF로 다시 시도해 주세요.',
+  invalidType: 'Only PDF files can be uploaded.',
+  tooLarge: 'The file is too large. Please upload a PDF under 20MB.',
+  empty: 'The file is empty. Please try again with another PDF.',
 } as const;
 
-/** Validate a picked file; returns a Korean guard message, or null if OK. */
+/** Validate a picked file; returns a user-facing guard message, or null if OK. */
 function validatePdf(file: File): string | null {
   const isPdf =
     file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
@@ -84,7 +84,7 @@ export function UploadStep() {
         dispatch({ type: 'SET_DOCUMENT', document, file });
       } catch (err) {
         if (err instanceof DOMException && err.name === 'AbortError') return;
-        setError(err instanceof ApiError ? err.message : '문제가 생겼어요. 잠시 후 다시 시도해 주세요.');
+        setError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again shortly.');
       } finally {
         abortRef.current = null;
         setProgress(null);
@@ -122,9 +122,9 @@ export function UploadStep() {
   return (
     <div className="flex flex-col gap-md">
       <div className="flex flex-col gap-2xs">
-        <h2 className="text-xl font-bold text-foreground">계약 PDF를 올려 주세요</h2>
+        <h2 className="text-xl font-bold text-foreground">Upload the contract PDF</h2>
         <p className="text-sm text-foreground-subtle">
-          서명을 받을 PDF 문서를 끌어다 놓거나 직접 선택하세요. 최대 20MB까지 올릴 수 있어요.
+          Drag and drop the PDF document you need signed, or choose it directly. Files up to 20MB are supported.
         </p>
       </div>
 
@@ -218,12 +218,12 @@ function DropZone({
       </span>
       <div className="flex flex-col gap-2xs">
         <span className="text-base font-bold text-foreground">
-          {dragActive ? '여기에 놓으면 업로드돼요' : 'PDF를 끌어다 놓으세요'}
+          {dragActive ? 'Drop it here to upload' : 'Drag and drop your PDF here'}
         </span>
-        <span className="text-sm text-foreground-subtle">또는 클릭해서 파일을 선택하세요</span>
+        <span className="text-sm text-foreground-subtle">or click to choose a file</span>
       </div>
       <span className="pointer-events-none mt-2xs inline-flex h-9 items-center rounded-md bg-surface px-md text-sm font-semibold text-primary shadow-sm">
-        파일 선택
+        Choose file
       </span>
     </label>
   );
@@ -252,11 +252,11 @@ function UploadingView({
         <div className="flex min-w-0 flex-1 flex-col gap-2xs">
           <span className="truncate text-sm font-semibold text-foreground">{fileName}</span>
           <span className="text-xs text-foreground-subtle">
-            {preparing ? '문서를 준비하고 있어요' : `업로드 중 ${pct}%`}
+            {preparing ? 'Preparing the document' : `Uploading ${pct}%`}
           </span>
         </div>
         <Button variant="ghost" size="sm" onClick={onCancel}>
-          취소
+          Cancel
         </Button>
       </div>
       <div
@@ -265,7 +265,7 @@ function UploadingView({
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={preparing ? undefined : pct}
-        aria-label="업로드 진행률"
+        aria-label="Upload progress"
       >
         <div
           className={cn(
@@ -303,13 +303,13 @@ function UploadedView({
         <div className="flex min-w-0 flex-1 flex-col gap-2xs">
           <span className="truncate text-sm font-semibold text-foreground">{fileName}</span>
           <span className="text-xs text-foreground-subtle">
-            {[formatBytes(fileSize), pageCount > 0 ? `${pageCount}페이지` : null]
+            {[formatBytes(fileSize), pageCount > 0 ? `${pageCount} page${pageCount === 1 ? '' : 's'}` : null]
               .filter(Boolean)
               .join(' · ')}
           </span>
         </div>
         <Button variant="ghost" size="sm" onClick={onReplace}>
-          다른 파일
+          Choose another
         </Button>
       </div>
 

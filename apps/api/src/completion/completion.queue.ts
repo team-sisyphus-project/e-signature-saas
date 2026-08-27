@@ -36,7 +36,7 @@ export class CompletionQueue implements OnModuleInit, OnModuleDestroy {
   async onModuleInit(): Promise<void> {
     const redisUrl = this.config.get<string>('REDIS_URL');
     if (!redisUrl) {
-      this.logger.log('REDIS_URL 미설정 — 완료 후처리는 인라인으로 실행됩니다.');
+      this.logger.log('REDIS_URL is not set — completion post-processing runs inline.');
       return;
     }
 
@@ -62,17 +62,17 @@ export class CompletionQueue implements OnModuleInit, OnModuleDestroy {
       );
       this.worker.on('failed', (job, err) => {
         this.logger.error(
-          `완료 후처리 실패 — 재시도됩니다 (docId=${job?.data?.documentId ?? '?'}, 시도 ${job?.attemptsMade ?? '?'}): ${String(err)}`,
+          `Completion post-processing failed — will retry (docId=${job?.data?.documentId ?? '?'}, attempt ${job?.attemptsMade ?? '?'}): ${String(err)}`,
         );
       });
       this.worker.on('completed', (job) => {
-        this.logger.debug(`완료 후처리 잡 완료: docId=${job.data.documentId}`);
+        this.logger.debug(`Completion post-processing job finished: docId=${job.data.documentId}`);
       });
-      this.logger.log('완료 후처리 큐(BullMQ) + 워커가 활성화되었습니다.');
+      this.logger.log('Completion post-processing queue (BullMQ) + worker are active.');
     } catch (err) {
       this.queue = null;
       this.worker = null;
-      this.logger.warn(`완료 후처리 큐 초기화 실패 — 인라인으로 대체합니다: ${String(err)}`);
+      this.logger.warn(`Completion post-processing queue init failed — falling back to inline: ${String(err)}`);
     }
   }
 
@@ -105,7 +105,7 @@ export class CompletionQueue implements OnModuleInit, OnModuleDestroy {
         );
         return;
       } catch (err) {
-        this.logger.warn(`완료 후처리 큐 적재 실패 — 인라인으로 대체합니다: ${String(err)}`);
+        this.logger.warn(`Failed to enqueue completion post-processing — falling back to inline: ${String(err)}`);
       }
     }
     await this.runInline(documentId, locale);
@@ -116,7 +116,7 @@ export class CompletionQueue implements OnModuleInit, OnModuleDestroy {
     try {
       await this.completion.runPostProcessing(documentId, locale);
     } catch (err) {
-      this.logger.error(`완료 후처리(인라인) 실패: docId=${documentId}: ${String(err)}`);
+      this.logger.error(`Completion post-processing (inline) failed: docId=${documentId}: ${String(err)}`);
     }
   }
 }

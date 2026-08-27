@@ -20,7 +20,7 @@ export const StepIndicator = React.forwardRef<HTMLOListElement, StepIndicatorPro
     <ol
       ref={ref}
       className={cn('flex w-full items-center', className)}
-      aria-label="진행 단계"
+      aria-label="Progress steps"
       {...props}
     >
       {steps.map((label, index) => {

@@ -18,9 +18,9 @@ export type CompletionEmailRole = 'SENDER' | 'SIGNER';
 export interface CompletionEmailInput {
   /** Resolved output locale; completion emails never infer mail-client language. */
   locale: SupportedLocale;
-  /** Contract title — fills `{계약명}` in subject/body. */
+  /** Contract title — fills `{title}` in subject/body. */
   contractTitle: string;
-  /** Sender display name — fills `{발신자명}` / brand header. */
+  /** Sender display name — fills the sender name / brand header. */
   senderName: string;
   /** SENDER copy adds the dashboard line + CTA; SIGNER omits both. */
   recipientRole: CompletionEmailRole;

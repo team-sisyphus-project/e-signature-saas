@@ -12,7 +12,7 @@ import { TEMPLATE_ACTIONS_COPY, TEMPLATE_META_COPY } from '@/lib/templates-copy'
  * surface) so the lists read as one system.
  *
  * Three shapes:
- * - **base** (default): a read-only summary in the "내 템플릿" list — no link,
+ * - **base** (default): a read-only summary in the "My templates" list — no link,
  *   badges, or actions.
  * - **selectable** Variant (design-spec `components/template-card/selectable.md`):
  *   pass `onSelect` and the card becomes a full-width button with the Card's
@@ -21,8 +21,8 @@ import { TEMPLATE_ACTIONS_COPY, TEMPLATE_META_COPY } from '@/lib/templates-copy'
  *   pick is being prepared so only one prepare runs at a time.
  * - **manageable** Extension (design-spec `components/template-card/manageable.md`):
  *   pass `actions` and the summary row grows a divided action cluster —
- *   미리보기 · 이름 수정 · 삭제 (quiet ghost buttons; delete carries a subtle danger
- *   tint) on the left and the primary '이 템플릿으로 시작' on the right. Used by
+ *   preview · rename · delete (quiet ghost buttons; delete carries a subtle danger
+ *   tint) on the left and the primary "Start with this template" on the right. Used by
  *   `/templates` so a saved layout can be previewed, renamed, deleted, or reused.
  *
  * `onSelect` and `actions` are mutually exclusive — the picker uses `onSelect`,
@@ -149,8 +149,8 @@ function metaLine(template: TemplateSummary): string {
 }
 
 /**
- * Relative "saved" time in the same voice as the contract list (방금 전 / N분 전
- * / N시간 전 / N일 전, then an absolute YYYY.MM.DD past a week). Mirrors
+ * Relative "saved" time in the same voice as the contract list (just now / Nm ago
+ * / Nh ago / Nd ago, then an absolute YYYY.MM.DD past a week). Mirrors
  * ContractCard's formatRelative so both lists tell time identically.
  */
 function formatRelative(iso: string): string {
@@ -158,12 +158,12 @@ function formatRelative(iso: string): string {
   if (Number.isNaN(then)) return '';
   const diffMs = Date.now() - then;
   const min = Math.floor(diffMs / 60000);
-  if (min < 1) return '방금 전';
-  if (min < 60) return `${min}분 전`;
+  if (min < 1) return 'just now';
+  if (min < 60) return `${min}m ago`;
   const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}시간 전`;
+  if (hr < 24) return `${hr}h ago`;
   const day = Math.floor(hr / 24);
-  if (day < 7) return `${day}일 전`;
+  if (day < 7) return `${day}d ago`;
   const d = new Date(then);
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
 }

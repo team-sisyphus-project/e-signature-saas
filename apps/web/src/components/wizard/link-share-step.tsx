@@ -1,11 +1,11 @@
 'use client';
 
 /**
- * Wizard step — share link ("링크 공유").
+ * Wizard step — share link.
  *
  * Terminal step of the 'link' delivery branch: generate a shareable contract
  * link (validity window, optional password) and copy it. Like the review step,
- * it owns its own CTA, so the shell hides its footer "다음" here.
+ * it owns its own CTA, so the shell hides its footer "Next" here.
  *
  * The link path skips the recipients step, so the placed fields carry no
  * recipient assignment. We persist them first (`saveFields`) — they land with
@@ -16,7 +16,7 @@
  * The settings/generate/result body is the same `ShareLinkBody` the detail
  * screen's modal uses, so the two link-sharing entry points stay in lockstep.
  * This step adds only the wizard framing: a header and, once the link exists, a
- * "대시보드로 가기" hand-off — mirroring the review step's success tone, but kept
+ * "Go to dashboard" hand-off — mirroring the review step's success tone, but kept
  * inline so the just-made link stays visible to copy.
  */
 

@@ -8,20 +8,20 @@ import type { Urgency } from '@/lib/documents';
  * lifecycle StatusBadge (see design-spec/components/urgency-badge/base.md).
  *
  * Design decisions (design-spec):
- * - Tone map (grain-1/M2): OVERDUE → danger "기한 초과", DUE_SOON → warning
- *   "마감 임박", NORMAL → no badge at all (no time pressure, keep visual noise
+ * - Tone map (grain-1/M2): OVERDUE → danger "Overdue", DUE_SOON → warning
+ *   "Due soon", NORMAL → no badge at all (no time pressure, keep visual noise
  *   down — the StatusBadge alone carries the state). So this renders `null` for
  *   NORMAL.
  * - Accessibility (never color alone): each tone leads with a *shape-different*
  *   icon so OVERDUE↔DUE_SOON are distinguishable by form (not just red↔orange,
  *   which sit close for some color vision) — an alert triangle for OVERDUE, a
- *   clock for DUE_SOON — and the Korean label is always present.
+ *   clock for DUE_SOON — and the text label is always present.
  * - AA on tinted backgrounds: tinted text can fail WCAG AA (see StatusBadge's
  *   recorded green-on-success-subtle failure), so the label text stays dark
  *   (`foreground-muted`) and the hue is carried by the icon over a subtle tint.
  *
  * The `label` comes from the caller (the copy source of truth is
- * design-spec/messaging/todo-copy.md — "기한 초과" / "마감 임박"); it is unused
+ * design-spec/messaging/todo-copy.md — "Overdue" / "Due soon"); it is unused
  * for NORMAL since nothing renders.
  */
 type UrgentTone = Exclude<Urgency, 'NORMAL'>;
@@ -33,7 +33,7 @@ const TONE: Record<UrgentTone, { tint: string; icon: string; Icon: () => ReactEl
 
 export interface UrgencyBadgeProps {
   urgency: Urgency;
-  /** Korean urgency label (from messaging/todo-copy.md). Ignored for NORMAL. */
+  /** Urgency label (from messaging/todo-copy.md). Ignored for NORMAL. */
   label: string;
   className?: string;
 }

@@ -53,7 +53,7 @@ export const FIELD_TYPES: readonly SignFieldType[] = ['SIGNATURE', 'DATE', 'TEXT
 
 export interface FieldTypeMeta {
   type: SignFieldType;
-  /** Korean label shown on the tool + the placed field. */
+  /** Label shown on the tool + the placed field. */
   label: string;
   /** Default normalized size when first dropped. */
   defaultSize: { width: number; height: number };
@@ -61,9 +61,9 @@ export interface FieldTypeMeta {
 
 /** Per-type display + default footprint. Sizes are page-relative (0..1). */
 export const FIELD_TYPE_META: Record<SignFieldType, FieldTypeMeta> = {
-  SIGNATURE: { type: 'SIGNATURE', label: '서명', defaultSize: { width: 0.26, height: 0.08 } },
-  DATE: { type: 'DATE', label: '날짜', defaultSize: { width: 0.18, height: 0.05 } },
-  TEXT: { type: 'TEXT', label: '텍스트', defaultSize: { width: 0.28, height: 0.06 } },
+  SIGNATURE: { type: 'SIGNATURE', label: 'Signature', defaultSize: { width: 0.26, height: 0.08 } },
+  DATE: { type: 'DATE', label: 'Date', defaultSize: { width: 0.18, height: 0.05 } },
+  TEXT: { type: 'TEXT', label: 'Text', defaultSize: { width: 0.28, height: 0.06 } },
 };
 
 function clamp(value: number, min: number, max: number): number {

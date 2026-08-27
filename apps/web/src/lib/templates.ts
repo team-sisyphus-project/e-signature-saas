@@ -9,7 +9,7 @@
  *
  * This grain covers only *saving* a template (from the wizard) and *listing*
  * the owner's templates. Every call goes through `apiFetch`, so the server's
- * Korean copy — quota reached ('저장할 수 있는 템플릿 수를 …'), not-found,
+ * copy — quota reached ("You have reached the template limit…"), not-found,
  * forbidden — surfaces verbatim, and transport failures fall back to the neutral
  * generic line.
  */

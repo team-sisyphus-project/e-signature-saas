@@ -195,10 +195,10 @@ export type TranslationKey =
   | 'auditCertificate.actionDocumentCompleted'
   | 'auditCertificate.actionFallback';
 
-/** Returns a translated string, with Korean as the guaranteed safe fallback. */
+/** Returns a translated string, with English as the guaranteed safe fallback. */
 export function translate(locale: SupportedLocale, key: TranslationKey): string {
-  const [scope, name] = key.split('.') as [keyof (typeof SERVER_TRANSLATIONS)['ko'], string];
+  const [scope, name] = key.split('.') as [keyof (typeof SERVER_TRANSLATIONS)['en'], string];
   const localized = SERVER_TRANSLATIONS[locale][scope] as Record<string, string>;
-  const fallback = SERVER_TRANSLATIONS.ko[scope] as Record<string, string>;
+  const fallback = SERVER_TRANSLATIONS.en[scope] as Record<string, string>;
   return localized[name] ?? fallback[name];
 }

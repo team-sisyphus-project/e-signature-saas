@@ -1,22 +1,22 @@
 'use client';
 
 /**
- * Wizard step 4 — review & send ("발송 검토").
+ * Wizard step 4 — review & send ("Review & send").
  *
  * The last step has two faces:
  *
  *   1. Review summary — a read-back of what's about to go out (document, placed
- *      fields, recipients in signing order) plus this step's own 발송 CTA. The
+ *      fields, recipients in signing order) plus this step's own send CTA. The
  *      shell deliberately leaves its footer-right empty here so the send button
  *      lives with the content it confirms.
  *   2. Success — the celebratory takeover shown once the dispatch lands:
- *      "계약 발송이 완료되었습니다!" with the SuccessCheck stroke-draw + a Confetti
+ *      "Your contract has been sent!" with the SuccessCheck stroke-draw + a Confetti
  *      burst (pure-CSS, reduced-motion-safe) and a staggered text fade-in.
  *
  * Sending is two ordered calls (save fields → send); see `lib/send.ts`. On
- * failure we surface the server's Korean message and let the user retry; a 401
+ * failure we surface the server's message and let the user retry; a 401
  * means the session lapsed, so we bounce to /login. On success we stash the
- * just-sent summary via `writeSentSignal` so the dashboard shows it as '진행 중'
+ * just-sent summary via `writeSentSignal` so the dashboard shows it as 'In progress'
  * the instant we route back.
  */
 
@@ -33,27 +33,27 @@ import { saveFields, sendContract } from '@/lib/send';
 import { useWizard, type RecipientDraft, type SignFieldDraft } from './wizard-context';
 
 const COPY = {
-  title: '발송 전 확인해 주세요',
-  subhead: '아래 내용으로 서명 요청을 보낼게요. 맞는지 확인해 주세요.',
-  docSection: '계약 문서',
-  fieldsSection: '서명 필드',
-  recipientsSection: '받는 분',
-  send: '발송',
-  schedule: '예약 발송',
-  scheduleDescription: '원하는 날짜와 시간에 서명 요청을 보냅니다.',
-  scheduleDateTime: '발송 날짜와 시간',
-  scheduleHint: '현재 시각 이후로 설정해 주세요.',
-  scheduleRequired: '예약 발송 날짜와 시간을 설정해 주세요.',
-  scheduleFuture: '현재 시각 이후로 설정해 주세요.',
-  scheduledSend: '예약 발송',
-  sending: '발송 중',
-  scheduling: '예약 중',
-  retry: '다시 시도',
-  successTitle: '계약 발송이 완료되었습니다!',
-  successBody: '받는 분에게 서명 요청을 보냈어요. 진행 상황은 대시보드에서 확인할 수 있어요.',
-  scheduledSuccessTitle: '계약 발송을 예약했어요!',
-  scheduledSuccessBody: '설정한 시간에 받는 분에게 서명 요청을 보낼게요. 진행 상황은 대시보드에서 확인할 수 있어요.',
-  successCta: '대시보드로 가기',
+  title: 'Review before sending',
+  subhead: "We'll send the signature request with the details below. Please make sure everything is correct.",
+  docSection: 'Contract document',
+  fieldsSection: 'Signature fields',
+  recipientsSection: 'Recipients',
+  send: 'Send',
+  schedule: 'Scheduled send',
+  scheduleDescription: 'Send the signature request at the date and time you choose.',
+  scheduleDateTime: 'Send date and time',
+  scheduleHint: 'Please set a time later than now.',
+  scheduleRequired: 'Please set a date and time for the scheduled send.',
+  scheduleFuture: 'Please set a time later than now.',
+  scheduledSend: 'Schedule send',
+  sending: 'Sending',
+  scheduling: 'Scheduling',
+  retry: 'Try again',
+  successTitle: 'Your contract has been sent!',
+  successBody: 'We sent the signature request to your recipients. You can track progress on the dashboard.',
+  scheduledSuccessTitle: 'Your contract send has been scheduled!',
+  scheduledSuccessBody: "We'll send the signature request to your recipients at the scheduled time. You can track progress on the dashboard.",
+  successCta: 'Go to dashboard',
 } as const;
 
 type SendState = 'idle' | 'sending' | 'error';
@@ -108,7 +108,7 @@ export function ReviewStep() {
         return;
       }
       setError(
-        err instanceof ApiError ? err.message : '문제가 생겼어요. 잠시 후 다시 시도해 주세요.',
+        err instanceof ApiError ? err.message : 'Something went wrong. Please try again shortly.',
       );
       setStatus('error');
     }
@@ -278,7 +278,7 @@ function DocumentSummaryCard({
         </span>
         <div className="flex min-w-0 flex-1 flex-col gap-2xs">
           <p className="truncate text-base font-bold text-foreground">
-            {document?.title ?? '제목 없는 계약'}
+            {document?.title ?? 'Untitled contract'}
           </p>
           <p className="text-sm text-foreground-subtle">{docMeta(document, fieldCount)}</p>
         </div>
@@ -289,8 +289,9 @@ function DocumentSummaryCard({
 
 function docMeta(document: DocumentSummary | null, fieldCount: number): string {
   const parts: string[] = [];
-  if (document && document.pageCount > 0) parts.push(`${document.pageCount}페이지`);
-  parts.push(`서명 필드 ${fieldCount}개`);
+  if (document && document.pageCount > 0)
+    parts.push(`${document.pageCount} page${document.pageCount === 1 ? '' : 's'}`);
+  parts.push(`${fieldCount} signature field${fieldCount === 1 ? '' : 's'}`);
   return parts.join(' · ');
 }
 
@@ -305,7 +306,7 @@ function FieldsSummaryCard({ fields }: { fields: SignFieldDraft[] }) {
   return (
     <SummaryCard
       title={COPY.fieldsSection}
-      trailing={<span className="text-sm font-semibold text-foreground-subtle">전체 {fields.length}개</span>}
+      trailing={<span className="text-sm font-semibold text-foreground-subtle">{fields.length} total</span>}
     >
       <ul className="flex flex-wrap gap-xs">
         {FIELD_TYPES.filter((t) => counts[t] > 0).map((t) => (
@@ -316,7 +317,7 @@ function FieldsSummaryCard({ fields }: { fields: SignFieldDraft[] }) {
             <span className="flex h-4 w-4 items-center justify-center">
               <FieldGlyph type={t} />
             </span>
-            {FIELD_TYPE_META[t].label} {counts[t]}개
+            {FIELD_TYPE_META[t].label} × {counts[t]}
           </li>
         ))}
       </ul>
@@ -328,14 +329,14 @@ function RecipientsSummaryCard({ recipients }: { recipients: RecipientDraft[] })
   return (
     <SummaryCard
       title={COPY.recipientsSection}
-      trailing={<span className="text-sm font-semibold text-foreground-subtle">{recipients.length}명</span>}
+      trailing={<span className="text-sm font-semibold text-foreground-subtle">{recipients.length} total</span>}
     >
       <ol className="flex flex-col gap-xs">
         {recipients.map((r, i) => (
           <li key={r.id} className="flex items-center gap-sm">
             <span
               className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-subtle text-sm font-bold text-primary"
-              aria-label={`서명 순서 ${i + 1}번째`}
+              aria-label={`Signing order ${i + 1}`}
             >
               {i + 1}
             </span>

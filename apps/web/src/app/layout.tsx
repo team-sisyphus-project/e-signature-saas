@@ -7,8 +7,8 @@ import { LocaleProvider } from '@/components/locale-provider';
 import { WebTranslationDiagnostics } from '@/components/web-translation-diagnostics';
 
 export const metadata: Metadata = {
-  title: '전자계약',
-  description: '전자계약 SaaS',
+  title: 'eSign',
+  description: 'eSign SaaS',
 };
 
 export const viewport: Viewport = {
@@ -31,7 +31,7 @@ export default async function RootLayout({
   const branding = await fetchBrandingServer();
 
   return (
-    <html lang="ko" style={brandStyle(branding.brandColor)}>
+    <html lang="en" style={brandStyle(branding.brandColor)}>
       <head>
         {branding.faviconUrl ? (
           <link rel="icon" href={branding.faviconUrl} data-branding="" />
