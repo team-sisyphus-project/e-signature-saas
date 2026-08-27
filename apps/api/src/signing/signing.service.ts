@@ -53,7 +53,11 @@ export class SigningService {
    * exposes the PDF, fields, or full recipient identity before the 6-digit
    * code is verified.
    */
-  async meta(accessToken: string, acceptLanguage?: string): Promise<SigningMeta> {
+  async meta(
+    accessToken: string,
+    acceptLanguage?: string,
+    linkLocale?: string,
+  ): Promise<SigningMeta> {
     const signRequest = await this.prisma.signRequest.findUnique({
       where: { accessToken },
       include: {
@@ -77,7 +81,7 @@ export class SigningService {
         brandLogoUrl: document.owner.brandLogoUrl,
         locale: document.owner.locale,
       },
-      locale: resolveLocale({ senderLocale: document.owner.locale, acceptLanguage }),
+      locale: resolveLocale({ linkLocale, senderLocale: document.owner.locale, acceptLanguage }),
       recipientNameMasked: maskName(signRequest.recipientName),
       status: signRequest.status,
       alreadySigned: signRequest.status === SignRequestStatus.SIGNED,

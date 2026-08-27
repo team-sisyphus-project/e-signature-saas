@@ -23,6 +23,7 @@
 import * as React from 'react';
 import { ApiError } from '@/lib/api';
 import { useLocale } from '@/components/locale-provider';
+import { getLinkLocale } from '@/lib/locale';
 import { signerCopyFor } from '@/lib/signing';
 import {
   fetchShareMeta,
@@ -170,7 +171,7 @@ export function ShareProvider({
   React.useEffect(() => {
     let active = true;
     setPublicLinkActive(true);
-    fetchShareMeta(token)
+    fetchShareMeta(token, getLinkLocale())
       .then((meta) => {
         if (!active) return;
         setSenderLocale(meta.locale);

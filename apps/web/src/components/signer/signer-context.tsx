@@ -23,6 +23,7 @@
 import * as React from 'react';
 import { ApiError } from '@/lib/api';
 import { useLocale } from '@/components/locale-provider';
+import { getLinkLocale } from '@/lib/locale';
 import {
   completeSigning,
   downloadSignerArtifact,
@@ -181,7 +182,7 @@ export function SignerProvider({
   React.useEffect(() => {
     let active = true;
     setPublicLinkActive(true);
-    fetchMeta(token)
+    fetchMeta(token, getLinkLocale())
       .then((meta) => {
         if (!active) return;
         setSenderLocale(meta.locale);

@@ -5,6 +5,7 @@ import { getUser } from '@/lib/auth';
 import {
   fetchTranslationResources,
   getBrowserLanguages,
+  getLinkLocale,
   resolveLocale,
   type SupportedLocale,
   type TranslationResources,
@@ -31,27 +32,37 @@ const LocaleContext = React.createContext<LocaleContextValue | null>(null);
  */
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
   const [userLocale, setUserLocale] = React.useState<string | null>(null);
+  const [linkLocale, setLinkLocale] = React.useState<string | null>(null);
   const [senderLocale, setSenderLocale] = React.useState<string | null>(null);
   const [publicLinkActive, setPublicLinkActive] = React.useState(false);
   const [browserLanguages, setBrowserLanguages] = React.useState<readonly string[]>([]);
   const [resources, setResources] = React.useState<TranslationResources['resources']>();
 
   const refreshUserLocale = React.useCallback(() => setUserLocale(getUser()?.locale ?? null), []);
+  const refreshLinkLocale = React.useCallback(() => setLinkLocale(getLinkLocale() ?? null), []);
   const setPublicSenderLocale = React.useCallback(
     (locale: string | null | undefined) => setSenderLocale(locale ?? null),
     [],
   );
 
+  // The URL is read after mount rather than through `useSearchParams`, which
+  // would opt the whole app shell out of static rendering. `popstate` keeps the
+  // tier from going stale when the visitor navigates back out of a `?lang=` link.
   React.useEffect(() => {
     setBrowserLanguages(getBrowserLanguages());
+    refreshLinkLocale();
     refreshUserLocale();
     window.addEventListener('esign:session-change', refreshUserLocale);
-    return () => window.removeEventListener('esign:session-change', refreshUserLocale);
-  }, [refreshUserLocale]);
+    window.addEventListener('popstate', refreshLinkLocale);
+    return () => {
+      window.removeEventListener('esign:session-change', refreshUserLocale);
+      window.removeEventListener('popstate', refreshLinkLocale);
+    };
+  }, [refreshUserLocale, refreshLinkLocale]);
 
   const locale = publicLinkActive
-    ? resolveLocale({ senderLocale, browserLanguages })
-    : resolveLocale({ userLocale, senderLocale, browserLanguages });
+    ? resolveLocale({ linkLocale, senderLocale, browserLanguages })
+    : resolveLocale({ userLocale, linkLocale, senderLocale, browserLanguages });
 
   React.useEffect(() => {
     let active = true;

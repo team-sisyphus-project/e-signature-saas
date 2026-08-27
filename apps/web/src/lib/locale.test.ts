@@ -1,5 +1,8 @@
 import {
   DEFAULT_LOCALE,
+  getLinkLocale,
+  linkLocaleFromSearch,
+  linkLocaleQuery,
   localeFromBrowserLanguages,
   parseLocale,
   resolveLocale,
@@ -149,6 +152,96 @@ describe('web locale resolver', () => {
       expect(resolveLocale(input)).toBe('en');
       expect(resolveLocale(input)).toBe('en');
       expect(JSON.stringify(input)).toBe(snapshot);
+    });
+  });
+});
+
+/**
+ * The link parameter is the only tier the runtime reads out of the URL, so its
+ * reader is specified separately from `resolveLocale`: what it extracts, what it
+ * refuses to interpret, and that it survives a server render with no `window`.
+ */
+describe('link locale parameter', () => {
+  describe('reading a query string', () => {
+    it('extracts the parameter with or without a leading question mark', () => {
+      expect(linkLocaleFromSearch('?lang=en')).toBe('en');
+      expect(linkLocaleFromSearch('lang=en')).toBe('en');
+      expect(linkLocaleFromSearch('?token=abc&lang=en&ref=mail')).toBe('en');
+    });
+
+    it('returns nothing when the parameter is absent, empty or blank', () => {
+      expect(linkLocaleFromSearch('')).toBeUndefined();
+      expect(linkLocaleFromSearch(null)).toBeUndefined();
+      expect(linkLocaleFromSearch(undefined)).toBeUndefined();
+      expect(linkLocaleFromSearch('?token=abc')).toBeUndefined();
+      expect(linkLocaleFromSearch('?lang=')).toBeUndefined();
+      expect(linkLocaleFromSearch('?lang=%20%20')).toBeUndefined();
+    });
+
+    it('takes the first value when the parameter is repeated', () => {
+      expect(linkLocaleFromSearch('?lang=en&lang=ko')).toBe('en');
+    });
+
+    it('hands unsupported tags through unchanged so the next tier can decide', () => {
+      expect(linkLocaleFromSearch('?lang=fr')).toBe('fr');
+      expect(
+        resolveLocale({
+          linkLocale: linkLocaleFromSearch('?lang=fr'),
+          senderLocale: 'en',
+          browserLanguages: ['ko-KR'],
+        }),
+      ).toBe('en');
+    });
+
+    it('feeds a supported tag into the tier above the sender', () => {
+      expect(
+        resolveLocale({
+          linkLocale: linkLocaleFromSearch('?lang=en-US'),
+          senderLocale: 'ko',
+          browserLanguages: ['ko-KR'],
+        }),
+      ).toBe('en');
+    });
+  });
+
+  describe('reading the current location', () => {
+    const globals = globalThis as { window?: { location: { search: string } } };
+
+    afterEach(() => {
+      delete globals.window;
+    });
+
+    it('returns nothing when rendered without a window (SSR)', () => {
+      expect(globals.window).toBeUndefined();
+      expect(getLinkLocale()).toBeUndefined();
+    });
+
+    it('reads the parameter off the current URL in the browser', () => {
+      globals.window = { location: { search: '?lang=en' } };
+
+      expect(getLinkLocale()).toBe('en');
+    });
+
+    it('returns nothing when the current URL carries no parameter', () => {
+      globals.window = { location: { search: '?token=abc' } };
+
+      expect(getLinkLocale()).toBeUndefined();
+    });
+  });
+
+  describe('forwarding to the API', () => {
+    it('appends the parameter so the server resolves from the same tier', () => {
+      expect(linkLocaleQuery('en')).toBe('?lang=en');
+    });
+
+    it('escapes values instead of letting them extend the query', () => {
+      expect(linkLocaleQuery('en&admin=1')).toBe('?lang=en%26admin%3D1');
+    });
+
+    it('appends nothing when the link carries no parameter', () => {
+      expect(linkLocaleQuery(undefined)).toBe('');
+      expect(linkLocaleQuery(null)).toBe('');
+      expect(linkLocaleQuery('')).toBe('');
     });
   });
 });

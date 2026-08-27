@@ -65,6 +65,39 @@ export function resolveLocale(input: LocaleResolutionInput = {}): SupportedLocal
   );
 }
 
+/** Query parameter carrying an explicit locale on a signing/share link. */
+export const LINK_LOCALE_PARAM = 'lang';
+
+/**
+ * Raw `?lang=` value of a query string, or undefined when it is absent or blank.
+ *
+ * The value is returned unvalidated on purpose: `resolveLocale` owns which tags
+ * are supported, so `?lang=fr` must reach it as a spent tier and fall through to
+ * the sender/browser tiers, rather than being reclassified into the Korean
+ * default here.
+ */
+export function linkLocaleFromSearch(search?: string | null): string | undefined {
+  if (!search) return undefined;
+  // URLSearchParams strips a leading `?` itself, so both forms are accepted.
+  const value = new URLSearchParams(search).get(LINK_LOCALE_PARAM);
+  return value && value.trim() ? value : undefined;
+}
+
+/** Read the link locale from the current URL, without assuming a browser (SSR-safe). */
+export function getLinkLocale(): string | undefined {
+  if (typeof window === 'undefined') return undefined;
+  return linkLocaleFromSearch(window.location.search);
+}
+
+/**
+ * `?lang=…` suffix for a public-link API path; empty when there is nothing to
+ * forward. Keeps the server resolving from the same parameter the browser saw.
+ */
+export function linkLocaleQuery(linkLocale?: string | null): string {
+  if (!linkLocale) return '';
+  return `?${LINK_LOCALE_PARAM}=${encodeURIComponent(linkLocale)}`;
+}
+
 /** Browser-facing lookup for the API's read-only translation resources. */
 export function fetchTranslationResources(locale: SupportedLocale): Promise<TranslationResources> {
   return apiFetch<TranslationResources>(`/i18n/resources/${locale}`);

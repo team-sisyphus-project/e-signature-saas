@@ -8,6 +8,7 @@ import {
   Ip,
   Param,
   Post,
+  Query,
   Res,
   UseGuards,
 } from '@nestjs/common';
@@ -30,10 +31,21 @@ import { SaveFieldValuesDto } from '../signing/dto/signing.dto';
 export class SharePublicController {
   constructor(private readonly sharing: SharingService) {}
 
-  /** ① Pre-auth minimal metadata (no PDF / fields). */
+  /**
+   * ① Pre-auth minimal metadata (no PDF / fields).
+   *
+   * `?lang=` is the locale carried by the share link itself. It is forwarded
+   * verbatim — validation and precedence belong to `resolveLocale`, so an
+   * unusable value falls through to the sender locale instead of being
+   * rejected here and breaking an otherwise valid link.
+   */
   @Get(':token')
-  meta(@Param('token') token: string, @Headers('accept-language') acceptLanguage?: string) {
-    return this.sharing.meta(token, acceptLanguage);
+  meta(
+    @Param('token') token: string,
+    @Headers('accept-language') acceptLanguage?: string,
+    @Query('lang') lang?: string,
+  ) {
+    return this.sharing.meta(token, acceptLanguage, lang);
   }
 
   /** ② Unlock (verify password if set) → short-lived share session token. */

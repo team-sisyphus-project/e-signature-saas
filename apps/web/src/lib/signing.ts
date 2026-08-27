@@ -18,6 +18,7 @@
  */
 
 import { ApiError, apiDownload, apiFetch, apiUrl } from './api';
+import { linkLocaleQuery } from './locale';
 import {
   completionDownloadCopyFor,
   saveBlob,
@@ -240,9 +241,13 @@ export function clearSignerSession(accessToken: string): void {
 
 const base = (accessToken: string) => `/signing/${encodeURIComponent(accessToken)}`;
 
-/** ① Pre-auth metadata for the landing screen. */
-export function fetchMeta(accessToken: string): Promise<SigningMeta> {
-  return apiFetch<SigningMeta>(base(accessToken));
+/**
+ * ① Pre-auth metadata for the landing screen. `linkLocale` is the link's own
+ * `?lang=` value; forwarding it lets the server resolve `meta.locale` from the
+ * same tier the browser applies.
+ */
+export function fetchMeta(accessToken: string, linkLocale?: string): Promise<SigningMeta> {
+  return apiFetch<SigningMeta>(`${base(accessToken)}${linkLocaleQuery(linkLocale)}`);
 }
 
 /** ② Verify the 6-digit code → receive a short-lived session token. */

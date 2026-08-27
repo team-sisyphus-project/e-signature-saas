@@ -48,6 +48,26 @@ describe('SigningService.meta locale contract', () => {
 
     expect(meta.locale).toBe('ko');
   });
+
+  it('lets the link\u2019s ?lang= parameter override a Korean sender and Korean browser', async () => {
+    const meta = await serviceFor('ko').meta('sign-token', 'ko-KR,ko;q=0.9', 'en');
+
+    expect(meta.locale).toBe('en');
+    // The sender's own preference is reported unchanged — only the screen locale moves.
+    expect(meta.sender.locale).toBe('ko');
+  });
+
+  it('ignores an unsupported ?lang= value and keeps resolving from the sender', async () => {
+    const meta = await serviceFor('en').meta('sign-token', 'ko-KR,ko;q=0.9', 'fr');
+
+    expect(meta.locale).toBe('en');
+  });
+
+  it('falls back to Accept-Language when the link carries no parameter', async () => {
+    const meta = await serviceFor(null).meta('sign-token', 'en-US,en;q=0.9', undefined);
+
+    expect(meta.locale).toBe('en');
+  });
 });
 
 describe('SigningService.complete locale handoff', () => {

@@ -386,6 +386,28 @@ describe('SharingService — pre-auth meta', () => {
     expect(meta).not.toHaveProperty('pdfPath');
   });
 
+  it('resolves the screen locale from the link parameter, then sender, then browser', async () => {
+    const h = setup();
+    // A Korean sender, opened from a Korean browser: only the link says English.
+    h.prisma._users.get(h.ownerId)!.locale = 'ko';
+    const link = await h.sharing.createLink(h.ownerId, h.documentId, {});
+
+    await expect(h.sharing.meta(link.token, 'ko-KR,ko;q=0.9', 'en')).resolves.toMatchObject({
+      locale: 'en',
+      // The sender's own preference is reported unchanged — only the screen locale moves.
+      sender: { locale: 'ko' },
+    });
+    // An unusable parameter is spent, not fatal: the sender tier still decides.
+    await expect(h.sharing.meta(link.token, 'en-US,en;q=0.9', 'fr')).resolves.toMatchObject({
+      locale: 'ko',
+    });
+    // With no sender preference at all, the browser header is the last tier.
+    delete h.prisma._users.get(h.ownerId)!.locale;
+    await expect(h.sharing.meta(link.token, 'en-US,en;q=0.9')).resolves.toMatchObject({
+      locale: 'en',
+    });
+  });
+
   it('maps expired / revoked / invalid to the right status code', async () => {
     const h = setup();
     const link = await h.sharing.createLink(h.ownerId, h.documentId, {});

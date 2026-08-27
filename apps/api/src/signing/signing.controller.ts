@@ -9,6 +9,7 @@ import {
   Ip,
   Param,
   Post,
+  Query,
   Res,
   UseGuards,
 } from '@nestjs/common';
@@ -33,10 +34,21 @@ import { SaveFieldValuesDto, VerifyCodeDto } from './dto/signing.dto';
 export class SigningController {
   constructor(private readonly signing: SigningService) {}
 
-  /** ① Pre-auth minimal metadata (no PDF / fields). */
+  /**
+   * ① Pre-auth minimal metadata (no PDF / fields).
+   *
+   * `?lang=` is the locale carried by the signing link itself. It is forwarded
+   * verbatim — validation and precedence belong to `resolveLocale`, so an
+   * unusable value falls through to the sender locale instead of being
+   * rejected here and breaking an otherwise valid link.
+   */
   @Get(':token')
-  meta(@Param('token') token: string, @Headers('accept-language') acceptLanguage?: string) {
-    return this.signing.meta(token, acceptLanguage);
+  meta(
+    @Param('token') token: string,
+    @Headers('accept-language') acceptLanguage?: string,
+    @Query('lang') lang?: string,
+  ) {
+    return this.signing.meta(token, acceptLanguage, lang);
   }
 
   /** ② Verify the 6-digit code → issue a short-lived signer session token. */

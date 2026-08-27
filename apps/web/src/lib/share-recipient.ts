@@ -22,6 +22,7 @@
  */
 
 import { ApiError, apiFetch, apiUrl } from './api';
+import { linkLocaleQuery } from './locale';
 import { SHARE_PASSWORD_MIN_LENGTH } from './sharing';
 import type { SignFieldType, SignerSender, SignRequestStatus } from './signing';
 
@@ -116,9 +117,13 @@ export function clearShareSession(accessToken: string): void {
 
 const base = (accessToken: string) => `/share/${encodeURIComponent(accessToken)}`;
 
-/** ① Pre-auth metadata for the landing/gate screen. */
-export function fetchShareMeta(accessToken: string): Promise<ShareMeta> {
-  return apiFetch<ShareMeta>(base(accessToken));
+/**
+ * ① Pre-auth metadata for the landing/gate screen. `linkLocale` is the link's own
+ * `?lang=` value; forwarding it lets the server resolve `meta.locale` from the
+ * same tier the browser applies.
+ */
+export function fetchShareMeta(accessToken: string, linkLocale?: string): Promise<ShareMeta> {
+  return apiFetch<ShareMeta>(`${base(accessToken)}${linkLocaleQuery(linkLocale)}`);
 }
 
 /**
