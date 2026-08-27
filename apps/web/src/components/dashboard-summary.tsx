@@ -84,7 +84,7 @@ export interface DashboardSummaryCopy {
 const TONE: Record<SummaryFilterKey, { chip: string; mark: string; Mark: () => ReactElement }> = {
   OVERDUE: { chip: 'bg-danger-subtle', mark: 'text-danger', Mark: AlertTriangleMark },
   DUE_SOON: { chip: 'bg-warning-subtle', mark: 'text-warning', Mark: ClockMark },
-  AWAITING: { chip: 'bg-grey-100', mark: 'text-foreground-subtle', Mark: NeutralDotMark },
+  AWAITING: { chip: 'bg-surface-hover', mark: 'text-foreground-subtle', Mark: NeutralDotMark },
 };
 
 export interface DashboardSummaryProps {
@@ -263,5 +263,5 @@ function ClockMark() {
  * path.
  */
 function NeutralDotMark() {
-  return <span className="h-1.5 w-1.5 rounded-full bg-grey-400" aria-hidden="true" />;
+  return <span className="h-1.5 w-1.5 rounded-full bg-foreground-subtle" aria-hidden="true" />;
 }

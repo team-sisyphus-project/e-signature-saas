@@ -287,7 +287,7 @@ function PlanUsage({
               {isFree ? 'Free 플랜' : `${plan} 플랜`}
             </span>
             {isFree ? (
-              <span className="rounded-full bg-grey-100 px-xs py-2xs text-2xs font-semibold text-foreground-subtle">
+              <span className="rounded-full bg-surface-hover px-xs py-2xs text-2xs font-semibold text-foreground-subtle">
                 무료
               </span>
             ) : null}
@@ -337,7 +337,7 @@ function QuotaBar({ quota }: { quota: Quota | null }) {
   return (
     <div className="px-lg pb-lg">
       <div
-        className="h-2 w-full overflow-hidden rounded-full bg-grey-100"
+        className="h-2 w-full overflow-hidden rounded-full bg-surface-hover"
         role="progressbar"
         aria-valuemin={0}
         aria-valuemax={quota?.limit ?? 5}
@@ -504,10 +504,16 @@ function EmptyIllustration() {
         stroke="currentColor"
         strokeWidth="2.4"
         strokeLinecap="round"
-        className="text-grey-300"
+        className="text-border-strong"
       />
       <circle cx="68" cy="68" r="14" className="fill-primary" />
-      <path d="M68 62v12M62 68h12" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" />
+      <path
+        d="M68 62v12M62 68h12"
+        stroke="currentColor"
+        strokeWidth="2.6"
+        strokeLinecap="round"
+        className="text-primary-foreground"
+      />
     </svg>
   );
 }

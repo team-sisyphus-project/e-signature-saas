@@ -22,8 +22,8 @@ export const STATUS_TONE: Record<DocumentStatus, { tint: string; dot: string; te
   IN_PROGRESS: { tint: 'bg-primary-subtle', dot: 'bg-primary', text: 'text-primary' },
   SCHEDULED: { tint: 'bg-primary-subtle', dot: 'bg-primary', text: 'text-primary' },
   COMPLETED: { tint: 'bg-success-subtle', dot: 'bg-success', text: 'text-foreground-muted' },
-  DRAFT: { tint: 'bg-grey-100', dot: 'bg-grey-400', text: 'text-foreground-muted' },
-  CANCELLED: { tint: 'bg-grey-100', dot: 'bg-grey-300', text: 'text-foreground-subtle' },
+  DRAFT: { tint: 'bg-surface-hover', dot: 'bg-foreground-subtle', text: 'text-foreground-muted' },
+  CANCELLED: { tint: 'bg-surface-hover', dot: 'bg-foreground-subtle', text: 'text-foreground-subtle' },
 };
 
 export interface StatusBadgeProps {
