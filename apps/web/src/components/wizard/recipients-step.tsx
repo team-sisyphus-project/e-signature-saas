@@ -435,7 +435,7 @@ function IconButton({
         'disabled:cursor-not-allowed disabled:opacity-30',
         tone === 'danger'
           ? 'hover:bg-danger/10 hover:text-danger'
-          : 'hover:bg-grey-100 hover:text-foreground',
+          : 'hover:bg-surface-hover hover:text-foreground',
       )}
     >
       {children}

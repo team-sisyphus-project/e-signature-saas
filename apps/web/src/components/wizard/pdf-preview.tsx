@@ -76,8 +76,17 @@ export function PdfPreview({ file, onPageCount, className }: PdfPreviewProps) {
         </div>
       ) : null}
 
+      {/*
+        White document island: the rendered contract page must look identical to
+        the printed/PDF original — a white page with dark ink — in every theme.
+        `data-surface="document"` re-pins the color tokens to their light values
+        for this page frame only, so the global dark theme can't reach the page
+        (its border/backing stay light). The error/skeleton chrome above sits
+        outside the island and themes with the surrounding dark UI.
+      */}
       <canvas
         ref={canvasRef}
+        data-surface="document"
         role="img"
         aria-label="업로드한 PDF 첫 페이지 미리보기"
         className={cn(
@@ -91,7 +100,7 @@ export function PdfPreview({ file, onPageCount, className }: PdfPreviewProps) {
 
 function PdfBrokenIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-7 w-7 text-grey-400" fill="none" aria-hidden="true">
+    <svg viewBox="0 0 24 24" className="h-7 w-7 text-foreground-subtle" fill="none" aria-hidden="true">
       <path
         d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"
         stroke="currentColor"

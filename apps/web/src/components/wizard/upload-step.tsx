@@ -260,7 +260,7 @@ function UploadingView({
         </Button>
       </div>
       <div
-        className="h-2 w-full overflow-hidden rounded-full bg-grey-100"
+        className="h-2 w-full overflow-hidden rounded-full bg-surface-hover"
         role="progressbar"
         aria-valuemin={0}
         aria-valuemax={100}

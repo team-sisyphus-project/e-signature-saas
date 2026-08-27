@@ -166,6 +166,48 @@
     --color-focus-danger: color-mix(in srgb, var(--color-danger) 40%, transparent);
   }
 
+  /*
+   * — White document-preview island (scoped light-token reset) —
+   *
+   * The rendered contract page must look identical to the printed/PDF original:
+   * a white page with dark ink, in every theme. Marked by `data-surface="document"`
+   * on the page frame only (the upload-flow PDF preview `<canvas>`; the field
+   * placement editor's page wrapper). Under `data-theme="dark"` the page backing,
+   * ink, and overlaid field-box fills would otherwise flip to dark. This block
+   * re-declares the theme-flipping color tokens at their light Base values on the
+   * island element itself. CSS custom properties resolve to the nearest ancestor
+   * that sets them, so this descendant of `:root` wins over the
+   * `:root[data-theme='dark']` block for its subtree regardless of specificity —
+   * the dark override cannot leak past the island boundary. No new token or dark
+   * value is introduced (every value equals the light Base); in light mode the
+   * island is a no-op. The `--grey-*` ramp and the `--brand-primary` hue are not
+   * re-declared here, so a sender's brand override still flows into field chrome.
+   */
+  [data-surface='document'] {
+    --color-background: var(--grey-100);
+    --color-surface: #ffffff;
+    --color-surface-muted: var(--grey-50);
+    --surface-hover: var(--grey-100);
+    --color-foreground: var(--grey-900);
+    --color-foreground-muted: var(--grey-700);
+    --color-foreground-subtle: var(--grey-600);
+    --color-border: var(--grey-200);
+    --color-border-strong: var(--grey-300);
+    /* Field-box tint stays light on the white page (the hue still follows the
+       sender's `--brand-primary`; only the light *tint* value is pinned). */
+    --brand-primary-subtle: #e8f1ff;
+    --color-success: #15c47e;
+    --color-success-foreground: #ffffff;
+    --color-success-subtle: #e7f9f1;
+    --color-danger: #d62f3c;
+    --color-danger-foreground: #ffffff;
+    --color-danger-subtle: #fdecee;
+    --color-warning: #ff9500;
+    --color-warning-foreground: #ffffff;
+    --color-warning-subtle: #fff4e6;
+    --color-overlay: rgba(13, 16, 21, 0.55);
+  }
+
   html {
     -webkit-text-size-adjust: 100%;
   }
