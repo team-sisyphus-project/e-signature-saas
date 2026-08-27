@@ -1,7 +1,9 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { MESSAGES, SHARE_SESSION_TTL_MINUTES } from '../common/messages';
+import { SHARE_SESSION_TTL_MINUTES } from '../common/messages';
+import { DEFAULT_LOCALE, type SupportedLocale } from '../i18n/locale-resolver';
+import { translate } from '../i18n/server-translations';
 
 /**
  * Default share-session secret for local dev. Production must set
@@ -52,23 +54,26 @@ export class ShareSessionService {
   }
 
   /**
-   * Verify a bearer token and return the bound SignRequest id. Throws a
-   * Toss-tone "다시 열어 주세요" message on any failure (expired / malformed /
-   * wrong audience) so the recipient is guided back to the link.
+   * Verify a bearer token and return the bound SignRequest id. Throws the
+   * "open the link again" message on any failure (expired / malformed / wrong
+   * audience) so the recipient is guided back to the link.
+   *
+   * `locale` is the language that message is written in — the recipient never
+   * logged in, so it is resolved from their link by the guard that calls this.
+   * It defaults to Korean, the product default, so a caller that has no request
+   * in hand still gets readable copy.
    */
-  verify(token: string | undefined): ShareSession {
-    if (!token) {
-      throw new UnauthorizedException(MESSAGES.share.sessionExpired);
-    }
+  verify(token: string | undefined, locale: SupportedLocale = DEFAULT_LOCALE): ShareSession {
+    const expired = () => new UnauthorizedException(translate(locale, 'share.sessionExpired'));
+
+    if (!token) throw expired();
     try {
       const payload = this.jwt.verify<ShareTokenPayload>(token, { secret: this.secret });
-      if (payload.typ !== SHARE_TOKEN_TYPE || !payload.sub) {
-        throw new UnauthorizedException(MESSAGES.share.sessionExpired);
-      }
+      if (payload.typ !== SHARE_TOKEN_TYPE || !payload.sub) throw expired();
       return { signRequestId: payload.sub };
     } catch (err) {
       if (err instanceof UnauthorizedException) throw err;
-      throw new UnauthorizedException(MESSAGES.share.sessionExpired);
+      throw expired();
     }
   }
 }

@@ -33,7 +33,12 @@ import { LinkPasswordCipher } from './link-password-cipher';
 import { SendQuotaService } from '../common/send-quota.service';
 import type { SaveFieldValuesDto } from '../signing/dto/signing.dto';
 import type { CreateShareLinkDto, UpdateShareLinkPasswordDto } from './dto/sharing.dto';
-import { resolveLocale, type SupportedLocale } from '../i18n/locale-resolver';
+import {
+  resolvePublicEntryLocale,
+  type PublicLocaleHints,
+  type SupportedLocale,
+} from '../i18n/locale-resolver';
+import { translate } from '../i18n/server-translations';
 
 /** Audit-log action names for the share-link flow. */
 const AUDIT_ACTION = {
@@ -316,7 +321,15 @@ export class SharingService {
         },
       },
     });
-    assertLinkAccessible(link);
+
+    // Resolved before the gate, so an expired or revoked link is refused in the
+    // recipient's language rather than the product default.
+    const locale = resolvePublicEntryLocale({
+      linkLocale,
+      senderLocale: link?.document.owner.locale,
+      acceptLanguage,
+    });
+    assertLinkAccessible(link, new Date(), locale);
 
     return {
       documentTitle: link!.document.title,
@@ -326,11 +339,7 @@ export class SharingService {
         brandLogoUrl: link!.document.owner.brandLogoUrl,
         locale: link!.document.owner.locale,
       },
-      locale: resolveLocale({
-        linkLocale,
-        senderLocale: link!.document.owner.locale,
-        acceptLanguage,
-      }),
+      locale,
       requiresPassword: link!.linkPasswordCipher != null,
       expiresAt: link!.linkExpiresAt ? link!.linkExpiresAt.toISOString() : null,
       alreadySubmitted: link!.status === SignRequestStatus.SIGNED,
@@ -351,6 +360,7 @@ export class SharingService {
     password: string | undefined,
     ip?: string,
     userAgent?: string,
+    hints: PublicLocaleHints = {},
   ): Promise<UnlockResult> {
     const link = await this.prisma.signRequest.findUnique({
       where: { accessToken },
@@ -361,26 +371,28 @@ export class SharingService {
         linkExpiresAt: true,
         linkRevokedAt: true,
         linkPasswordCipher: true,
-        document: { select: { status: true } },
+        document: { select: { status: true, owner: { select: { locale: true } } } },
       },
     });
-    assertLinkAccessible(link);
+
+    const locale = this.localeFor(hints, link?.document.owner.locale);
+    assertLinkAccessible(link, new Date(), locale);
 
     if (link!.status === SignRequestStatus.SIGNED) {
-      throw new ForbiddenException(MESSAGES.share.alreadySubmitted);
+      throw new ForbiddenException(translate(locale, 'share.alreadySubmitted'));
     }
     if (!this.isAccessible(link!.document.status, link!.status)) {
-      throw new ForbiddenException(MESSAGES.share.notSignable);
+      throw new ForbiddenException(translate(locale, 'share.notSignable'));
     }
 
     if (link!.linkPasswordCipher) {
       // Minimal lockout: deny before comparing once recent failures pile up.
       const recentFailures = await this.countRecentUnlockFailures(link!.id);
       if (recentFailures >= SHARE_UNLOCK_MAX_ATTEMPTS) {
-        throw new ForbiddenException(MESSAGES.share.locked);
+        throw new ForbiddenException(translate(locale, 'share.locked'));
       }
       if (!password) {
-        throw new UnauthorizedException(MESSAGES.share.passwordRequired);
+        throw new UnauthorizedException(translate(locale, 'share.passwordRequired'));
       }
       // New links store reversible ciphertext (decrypt-and-compare); links minted
       // before this change still hold a bcrypt hash (hash-library compare).
@@ -395,7 +407,7 @@ export class SharingService {
           ip,
           metadata: { userAgent: userAgent ?? null },
         });
-        throw new UnauthorizedException(MESSAGES.share.wrongPassword);
+        throw new UnauthorizedException(translate(locale, 'share.wrongPassword'));
       }
     }
 
@@ -422,12 +434,23 @@ export class SharingService {
    * plus the short-lived API path to stream the PDF. Records a VIEWED audit the
    * first time the document content is actually served.
    */
-  async payload(signRequestId: string, accessToken: string): Promise<SharePayload> {
+  async payload(
+    signRequestId: string,
+    accessToken: string,
+    hints: PublicLocaleHints = {},
+  ): Promise<SharePayload> {
     const link = await this.prisma.signRequest.findUnique({
       where: { id: signRequestId },
       select: {
         status: true,
-        document: { select: { title: true, pageCount: true, status: true } },
+        document: {
+          select: {
+            title: true,
+            pageCount: true,
+            status: true,
+            owner: { select: { locale: true } },
+          },
+        },
         signFields: {
           orderBy: [{ page: 'asc' }, { y: 'asc' }],
           select: {
@@ -443,12 +466,16 @@ export class SharingService {
         },
       },
     });
-    if (!link) throw new NotFoundException(MESSAGES.share.invalidLink);
+    if (!link) {
+      throw new NotFoundException(translate(this.localeFor(hints), 'share.invalidLink'));
+    }
+
+    const locale = this.localeFor(hints, link.document.owner.locale);
     if (link.status === SignRequestStatus.SIGNED) {
-      throw new ForbiddenException(MESSAGES.share.alreadySubmitted);
+      throw new ForbiddenException(translate(locale, 'share.alreadySubmitted'));
     }
     if (!this.isAccessible(link.document.status, link.status)) {
-      throw new ForbiddenException(MESSAGES.share.notSignable);
+      throw new ForbiddenException(translate(locale, 'share.notSignable'));
     }
 
     await this.recordFirstView(signRequestId);
@@ -471,13 +498,17 @@ export class SharingService {
   }
 
   /** Stream the document PDF bytes — reuses the signer flow's opener. */
-  openPdf(signRequestId: string): Promise<Readable> {
-    return this.signing.openPdf(signRequestId);
+  openPdf(signRequestId: string, hints: PublicLocaleHints = {}): Promise<Readable> {
+    return this.signing.openPdf(signRequestId, hints);
   }
 
   /** Persist captured field values — reuses the signer flow's validation. */
-  saveFields(signRequestId: string, dto: SaveFieldValuesDto): Promise<{ saved: number }> {
-    return this.signing.saveFields(signRequestId, dto);
+  saveFields(
+    signRequestId: string,
+    dto: SaveFieldValuesDto,
+    hints: PublicLocaleHints = {},
+  ): Promise<{ saved: number }> {
+    return this.signing.saveFields(signRequestId, dto, hints);
   }
 
   /**
@@ -486,16 +517,35 @@ export class SharingService {
    * when last, and enqueue completion post-processing so the **sender** gets the
    * completion notification — then returns the share-flavoured success headline.
    */
-  async submit(signRequestId: string, ip?: string, userAgent?: string): Promise<SubmitResult> {
-    const result = await this.signing.complete(signRequestId, ip, userAgent);
+  async submit(
+    signRequestId: string,
+    ip?: string,
+    userAgent?: string,
+    hints: PublicLocaleHints = {},
+  ): Promise<SubmitResult> {
+    const result = await this.signing.complete(signRequestId, ip, userAgent, hints);
     return {
       status: result.status,
       documentCompleted: result.documentCompleted,
-      message: MESSAGES.share.submitted,
+      // The completion machine already resolved this recipient's language from
+      // the same row; resolving it again here could answer differently.
+      message: translate(result.locale, 'share.submitted'),
     };
   }
 
   // --- internals -----------------------------------------------------------
+
+  /**
+   * The language a recipient is answered in: the link's own hints plus the
+   * sender tier, absent when the token resolved to no row at all.
+   *
+   * `resolvePublicEntryLocale` — not `resolveLocale` — because a share link is
+   * opened by someone who is not the account holder, and a stale session of some
+   * other account must never repaint their screen.
+   */
+  private localeFor(hints: PublicLocaleHints, senderLocale?: string | null): SupportedLocale {
+    return resolvePublicEntryLocale({ ...hints, senderLocale });
+  }
 
   /** A link can be opened/filled only while the document is in progress. */
   private isAccessible(documentStatus: DocumentStatus, requestStatus: SignRequestStatus): boolean {

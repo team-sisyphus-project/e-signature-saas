@@ -1,8 +1,9 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { MESSAGES } from '../common/messages';
 import { SIGNER_SESSION_TTL_MINUTES } from '../common/messages';
+import { DEFAULT_LOCALE, type SupportedLocale } from '../i18n/locale-resolver';
+import { translate } from '../i18n/server-translations';
 
 /**
  * Default signer-session secret for local dev. Production must set
@@ -51,23 +52,27 @@ export class SignerSessionService {
   }
 
   /**
-   * Verify a bearer token and return the bound SignRequest id. Throws a
-   * Toss-tone "다시 인증" message on any failure (expired / malformed / wrong
+   * Verify a bearer token and return the bound SignRequest id. Throws the
+   * "verify again" message on any failure (expired / malformed / wrong
    * audience) so the signer is guided back to the code screen.
+   *
+   * `locale` is the language that message is written in — the signer never
+   * logged in, so it is resolved from their link by the guard that calls this.
+   * It defaults to Korean, the product default, so a caller that has no request
+   * in hand still gets readable copy.
    */
-  verify(token: string | undefined): SignerSession {
-    if (!token) {
-      throw new UnauthorizedException(MESSAGES.signing.sessionExpired);
-    }
+  verify(token: string | undefined, locale: SupportedLocale = DEFAULT_LOCALE): SignerSession {
+    const expired = () =>
+      new UnauthorizedException(translate(locale, 'signing.sessionExpired'));
+
+    if (!token) throw expired();
     try {
       const payload = this.jwt.verify<SignerTokenPayload>(token, { secret: this.secret });
-      if (payload.typ !== SIGNER_TOKEN_TYPE || !payload.sub) {
-        throw new UnauthorizedException(MESSAGES.signing.sessionExpired);
-      }
+      if (payload.typ !== SIGNER_TOKEN_TYPE || !payload.sub) throw expired();
       return { signRequestId: payload.sub };
     } catch (err) {
       if (err instanceof UnauthorizedException) throw err;
-      throw new UnauthorizedException(MESSAGES.signing.sessionExpired);
+      throw expired();
     }
   }
 }

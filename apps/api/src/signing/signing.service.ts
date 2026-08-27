@@ -16,15 +16,28 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import {
-  MESSAGES,
   SIGNER_VERIFY_LOCK_WINDOW_MINUTES,
   SIGNER_VERIFY_MAX_ATTEMPTS,
 } from '../common/messages';
 import { SignerSessionService } from './signer-session.service';
 import { CompletionQueue } from '../completion/completion.queue';
-import { artifactFilename, type CompletionArtifact } from '../completion/artifact';
+import { artifactFilename, parseArtifactKind } from '../completion/artifact';
 import type { SaveFieldValuesDto } from './dto/signing.dto';
-import { resolveLocale, type SupportedLocale } from '../i18n/locale-resolver';
+import {
+  resolveLocale,
+  resolvePublicEntryLocale,
+  type PublicLocaleHints,
+  type SupportedLocale,
+} from '../i18n/locale-resolver';
+import { translate } from '../i18n/server-translations';
+
+/**
+ * The shape of a signer's out-of-band code. The rule lives here, beside the
+ * comparison it protects, rather than in the DTO: a `class-validator` message
+ * cannot be localized, and the visitor reading it never logged in and never
+ * chose the language it would be written in.
+ */
+const VERIFY_CODE_PATTERN = /^\d{6}$/;
 
 /** Audit-log action names for the signer flow. */
 const AUDIT_ACTION = {
@@ -68,7 +81,13 @@ export class SigningService {
         },
       },
     });
-    if (!signRequest) throw new NotFoundException(MESSAGES.signing.invalidLink);
+    if (!signRequest) {
+      // A token that resolves to nothing has no sender, so the refusal speaks
+      // in the only two tiers the request brought with it.
+      throw new NotFoundException(
+        translate(resolvePublicEntryLocale({ linkLocale, acceptLanguage }), 'signing.invalidLink'),
+      );
+    }
 
     const { document } = signRequest;
     return {
@@ -81,7 +100,11 @@ export class SigningService {
         brandLogoUrl: document.owner.brandLogoUrl,
         locale: document.owner.locale,
       },
-      locale: resolveLocale({ linkLocale, senderLocale: document.owner.locale, acceptLanguage }),
+      locale: resolvePublicEntryLocale({
+        linkLocale,
+        senderLocale: document.owner.locale,
+        acceptLanguage,
+      }),
       recipientNameMasked: maskName(signRequest.recipientName),
       status: signRequest.status,
       alreadySigned: signRequest.status === SignRequestStatus.SIGNED,
@@ -102,24 +125,40 @@ export class SigningService {
     code: string,
     ip?: string,
     userAgent?: string,
+    hints: PublicLocaleHints = {},
   ): Promise<VerifyResult> {
     const signRequest = await this.prisma.signRequest.findUnique({
       where: { accessToken },
-      select: { id: true, status: true, verifyCode: true, document: { select: { status: true } } },
+      select: {
+        id: true,
+        status: true,
+        verifyCode: true,
+        document: { select: { status: true, owner: { select: { locale: true } } } },
+      },
     });
-    if (!signRequest) throw new NotFoundException(MESSAGES.signing.invalidLink);
+    if (!signRequest) {
+      throw new NotFoundException(
+        translate(resolvePublicEntryLocale(hints), 'signing.invalidLink'),
+      );
+    }
 
+    const locale = this.localeFor(hints, signRequest.document.owner.locale);
     if (signRequest.status === SignRequestStatus.SIGNED) {
-      throw new ForbiddenException(MESSAGES.signing.alreadySigned);
+      throw new ForbiddenException(translate(locale, 'signing.alreadySigned'));
     }
     if (!this.isSignable(signRequest.document.status, signRequest.status)) {
-      throw new ForbiddenException(MESSAGES.signing.notSignable);
+      throw new ForbiddenException(translate(locale, 'signing.notSignable'));
+    }
+    if (!VERIFY_CODE_PATTERN.test(code)) {
+      // Not a failed attempt — nothing was compared — so this costs the visitor
+      // none of their remaining tries.
+      throw new BadRequestException(translate(locale, 'signing.codeFormat'));
     }
 
     // Lockout: too many recent failures → deny before comparing.
     const recentFailures = await this.countRecentVerifyFailures(signRequest.id);
     if (recentFailures >= SIGNER_VERIFY_MAX_ATTEMPTS) {
-      throw new ForbiddenException(MESSAGES.signing.locked);
+      throw new ForbiddenException(translate(locale, 'signing.locked'));
     }
 
     const matches =
@@ -131,7 +170,7 @@ export class SigningService {
         ip,
         metadata: { userAgent: userAgent ?? null },
       });
-      throw new BadRequestException(MESSAGES.signing.codeMismatch);
+      throw new BadRequestException(translate(locale, 'signing.codeMismatch'));
     }
 
     // Success: mark viewed (first time) and record the VERIFIED event.
@@ -159,11 +198,19 @@ export class SigningService {
    * the short-lived API path to stream the PDF. Records a VIEWED audit log the
    * first time the document content is actually served.
    */
-  async payload(signRequestId: string): Promise<SigningPayload> {
+  async payload(signRequestId: string, hints: PublicLocaleHints = {}): Promise<SigningPayload> {
     const signRequest = await this.prisma.signRequest.findUnique({
       where: { id: signRequestId },
       include: {
-        document: { select: { id: true, title: true, pageCount: true, status: true } },
+        document: {
+          select: {
+            id: true,
+            title: true,
+            pageCount: true,
+            status: true,
+            owner: { select: { locale: true } },
+          },
+        },
         signFields: {
           orderBy: [{ page: 'asc' }, { y: 'asc' }],
           select: {
@@ -179,12 +226,18 @@ export class SigningService {
         },
       },
     });
-    if (!signRequest) throw new NotFoundException(MESSAGES.signing.invalidLink);
+    if (!signRequest) {
+      throw new NotFoundException(
+        translate(resolvePublicEntryLocale(hints), 'signing.invalidLink'),
+      );
+    }
+
+    const locale = this.localeFor(hints, signRequest.document.owner.locale);
     if (signRequest.status === SignRequestStatus.SIGNED) {
-      throw new ForbiddenException(MESSAGES.signing.alreadySigned);
+      throw new ForbiddenException(translate(locale, 'signing.alreadySigned'));
     }
     if (!this.isSignable(signRequest.document.status, signRequest.status)) {
-      throw new ForbiddenException(MESSAGES.signing.notSignable);
+      throw new ForbiddenException(translate(locale, 'signing.notSignable'));
     }
 
     await this.recordFirstView(signRequestId);
@@ -209,12 +262,18 @@ export class SigningService {
   // --- ④ pdf bytes (session) ----------------------------------------------
 
   /** Open the document's PDF bytes as a stream for `application/pdf` download. */
-  async openPdf(signRequestId: string): Promise<Readable> {
+  async openPdf(signRequestId: string, hints: PublicLocaleHints = {}): Promise<Readable> {
     const signRequest = await this.prisma.signRequest.findUnique({
       where: { id: signRequestId },
-      select: { document: { select: { storageKey: true } } },
+      select: {
+        document: { select: { storageKey: true, owner: { select: { locale: true } } } },
+      },
     });
-    if (!signRequest) throw new NotFoundException(MESSAGES.signing.invalidLink);
+    if (!signRequest) {
+      throw new NotFoundException(
+        translate(resolvePublicEntryLocale(hints), 'signing.invalidLink'),
+      );
+    }
 
     return this.storage.openStream(signRequest.document.storageKey);
   }
@@ -230,7 +289,8 @@ export class SigningService {
    */
   async openArtifact(
     signRequestId: string,
-    kind: CompletionArtifact,
+    artifact: string,
+    hints: PublicLocaleHints = {},
   ): Promise<{ stream: Readable; filename: string }> {
     const signRequest = await this.prisma.signRequest.findUnique({
       where: { id: signRequestId },
@@ -246,13 +306,23 @@ export class SigningService {
         },
       },
     });
-    if (!signRequest) throw new NotFoundException(MESSAGES.signing.invalidLink);
+    if (!signRequest) {
+      throw new NotFoundException(
+        translate(resolvePublicEntryLocale(hints), 'signing.invalidLink'),
+      );
+    }
 
     const { document } = signRequest;
+    // The visitor's language governs what they are *told*; the sender's governs
+    // what the file is *called* (below).
+    const spoken = this.localeFor(hints, document.owner.locale);
+    const kind = parseArtifactKind(artifact);
+    if (!kind) throw new BadRequestException(translate(spoken, 'signing.invalidLink'));
+
     const key =
       kind === 'signed' ? document.signedStorageKey : document.certificateStorageKey;
     if (document.status !== DocumentStatus.COMPLETED || !key) {
-      throw new NotFoundException(MESSAGES.document.artifactNotReady);
+      throw new NotFoundException(translate(spoken, 'signing.artifactNotReady'));
     }
 
     const stream = await this.storage.openStream(key);
@@ -273,17 +343,28 @@ export class SigningService {
   async saveFields(
     signRequestId: string,
     dto: SaveFieldValuesDto,
+    hints: PublicLocaleHints = {},
   ): Promise<{ saved: number }> {
     const signRequest = await this.prisma.signRequest.findUnique({
       where: { id: signRequestId },
-      select: { id: true, status: true, document: { select: { status: true } } },
+      select: {
+        id: true,
+        status: true,
+        document: { select: { status: true, owner: { select: { locale: true } } } },
+      },
     });
-    if (!signRequest) throw new NotFoundException(MESSAGES.signing.invalidLink);
+    if (!signRequest) {
+      throw new NotFoundException(
+        translate(resolvePublicEntryLocale(hints), 'signing.invalidLink'),
+      );
+    }
+
+    const locale = this.localeFor(hints, signRequest.document.owner.locale);
     if (signRequest.status === SignRequestStatus.SIGNED) {
-      throw new ForbiddenException(MESSAGES.signing.alreadySigned);
+      throw new ForbiddenException(translate(locale, 'signing.alreadySigned'));
     }
     if (!this.isSignable(signRequest.document.status, signRequest.status)) {
-      throw new ForbiddenException(MESSAGES.signing.notSignable);
+      throw new ForbiddenException(translate(locale, 'signing.notSignable'));
     }
 
     // Load this signer's fields so we can both authorize and type-check.
@@ -297,10 +378,10 @@ export class SigningService {
       const field = fieldById.get(input.fieldId);
       if (!field) {
         // Field id not assigned to this signer (or unknown).
-        throw new BadRequestException(MESSAGES.signing.invalidFieldValue);
+        throw new BadRequestException(translate(locale, 'signing.invalidFieldValue'));
       }
       if (!isValidFieldValue(field.type, input.value)) {
-        throw new BadRequestException(MESSAGES.signing.invalidFieldValue);
+        throw new BadRequestException(translate(locale, 'signing.invalidFieldValue'));
       }
     }
 
@@ -327,6 +408,7 @@ export class SigningService {
     signRequestId: string,
     ip?: string,
     userAgent?: string,
+    hints: PublicLocaleHints = {},
   ): Promise<CompleteResult> {
     const signRequest = await this.prisma.signRequest.findUnique({
       where: { id: signRequestId },
@@ -340,19 +422,25 @@ export class SigningService {
         signFields: { select: { id: true, value: true } },
       },
     });
-    if (!signRequest) throw new NotFoundException(MESSAGES.signing.invalidLink);
+    if (!signRequest) {
+      throw new NotFoundException(
+        translate(resolvePublicEntryLocale(hints), 'signing.invalidLink'),
+      );
+    }
+
+    const locale = this.localeFor(hints, signRequest.document.owner.locale);
     if (signRequest.status === SignRequestStatus.SIGNED) {
-      throw new ForbiddenException(MESSAGES.signing.alreadySigned);
+      throw new ForbiddenException(translate(locale, 'signing.alreadySigned'));
     }
     if (!this.isSignable(signRequest.document.status, signRequest.status)) {
-      throw new ForbiddenException(MESSAGES.signing.notSignable);
+      throw new ForbiddenException(translate(locale, 'signing.notSignable'));
     }
 
     const allFilled = signRequest.signFields.every(
       (f) => f.value != null && f.value.length > 0,
     );
     if (signRequest.signFields.length === 0 || !allFilled) {
-      throw new BadRequestException(MESSAGES.signing.fieldsIncomplete);
+      throw new BadRequestException(translate(locale, 'signing.fieldsIncomplete'));
     }
 
     const documentCompleted = await this.prisma.$transaction(async (tx) => {
@@ -406,11 +494,24 @@ export class SigningService {
     return {
       status: SignRequestStatus.SIGNED,
       documentCompleted,
-      message: MESSAGES.signing.completed,
+      locale,
+      message: translate(locale, 'signing.completed'),
     };
   }
 
   // --- internals -----------------------------------------------------------
+
+  /**
+   * The language this answer is written in: the link's own hints, plus the
+   * sender tier taken from the row the caller had to load anyway.
+   *
+   * `resolvePublicEntryLocale` — not `resolveLocale` — because nobody on these
+   * routes is logged in, and a stale session of some other account must never
+   * repaint a visitor's screen.
+   */
+  private localeFor(hints: PublicLocaleHints, senderLocale?: string | null): SupportedLocale {
+    return resolvePublicEntryLocale({ ...hints, senderLocale });
+  }
 
   /** A request can still be signed only while the document is in progress. */
   private isSignable(documentStatus: DocumentStatus, requestStatus: SignRequestStatus): boolean {
@@ -552,5 +653,11 @@ export interface SigningPayload {
 export interface CompleteResult {
   status: SignRequestStatus;
   documentCompleted: boolean;
+  /**
+   * The locale `message` was written in. Carried so a caller that wraps this
+   * result with its own headline (the share flow) renders the same language
+   * without resolving it a second time — two resolutions can disagree.
+   */
+  locale: SupportedLocale;
   message: string;
 }

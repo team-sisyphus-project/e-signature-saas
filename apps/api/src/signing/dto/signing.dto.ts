@@ -4,7 +4,6 @@ import {
   ArrayMinSize,
   IsArray,
   IsString,
-  Matches,
   MaxLength,
   MinLength,
   ValidateNested,
@@ -14,9 +13,15 @@ import {
 export const FIELD_VALUE_MAX_LENGTH = 5_000_000;
 
 export class VerifyCodeDto {
-  /** 6-digit numeric verification code delivered out of band. */
+  /**
+   * 6-digit numeric verification code delivered out of band.
+   *
+   * The shape rule lives in `SigningService.verify`, not in a `@Matches` here:
+   * a `class-validator` message cannot be localized, and the person reading it
+   * never logged in and never chose the language it would be written in. The
+   * service checks the same code before comparing anything.
+   */
   @IsString()
-  @Matches(/^\d{6}$/)
   code!: string;
 }
 

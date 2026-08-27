@@ -59,3 +59,39 @@ export function resolveLocale(input: LocaleResolutionInput = {}): SupportedLocal
     DEFAULT_LOCALE
   );
 }
+
+/**
+ * Tiers available to a logged-out visitor: `LocaleResolutionInput` minus the
+ * signed-in preference. The omission is the contract — widening this type is
+ * how the "a public link never reads a signed-in preference" rule would have to
+ * be broken deliberately. Mirrors `PublicEntryLocaleInput` on the web so both
+ * ends of a public link answer with the same tier list.
+ */
+export type PublicEntryLocaleInput = Omit<LocaleResolutionInput, 'userLocale'>;
+
+/**
+ * What an anonymous HTTP request carries about its own language before the
+ * sender row is loaded: the link's `?lang=` and the browser's `Accept-Language`.
+ * Public controllers hand this to services, which add the sender tier from the
+ * row they were going to read anyway.
+ */
+export type PublicLocaleHints = Omit<PublicEntryLocaleInput, 'senderLocale'>;
+
+/**
+ * Resolve the locale of a logged-out entry: link parameter → sender → browser
+ * → Korean.
+ *
+ * This is `resolveLocale` with the signed-in tier structurally removed rather
+ * than merely left unset. A public link is opened by someone who is not the
+ * account holder, so no authenticated preference may reach it — and the
+ * parameters are destructured so an input object that still carries
+ * `userLocale` loses it before any tier is evaluated, in a runtime where types
+ * are gone.
+ */
+export function resolvePublicEntryLocale({
+  linkLocale,
+  senderLocale,
+  acceptLanguage,
+}: PublicEntryLocaleInput = {}): SupportedLocale {
+  return resolveLocale({ linkLocale, senderLocale, acceptLanguage });
+}

@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Get,
@@ -14,9 +13,8 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import type { Response } from 'express';
-import { MESSAGES } from '../common/messages';
 import { attachmentDisposition } from '../common/http';
-import { parseArtifactKind } from '../completion/artifact';
+import type { PublicLocaleHints } from '../i18n/locale-resolver';
 import { CurrentSigner } from './current-signer.decorator';
 import { SignerSessionGuard } from './signer-session.guard';
 import type { SignerSession } from './signer-session.service';
@@ -29,6 +27,11 @@ import { SaveFieldValuesDto, VerifyCodeDto } from './dto/signing.dto';
  * Routed under the global `/api` prefix → `/api/signing/:token/...`.
  * `:token` is the SignRequest access token embedded in the signing link.
  * The session-guarded routes additionally require a short-lived signer token.
+ *
+ * Nobody here is logged in, so every route also collects the two locale tiers
+ * the request carries — the link's `?lang=` and the browser's `Accept-Language`
+ * — and hands them to the service, which adds the sender tier from the row it
+ * loads. Errors are answered in the visitor's language, not the server's.
  */
 @Controller('signing')
 export class SigningController {
@@ -59,22 +62,33 @@ export class SigningController {
     @Body() dto: VerifyCodeDto,
     @Ip() ip: string,
     @Headers('user-agent') userAgent: string,
+    @Headers('accept-language') acceptLanguage?: string,
+    @Query('lang') lang?: string,
   ) {
-    return this.signing.verify(token, dto.code, ip, userAgent);
+    return this.signing.verify(token, dto.code, ip, userAgent, hints(acceptLanguage, lang));
   }
 
   /** ③ Signer's fields + short-lived PDF path (session required). */
   @Get(':token/payload')
   @UseGuards(SignerSessionGuard)
-  payload(@CurrentSigner() signer: SignerSession) {
-    return this.signing.payload(signer.signRequestId);
+  payload(
+    @CurrentSigner() signer: SignerSession,
+    @Headers('accept-language') acceptLanguage?: string,
+    @Query('lang') lang?: string,
+  ) {
+    return this.signing.payload(signer.signRequestId, hints(acceptLanguage, lang));
   }
 
   /** ④ Stream the document PDF bytes (session required). */
   @Get(':token/pdf')
   @UseGuards(SignerSessionGuard)
-  async pdf(@CurrentSigner() signer: SignerSession, @Res() res: Response) {
-    const stream = await this.signing.openPdf(signer.signRequestId);
+  async pdf(
+    @CurrentSigner() signer: SignerSession,
+    @Res() res: Response,
+    @Headers('accept-language') acceptLanguage?: string,
+    @Query('lang') lang?: string,
+  ) {
+    const stream = await this.signing.openPdf(signer.signRequestId, hints(acceptLanguage, lang));
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'inline; filename="document.pdf"');
     res.setHeader('Cache-Control', 'no-store');
@@ -92,14 +106,20 @@ export class SigningController {
   saveFields(
     @CurrentSigner() signer: SignerSession,
     @Body() dto: SaveFieldValuesDto,
+    @Headers('accept-language') acceptLanguage?: string,
+    @Query('lang') lang?: string,
   ) {
-    return this.signing.saveFields(signer.signRequestId, dto);
+    return this.signing.saveFields(signer.signRequestId, dto, hints(acceptLanguage, lang));
   }
 
   /**
    * ⑦ Download a completed contract's artifact (session required).
    * `:artifact` is `signed` (최종 계약서) or `certificate` (감사 추적 인증서).
    * Only resolves once the document is COMPLETED and the artifacts are stored.
+   *
+   * The `:artifact` name is validated by the service, which is where the
+   * sender's locale is known — a refusal written here could only be in the
+   * server's language.
    */
   @Get(':token/download/:artifact')
   @UseGuards(SignerSessionGuard)
@@ -107,11 +127,14 @@ export class SigningController {
     @CurrentSigner() signer: SignerSession,
     @Param('artifact') artifact: string,
     @Res() res: Response,
+    @Headers('accept-language') acceptLanguage?: string,
+    @Query('lang') lang?: string,
   ) {
-    const kind = parseArtifactKind(artifact);
-    if (!kind) throw new BadRequestException(MESSAGES.signing.invalidLink);
-
-    const { stream, filename } = await this.signing.openArtifact(signer.signRequestId, kind);
+    const { stream, filename } = await this.signing.openArtifact(
+      signer.signRequestId,
+      artifact,
+      hints(acceptLanguage, lang),
+    );
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', attachmentDisposition(filename));
     res.setHeader('Cache-Control', 'no-store');
@@ -130,7 +153,18 @@ export class SigningController {
     @CurrentSigner() signer: SignerSession,
     @Ip() ip: string,
     @Headers('user-agent') userAgent: string,
+    @Headers('accept-language') acceptLanguage?: string,
+    @Query('lang') lang?: string,
   ) {
-    return this.signing.complete(signer.signRequestId, ip, userAgent);
+    return this.signing.complete(signer.signRequestId, ip, userAgent, hints(acceptLanguage, lang));
   }
+}
+
+/**
+ * The locale tiers this request brought with it, forwarded unvalidated: which
+ * tags are supported is the resolver's decision, so `?lang=fr` must fall
+ * through to the sender rather than be reclassified here.
+ */
+function hints(acceptLanguage?: string, lang?: string): PublicLocaleHints {
+  return { acceptLanguage, linkLocale: lang };
 }

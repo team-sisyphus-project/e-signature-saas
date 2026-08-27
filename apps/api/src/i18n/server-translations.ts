@@ -5,12 +5,36 @@ import type { SupportedLocale } from './locale-resolver';
 export const SERVER_TRANSLATIONS = {
   ko: {
     common: { sender: '발신자', signer: '서명자', completed: '완료되었습니다.' },
+    /**
+     * Every message an anonymous signer can receive. The Korean wording is the
+     * `MESSAGES.signing` copy verbatim: this scope replaces that owner-facing
+     * constant on the public routes, and a Korean visitor must not notice the
+     * hand-off.
+     */
     signing: {
       invalidLink: '서명 링크가 올바르지 않아요. 발신자에게 링크를 다시 요청해 주세요.',
+      codeMismatch: '인증 코드가 일치하지 않아요. 다시 확인해 주세요.',
+      codeFormat: '6자리 인증 코드를 정확히 입력해 주세요.',
+      locked: '인증을 여러 번 실패했어요. 잠시 후 다시 시도해 주세요.',
+      sessionExpired: '본인확인 후 시간이 지났어요. 인증 코드를 다시 입력해 주세요.',
+      alreadySigned: '이미 서명을 완료한 계약이에요.',
+      notSignable: '더 이상 서명할 수 없는 계약이에요. 발신자에게 문의해 주세요.',
+      invalidFieldValue: '입력한 값을 다시 확인해 주세요.',
+      fieldsIncomplete: '아직 작성하지 않은 항목이 있어요. 모두 채운 뒤 완료해 주세요.',
+      artifactNotReady: '완료 문서가 아직 준비되지 않았어요. 잠시 후 다시 시도해 주세요.',
       completed: '서명이 완료되었습니다!',
     },
+    /** Every message an anonymous share-link recipient can receive. */
     share: {
       invalidLink: '링크가 올바르지 않아요. 보낸 분에게 링크를 다시 요청해 주세요.',
+      expired: '이 링크는 유효 기간이 지났어요. 보낸 분에게 새 링크를 요청해 주세요.',
+      revoked: '보낸 분이 이 링크를 사용 중지했어요. 보낸 분에게 문의해 주세요.',
+      passwordRequired: '비밀번호를 입력해 주세요.',
+      wrongPassword: '비밀번호가 일치하지 않아요. 다시 확인해 주세요.',
+      locked: '비밀번호를 여러 번 잘못 입력했어요. 잠시 후 다시 시도해 주세요.',
+      sessionExpired: '접속 시간이 만료됐어요. 링크를 다시 열어 주세요.',
+      notSignable: '지금은 작성할 수 없는 계약이에요. 보낸 분에게 문의해 주세요.',
+      alreadySubmitted: '이미 제출을 완료한 계약이에요.',
       submitted: '제출이 완료되었습니다!',
     },
     /**
@@ -91,10 +115,27 @@ export const SERVER_TRANSLATIONS = {
     common: { sender: 'Sender', signer: 'Signer', completed: 'Completed.' },
     signing: {
       invalidLink: 'This signing link is invalid. Ask the sender for a new link.',
+      codeMismatch: 'That verification code is incorrect. Check it and try again.',
+      codeFormat: 'Enter the 6-digit verification code.',
+      locked: 'Too many failed attempts. Try again in a few minutes.',
+      sessionExpired: 'Your session has expired. Enter the verification code again.',
+      alreadySigned: 'You have already signed this contract.',
+      notSignable: 'This contract can no longer be signed. Contact the sender.',
+      invalidFieldValue: 'Check the value you entered.',
+      fieldsIncomplete: 'Some fields are still empty. Fill them all in to finish.',
+      artifactNotReady: 'The completed documents are not ready yet. Try again in a moment.',
       completed: 'Signing is complete!',
     },
     share: {
       invalidLink: 'This link is invalid. Ask the sender for a new link.',
+      expired: 'This link has expired. Ask the sender for a new one.',
+      revoked: 'The sender turned this link off. Contact the sender.',
+      passwordRequired: 'Enter the password.',
+      wrongPassword: 'That password is incorrect. Check it and try again.',
+      locked: 'Too many incorrect passwords. Try again in a few minutes.',
+      sessionExpired: 'Your session has expired. Open the link again.',
+      notSignable: 'This contract cannot be filled in right now. Contact the sender.',
+      alreadySubmitted: 'You have already submitted this contract.',
       submitted: 'Submission is complete!',
     },
     artifact: {
@@ -167,8 +208,25 @@ export type TranslationKey =
   | 'common.signer'
   | 'common.completed'
   | 'signing.invalidLink'
+  | 'signing.codeMismatch'
+  | 'signing.codeFormat'
+  | 'signing.locked'
+  | 'signing.sessionExpired'
+  | 'signing.alreadySigned'
+  | 'signing.notSignable'
+  | 'signing.invalidFieldValue'
+  | 'signing.fieldsIncomplete'
+  | 'signing.artifactNotReady'
   | 'signing.completed'
   | 'share.invalidLink'
+  | 'share.expired'
+  | 'share.revoked'
+  | 'share.passwordRequired'
+  | 'share.wrongPassword'
+  | 'share.locked'
+  | 'share.sessionExpired'
+  | 'share.notSignable'
+  | 'share.alreadySubmitted'
   | 'share.submitted'
   | 'artifact.finalContract'
   | 'artifact.auditCertificate'

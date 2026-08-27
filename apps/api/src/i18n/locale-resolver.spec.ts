@@ -3,6 +3,7 @@ import {
   localeFromAcceptLanguage,
   parseLocale,
   resolveLocale,
+  resolvePublicEntryLocale,
   type LocaleResolutionInput,
   type SupportedLocale,
 } from './locale-resolver';
@@ -164,5 +165,31 @@ describe('locale resolver', () => {
   it('falls back safely to Korean copy', () => {
     expect(resolveLocale({ acceptLanguage: 'fr-FR' })).toBe('ko');
     expect(translate('en', 'signing.completed')).toBe('Signing is complete!');
+  });
+});
+
+/**
+ * The logged-out resolver. Its guarantee is an absence: a public link is opened
+ * by someone who is not the account holder, so no stored preference of a signed-in
+ * user may reach it. Mirrors `resolvePublicEntryLocale` on the web.
+ */
+describe('resolvePublicEntryLocale', () => {
+  it('follows link → sender → browser → Korean', () => {
+    expect(resolvePublicEntryLocale({ linkLocale: 'en', senderLocale: 'ko' })).toBe('en');
+    expect(resolvePublicEntryLocale({ senderLocale: 'en', acceptLanguage: 'ko-KR' })).toBe('en');
+    expect(resolvePublicEntryLocale({ acceptLanguage: 'en-US,en;q=0.9' })).toBe('en');
+    expect(resolvePublicEntryLocale({ acceptLanguage: 'fr-FR' })).toBe(DEFAULT_LOCALE);
+    expect(resolvePublicEntryLocale()).toBe(DEFAULT_LOCALE);
+  });
+
+  it('drops a signed-in preference that reaches it at runtime', () => {
+    // Types are gone at runtime, and a `userLocale` can arrive by spread from a
+    // shared request object. The parameters are destructured so it is lost
+    // before any tier is evaluated — and the answer differs from `resolveLocale`
+    // on the same input, which is the guarantee itself.
+    const leaked = { userLocale: 'en', acceptLanguage: 'ko-KR' } as LocaleResolutionInput;
+
+    expect(resolvePublicEntryLocale(leaked)).toBe('ko');
+    expect(resolveLocale(leaked)).toBe('en');
   });
 });
