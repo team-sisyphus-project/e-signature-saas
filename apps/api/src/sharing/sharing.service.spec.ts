@@ -529,7 +529,10 @@ describe('SharingService — fill & submit (reuses the completion machine)', () 
     // notifies the sender) was enqueued exactly once.
     expect(h.prisma._documents.get(h.documentId)!.status).toBe('COMPLETED');
     expect(h.completionEnqueue).toHaveBeenCalledTimes(1);
-    expect(h.completionEnqueue).toHaveBeenCalledWith(h.documentId);
+    // Completion runs outside any browser request, so the sender's persisted
+    // locale travels with the job. This owner has no stored preference, so the
+    // resolver falls back to Korean.
+    expect(h.completionEnqueue).toHaveBeenCalledWith(h.documentId, 'ko');
   });
 
   it('blocks submit with unfilled fields and treats a submitted link as done', async () => {
