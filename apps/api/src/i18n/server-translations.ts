@@ -1,5 +1,5 @@
 import { Logger } from '@nestjs/common';
-import type { SupportedLocale } from './locale-resolver';
+import { DEFAULT_LOCALE, type SupportedLocale } from './locale-resolver';
 
 /** Server-owned copy. New server-facing strings belong here, not in services. */
 export const SERVER_TRANSLATIONS = {
@@ -203,86 +203,102 @@ export const SERVER_TRANSLATIONS = {
   },
 } as const;
 
-export type TranslationKey =
-  | 'common.sender'
-  | 'common.signer'
-  | 'common.completed'
-  | 'signing.invalidLink'
-  | 'signing.codeMismatch'
-  | 'signing.codeFormat'
-  | 'signing.locked'
-  | 'signing.sessionExpired'
-  | 'signing.alreadySigned'
-  | 'signing.notSignable'
-  | 'signing.invalidFieldValue'
-  | 'signing.fieldsIncomplete'
-  | 'signing.artifactNotReady'
-  | 'signing.completed'
-  | 'share.invalidLink'
-  | 'share.expired'
-  | 'share.revoked'
-  | 'share.passwordRequired'
-  | 'share.wrongPassword'
-  | 'share.locked'
-  | 'share.sessionExpired'
-  | 'share.notSignable'
-  | 'share.alreadySubmitted'
-  | 'share.submitted'
-  | 'artifact.finalContract'
-  | 'artifact.auditCertificate'
-  | 'artifact.untitled'
-  | 'completionEmail.subject'
-  | 'completionEmail.headline'
-  | 'completionEmail.bodyAllDone'
-  | 'completionEmail.bodyAttachments'
-  | 'completionEmail.bodySenderExtra'
-  | 'completionEmail.finalContract'
-  | 'completionEmail.finalContractNote'
-  | 'completionEmail.auditCertificate'
-  | 'completionEmail.auditCertificateNote'
-  | 'completionEmail.ctaLabel'
-  | 'completionEmail.footer'
-  | 'completionEmail.serviceName'
-  | 'completionEmail.sender'
-  | 'completionEmail.logo'
-  | 'completionEmail.attachments'
-  | 'auditCertificate.title'
-  | 'auditCertificate.senderFallback'
-  | 'auditCertificate.issuedAt'
-  | 'auditCertificate.certificateId'
-  | 'auditCertificate.documentId'
-  | 'auditCertificate.contractSummary'
-  | 'auditCertificate.contractName'
-  | 'auditCertificate.originalPages'
-  | 'auditCertificate.originalPageCount'
-  | 'auditCertificate.sender'
-  | 'auditCertificate.senderEmail'
-  | 'auditCertificate.sentAt'
-  | 'auditCertificate.completedAt'
-  | 'auditCertificate.timeZone'
-  | 'auditCertificate.finalStatus'
-  | 'auditCertificate.completed'
-  | 'auditCertificate.participants'
-  | 'auditCertificate.noParticipants'
-  | 'auditCertificate.verification'
-  | 'auditCertificate.verificationMethod'
-  | 'auditCertificate.signedAt'
-  | 'auditCertificate.unsigned'
-  | 'auditCertificate.timeline'
-  | 'auditCertificate.integrity'
-  | 'auditCertificate.hashAlgorithm'
-  | 'auditCertificate.certificateIssued'
-  | 'auditCertificate.originalContract'
-  | 'auditCertificate.finalContract'
-  | 'auditCertificate.system'
-  | 'auditCertificate.actionDocumentUploaded'
-  | 'auditCertificate.actionContractSent'
-  | 'auditCertificate.actionSignRequestViewed'
-  | 'auditCertificate.actionSignRequestVerified'
-  | 'auditCertificate.actionSignVerifyFailed'
-  | 'auditCertificate.actionSignRequestSigned'
-  | 'auditCertificate.actionDocumentCompleted'
-  | 'auditCertificate.actionFallback';
+/**
+ * Every key a caller may ask `translate` for, as data.
+ *
+ * The list is the type's source, not its echo: `TranslationKey` is derived from
+ * it, so a key exists for the compiler exactly when the coverage report can see
+ * it. Kept as a list rather than derived from the `ko` catalog because the two
+ * answer different questions — this is what callers are allowed to request, the
+ * catalog is what has been written. A key declared here and written nowhere is
+ * the defect the report exists to surface; deriving it from the catalog would
+ * make that state unrepresentable and therefore invisible.
+ *
+ * Order follows the catalog, so a printed report reads in catalog order.
+ */
+export const TRANSLATION_KEYS = [
+  'common.sender',
+  'common.signer',
+  'common.completed',
+  'signing.invalidLink',
+  'signing.codeMismatch',
+  'signing.codeFormat',
+  'signing.locked',
+  'signing.sessionExpired',
+  'signing.alreadySigned',
+  'signing.notSignable',
+  'signing.invalidFieldValue',
+  'signing.fieldsIncomplete',
+  'signing.artifactNotReady',
+  'signing.completed',
+  'share.invalidLink',
+  'share.expired',
+  'share.revoked',
+  'share.passwordRequired',
+  'share.wrongPassword',
+  'share.locked',
+  'share.sessionExpired',
+  'share.notSignable',
+  'share.alreadySubmitted',
+  'share.submitted',
+  'artifact.finalContract',
+  'artifact.auditCertificate',
+  'artifact.untitled',
+  'completionEmail.subject',
+  'completionEmail.headline',
+  'completionEmail.bodyAllDone',
+  'completionEmail.bodyAttachments',
+  'completionEmail.bodySenderExtra',
+  'completionEmail.finalContract',
+  'completionEmail.finalContractNote',
+  'completionEmail.auditCertificate',
+  'completionEmail.auditCertificateNote',
+  'completionEmail.ctaLabel',
+  'completionEmail.footer',
+  'completionEmail.serviceName',
+  'completionEmail.sender',
+  'completionEmail.logo',
+  'completionEmail.attachments',
+  'auditCertificate.title',
+  'auditCertificate.senderFallback',
+  'auditCertificate.issuedAt',
+  'auditCertificate.certificateId',
+  'auditCertificate.documentId',
+  'auditCertificate.contractSummary',
+  'auditCertificate.contractName',
+  'auditCertificate.originalPages',
+  'auditCertificate.originalPageCount',
+  'auditCertificate.sender',
+  'auditCertificate.senderEmail',
+  'auditCertificate.sentAt',
+  'auditCertificate.completedAt',
+  'auditCertificate.timeZone',
+  'auditCertificate.finalStatus',
+  'auditCertificate.completed',
+  'auditCertificate.participants',
+  'auditCertificate.noParticipants',
+  'auditCertificate.verification',
+  'auditCertificate.verificationMethod',
+  'auditCertificate.signedAt',
+  'auditCertificate.unsigned',
+  'auditCertificate.timeline',
+  'auditCertificate.integrity',
+  'auditCertificate.hashAlgorithm',
+  'auditCertificate.certificateIssued',
+  'auditCertificate.originalContract',
+  'auditCertificate.finalContract',
+  'auditCertificate.system',
+  'auditCertificate.actionDocumentUploaded',
+  'auditCertificate.actionContractSent',
+  'auditCertificate.actionSignRequestViewed',
+  'auditCertificate.actionSignRequestVerified',
+  'auditCertificate.actionSignVerifyFailed',
+  'auditCertificate.actionSignRequestSigned',
+  'auditCertificate.actionDocumentCompleted',
+  'auditCertificate.actionFallback',
+] as const;
+
+export type TranslationKey = (typeof TRANSLATION_KEYS)[number];
 
 /**
  * Last-resort Korean text served when even the Korean base catalog has no copy
@@ -297,11 +313,73 @@ export const UNKNOWN_SERVER_TRANSLATION_FALLBACK = '내용을 준비하고 있�
 
 /** A catalog value may be absent or blank once catalogs drift out of sync. */
 type TranslationLeaf = string | null | undefined;
-type ServerCatalog = Readonly<Record<string, Readonly<Record<string, TranslationLeaf>>>>;
+
+/** One locale's copy, as `scope.name` pairs. */
+export type ServerTranslationCatalog = Readonly<
+  Record<string, Readonly<Record<string, TranslationLeaf>>>
+>;
+
+/** Every published locale's catalog — the shape of `SERVER_TRANSLATIONS`. */
+export type ServerTranslationCatalogs = Readonly<Record<SupportedLocale, ServerTranslationCatalog>>;
+
+/**
+ * Why a catalog has no copy for a key.
+ *
+ * The vocabulary is `MissingWebTranslationReason`'s in
+ * `apps/web/src/lib/web-translations.ts`, minus the browser-only `placeholder`
+ * case (server copy is interpolated by its callers, not here). One gap must be
+ * named the same way on both halves, or the two reports cannot be read — or
+ * merged — as one list.
+ */
+export type MissingServerTranslationReason = 'missing' | 'empty';
+
+/**
+ * What a catalog answers for one key: usable copy, or the reason there is none.
+ *
+ * Exported because `translate` and the coverage report must ask the *same*
+ * question. Were the report to re-implement the read, it could call a key
+ * covered that `translate` would still replace — a report that clears a gap the
+ * reader is about to hit is worse than no report.
+ */
+export type CatalogRead =
+  | { readonly copy: string; readonly gap?: undefined }
+  | { readonly copy?: undefined; readonly gap: MissingServerTranslationReason };
+
+/** This report retains keys and counters only, never user data or rendered copy. */
+export interface MissingServerTranslationEntry {
+  key: TranslationKey;
+  /** Locale requested by the caller at the point the lookup failed. */
+  requestedLocale: SupportedLocale;
+  /** Catalog whose copy was actually served. */
+  fallbackLocale: SupportedLocale;
+  reason: MissingServerTranslationReason;
+  /** How many times `translate` fell back for this exact tuple. */
+  count: number;
+}
+
+export interface ServerTranslationFallbackReport {
+  /** De-duplicated keys that fell back at least once — the missing-key list. */
+  missingKeys: readonly TranslationKey[];
+  /** Per-locale detail and occurrence counts for runtime diagnostics. */
+  entries: readonly MissingServerTranslationEntry[];
+}
 
 const logger = new Logger('ServerTranslations');
-/** Keys already reported, so a gap on a hot path cannot flood the log. */
-const reportedGaps = new Set<string>();
+
+/**
+ * Gaps this process has actually served, keyed by locale/key/reason.
+ *
+ * It replaces the log-only set that used to live here. A log line proves a gap
+ * to whoever is tailing the log at that moment; Spec M-6 asks for the missing
+ * keys as a *list* something can read back, so the same record now answers both
+ * — the map still gates the log to once per gap, and
+ * `getServerTranslationFallbackReport()` hands out the list.
+ *
+ * Growth is bounded by the code paths that call `translate`: keys are literals
+ * or come from closed mappings (`AUDIT_ACTION_LABEL`), never from user input,
+ * so no request can make this map grow.
+ */
+const fallbacks = new Map<string, MissingServerTranslationEntry>();
 
 /**
  * Own-property read. Plain object literals inherit from `Object.prototype`, so
@@ -319,7 +397,7 @@ function ownValue(record: Readonly<Record<string, unknown>> | undefined, name: s
  *
  * Splitting on the first separator only keeps names containing a dot readable.
  */
-function lookup(catalog: ServerCatalog | undefined, key: string): TranslationLeaf {
+function lookup(catalog: ServerTranslationCatalog | undefined, key: string): TranslationLeaf {
   const separator = key.indexOf('.');
   if (separator < 1 || separator === key.length - 1) return undefined;
   const scope = ownValue(catalog, key.slice(0, separator)) as
@@ -328,17 +406,69 @@ function lookup(catalog: ServerCatalog | undefined, key: string): TranslationLea
   return ownValue(scope, key.slice(separator + 1)) as TranslationLeaf;
 }
 
-/** Blank copy is a gap, not a translation: it would render as an empty label. */
-function isUsable(value: TranslationLeaf): value is string {
-  return typeof value === 'string' && value.trim() !== '';
+/**
+ * The catalog's answer for one key.
+ *
+ * Blank copy is a gap, not a translation: it would render as an empty label,
+ * which the reader cannot tell from a layout bug.
+ */
+export function readCatalog(
+  catalog: ServerTranslationCatalog | undefined,
+  key: string,
+): CatalogRead {
+  const value = lookup(catalog, key);
+  if (typeof value !== 'string') return { gap: 'missing' };
+  return value.trim() === '' ? { gap: 'empty' } : { copy: value };
 }
 
-/** A gap is a defect, so it is traceable in the log — never in the response. */
-function reportGap(locale: string, key: string): void {
-  const id = `${locale}\u0000${key}`;
-  if (reportedGaps.has(id)) return;
-  reportedGaps.add(id);
+/**
+ * Record one served fallback, and log it the first time it is seen.
+ *
+ * A gap is a defect, so it is traceable — in the log and in the report, never
+ * in the response.
+ */
+function reportGap(
+  locale: SupportedLocale,
+  key: TranslationKey,
+  reason: MissingServerTranslationReason,
+): void {
+  // A NUL separator cannot occur inside a locale or a key, so two distinct
+  // tuples can never collapse into one entry.
+  const id = [locale, DEFAULT_LOCALE, key, reason].join('\u0000');
+  const previous = fallbacks.get(id);
+  if (previous) {
+    previous.count += 1;
+    return;
+  }
+  fallbacks.set(id, {
+    key,
+    requestedLocale: locale,
+    fallbackLocale: DEFAULT_LOCALE,
+    reason,
+    count: 1,
+  });
   logger.warn(`Missing "${locale}" translation for "${key}"; served the Korean fallback.`);
+}
+
+/**
+ * Snapshot the keys this process replaced with Korean copy at runtime.
+ *
+ * The entries are copies: a diagnostics endpoint or a report writer cannot
+ * edit the ledger by editing what it was handed.
+ */
+export function getServerTranslationFallbackReport(): ServerTranslationFallbackReport {
+  const entries = [...fallbacks.values()].map((entry) => ({ ...entry }));
+  return { missingKeys: [...new Set(entries.map((entry) => entry.key))], entries };
+}
+
+/**
+ * Clear the ledger, for example after a report has been written out.
+ *
+ * This also re-arms the log: a gap already reported will warn once more the
+ * next time it is served, which is what a fresh reporting window means.
+ */
+export function resetServerTranslationFallbackReport(): void {
+  fallbacks.clear();
 }
 
 /**
@@ -348,14 +478,14 @@ function reportGap(locale: string, key: string): void {
  * the whole artifact and a leaked `auditCertificate.title` is permanent. So an
  * unknown locale, an unknown scope, an unknown name and blank copy all degrade
  * one step at a time instead of failing: the caller always receives text a
- * reader can understand, and the gap is reported through the log.
+ * reader can understand, and the gap is reported through the log and the
+ * fallback report.
  */
 export function translate(locale: SupportedLocale, key: TranslationKey): string {
-  const catalogs: Readonly<Record<string, ServerCatalog>> = SERVER_TRANSLATIONS;
-  const localized = lookup(catalogs[locale], key);
-  if (isUsable(localized)) return localized;
+  const catalogs: Readonly<Record<string, ServerTranslationCatalog>> = SERVER_TRANSLATIONS;
+  const localized = readCatalog(catalogs[locale], key);
+  if (localized.copy !== undefined) return localized.copy;
 
-  reportGap(locale, key);
-  const korean = lookup(catalogs.ko, key);
-  return isUsable(korean) ? korean : UNKNOWN_SERVER_TRANSLATION_FALLBACK;
+  reportGap(locale, key, localized.gap);
+  return readCatalog(catalogs[DEFAULT_LOCALE], key).copy ?? UNKNOWN_SERVER_TRANSLATION_FALLBACK;
 }
