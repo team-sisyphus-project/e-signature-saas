@@ -337,7 +337,19 @@ export function FieldCanvas({
 
   return (
     <div className={cn('relative w-full overflow-auto', className)}>
+      {/*
+        White document island: the contract page must look identical to the
+        printed/PDF original — a white page with dark ink — in every theme.
+        `data-surface="document"` re-pins the color tokens to their light values
+        for this page wrapper only, so the global dark theme can't reach the page
+        backing (`bg-surface` → white) or the overlaid field-box chrome
+        (`bg-primary-subtle` tint, resize-handle `bg-surface`, borders, ring).
+        The scroll container, palette, and page-nav chrome sit outside the island
+        and theme with the surrounding dark UI. See `pdf-preview.tsx` for the
+        upload-flow twin and `globals.css` `[data-surface="document"]` for the reset.
+      */}
       <div
+        data-surface="document"
         className="relative mx-auto"
         style={{ width: pageSize.width, height: pageSize.height }}
       >

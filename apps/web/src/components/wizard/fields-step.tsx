@@ -284,7 +284,7 @@ function IconButton({
       onClick={onClick}
       className={cn(
         'flex h-8 w-8 items-center justify-center rounded-sm text-foreground-muted',
-        'transition-colors duration-fast hover:bg-grey-100 hover:text-foreground',
+        'transition-colors duration-fast hover:bg-surface-hover hover:text-foreground',
         'focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-40',
       )}
     >
