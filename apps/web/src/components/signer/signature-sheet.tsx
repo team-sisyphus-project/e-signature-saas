@@ -45,10 +45,15 @@ import {
 } from './fill-context';
 import { SignaturePad, type SignaturePadHandle } from './signature-pad';
 
-/** Resolve a design-token color (e.g. `--color-foreground`) to a usable string. */
-function tokenColor(name: string, fallback: string): string {
+/**
+ * Resolve a design-token color (e.g. `--color-foreground`) to a usable string,
+ * reading from the given element's computed style so island scopes (such as the
+ * `data-surface="document"` white page) resolve their local token value rather
+ * than the document root's.
+ */
+function tokenColor(element: Element, name: string, fallback: string): string {
   if (typeof window === 'undefined') return fallback;
-  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const v = getComputedStyle(element).getPropertyValue(name).trim();
   return v || fallback;
 }
 
@@ -64,7 +69,11 @@ function todayIso(): string {
  * typed signature lands in the same SIGNATURE field as a drawn one. Waits for
  * the web font to load so the raster matches the on-screen preview.
  */
-async function rasterizeTypedName(text: string, fontFamily: string): Promise<string | null> {
+async function rasterizeTypedName(
+  text: string,
+  fontFamily: string,
+  inkSource: Element | null,
+): Promise<string | null> {
   const trimmed = text.trim();
   if (!trimmed || typeof document === 'undefined') return null;
 
@@ -94,7 +103,9 @@ async function rasterizeTypedName(text: string, fontFamily: string): Promise<str
   if (!ctx) return null;
   ctx.scale(dpr, dpr);
   ctx.font = `${fontSize}px ${fontFamily}`;
-  ctx.fillStyle = tokenColor('--color-foreground', '#191f28');
+  // Read the ink token from the on-screen preview (inside the document island),
+  // not the detached export canvas, so the raster matches the light page ink.
+  ctx.fillStyle = tokenColor(inkSource ?? document.documentElement, '--color-foreground', '#191f28');
   ctx.textBaseline = 'alphabetic';
   ctx.fillText(trimmed, padding, padding + ascent);
   return out.toDataURL('image/png');
@@ -222,6 +233,7 @@ function SignatureBody({
   const [font, setFont] = React.useState<SignatureFont>(DEFAULT_SIGNATURE_FONT);
   const [rasterizing, setRasterizing] = React.useState(false);
   const padRef = React.useRef<SignaturePadHandle>(null);
+  const previewRef = React.useRef<HTMLDivElement>(null);
 
   const canApply = mode === 'draw' ? hasInk : name.trim().length > 0;
   const busy = saving || rasterizing;
@@ -235,7 +247,7 @@ function SignatureBody({
     }
     setRasterizing(true);
     try {
-      const dataUrl = await rasterizeTypedName(name, font.fontFamily);
+      const dataUrl = await rasterizeTypedName(name, font.fontFamily, previewRef.current);
       if (!dataUrl) return;
       await onApply({ type: 'SIGNATURE', dataUrl });
     } finally {
@@ -264,7 +276,11 @@ function SignatureBody({
         </div>
       ) : (
         <div className="flex flex-col gap-md">
-          <div className="flex h-44 items-center justify-center overflow-hidden rounded-md border border-border bg-surface px-md">
+          <div
+            ref={previewRef}
+            data-surface="document"
+            className="flex h-44 items-center justify-center overflow-hidden rounded-md border border-border bg-surface px-md"
+          >
             <span
               className={cn('truncate text-3xl leading-none', name ? 'text-foreground' : 'text-foreground-subtle')}
               style={{ fontFamily: font.fontFamily }}

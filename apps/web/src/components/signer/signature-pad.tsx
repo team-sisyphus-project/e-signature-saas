@@ -46,10 +46,15 @@ interface SignaturePadProps {
   'aria-label': string;
 }
 
-/** Resolve a design-token color (e.g. `--color-foreground`) to a usable string. */
-function tokenColor(name: string, fallback: string): string {
+/**
+ * Resolve a design-token color (e.g. `--color-foreground`) to a usable string,
+ * reading from the given element's computed style so island scopes (such as the
+ * `data-surface="document"` white page) resolve their local token value rather
+ * than the document root's.
+ */
+function tokenColor(element: Element, name: string, fallback: string): string {
   if (typeof window === 'undefined') return fallback;
-  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const v = getComputedStyle(element).getPropertyValue(name).trim();
   return v || fallback;
 }
 
@@ -96,7 +101,7 @@ export const SignaturePad = React.forwardRef<SignaturePadHandle, SignaturePadPro
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
-      inkColorRef.current = tokenColor('--color-foreground', '#191f28');
+      inkColorRef.current = tokenColor(canvas, '--color-foreground', '#191f28');
       ctx.strokeStyle = inkColorRef.current;
       ctxRef.current = ctx;
     }, []);
@@ -253,6 +258,7 @@ export const SignaturePad = React.forwardRef<SignaturePadHandle, SignaturePadPro
     return (
       <canvas
         ref={canvasRef}
+        data-surface="document"
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={endStroke}

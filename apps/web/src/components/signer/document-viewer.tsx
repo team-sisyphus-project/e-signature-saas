@@ -319,7 +319,7 @@ function PdfPageView({
   const ready = status === 'ready' && pageSize !== null;
 
   return (
-    <div className="relative w-full">
+    <div data-surface="document" className="relative w-full">
       {ready ? null : status === 'error' ? (
         <div className="flex aspect-[1/1.414] w-full items-center justify-center rounded-sm border border-border bg-surface-muted px-md text-center">
           <p className="text-sm text-foreground-muted">{pageError(pageNumber)}</p>
