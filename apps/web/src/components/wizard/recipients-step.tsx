@@ -122,7 +122,7 @@ export function RecipientsStep() {
       <div className="flex flex-col gap-2xs">
         <h2 className="text-xl font-bold text-foreground">Add your recipients</h2>
         <p className="text-sm text-foreground-subtle">
-          Add each signer's name and email in the order they should sign.
+          Add each signer&apos;s name and email in the order they should sign.
         </p>
       </div>
 
