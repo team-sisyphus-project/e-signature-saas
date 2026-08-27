@@ -3,7 +3,7 @@
 /**
  * Wizard step 2 — place sign fields on the contract (desktop only).
  *
- * A toolbar of three field tools (서명 / 날짜 / 텍스트) sits above an interactive
+ * A toolbar of the three field tools (signature / date / text) sits above an interactive
  * PDF page. Tools are dragged onto the page to drop a field where the cursor is,
  * or clicked/Enter-ed to drop one at page center (keyboard path). The page can be
  * paged through and zoomed; fields are stored as normalized, page-relative boxes
@@ -22,8 +22,10 @@ import {
   FIELD_TYPE_META,
   FIELD_TYPES,
   clampNormRect,
+  fieldTypeLabel,
   type SignFieldType,
 } from '@/lib/field-geometry';
+import { useTranslation } from '@/components/locale-provider';
 import { useWizard, type SignFieldDraft } from './wizard-context';
 import { FieldCanvas, FIELD_DND_TYPE, nextFieldId } from './field-canvas';
 import { SaveTemplateDialog } from './save-template-dialog';
@@ -35,6 +37,7 @@ const ZOOM_STEP = 0.25;
 const BASE_FIT_WIDTH = 640;
 
 export function FieldsStep() {
+  const t = useTranslation();
   const isDesktop = useIsDesktop();
   const { state, dispatch } = useWizard();
   const { file, document, fields } = state;
@@ -85,10 +88,8 @@ export function FieldsStep() {
     <div className="flex flex-col gap-md">
       <div className="flex flex-wrap items-start justify-between gap-md">
         <div className="flex flex-col gap-2xs">
-          <h2 className="text-xl font-bold text-foreground">서명 필드를 배치해 주세요</h2>
-          <p className="text-sm text-foreground-subtle">
-            받는 분이 서명할 위치에 필드를 끌어다 놓으세요. 클릭하면 가운데에 추가돼요.
-          </p>
+          <h2 className="text-xl font-bold text-foreground">{t('wizard.fieldsTitle')}</h2>
+          <p className="text-sm text-foreground-subtle">{t('wizard.fieldsSubtitle')}</p>
         </div>
         <Button
           variant="secondary"
@@ -96,7 +97,7 @@ export function FieldsStep() {
           onClick={() => setSaveOpen(true)}
           disabled={!canSaveTemplate}
         >
-          템플릿으로 저장
+          {t('wizard.saveTemplate')}
         </Button>
       </div>
 
@@ -116,7 +117,7 @@ export function FieldsStep() {
           <FieldTool key={type} type={type} onAdd={() => addAtCenter(type)} />
         ))}
         <span className="ml-auto text-xs font-medium text-foreground-subtle">
-          이 페이지에 {pageFieldCount}개 · 전체 {fields.length}개
+          {t('wizard.fieldCounts', { page: pageFieldCount, total: fields.length })}
         </span>
       </div>
 
@@ -124,7 +125,7 @@ export function FieldsStep() {
       <div className="flex items-center justify-between gap-sm rounded-md border border-border bg-surface px-sm py-2xs">
         <div className="flex items-center gap-2xs">
           <IconButton
-            label="이전 페이지"
+            label={t('wizard.prevPage')}
             disabled={page <= 1}
             onClick={() => {
               setSelectedId(null);
@@ -134,10 +135,10 @@ export function FieldsStep() {
             <ChevronIcon dir="left" />
           </IconButton>
           <span className="min-w-[72px] text-center text-sm font-medium text-foreground tabular-nums">
-            {page} / {total} 페이지
+            {t('wizard.pageIndicator', { page, total })}
           </span>
           <IconButton
-            label="다음 페이지"
+            label={t('wizard.nextPage')}
             disabled={page >= total}
             onClick={() => {
               setSelectedId(null);
@@ -150,7 +151,7 @@ export function FieldsStep() {
 
         <div className="flex items-center gap-2xs">
           <IconButton
-            label="축소"
+            label={t('wizard.zoomOut')}
             disabled={zoom <= ZOOM_MIN}
             onClick={() => setZoom((z) => Math.max(ZOOM_MIN, +(z - ZOOM_STEP).toFixed(2)))}
           >
@@ -160,7 +161,7 @@ export function FieldsStep() {
             {Math.round(zoom * 100)}%
           </span>
           <IconButton
-            label="확대"
+            label={t('wizard.zoomIn')}
             disabled={zoom >= ZOOM_MAX}
             onClick={() => setZoom((z) => Math.min(ZOOM_MAX, +(z + ZOOM_STEP).toFixed(2)))}
           >
@@ -186,21 +187,20 @@ export function FieldsStep() {
 
         {fields.length === 0 ? (
           <p className="pointer-events-none absolute inset-x-0 bottom-md text-center text-xs font-medium text-foreground-subtle">
-            위 도구를 PDF 위로 끌어다 놓아 필드를 배치하세요
+            {t('wizard.placeHint')}
           </p>
         ) : null}
       </div>
 
-      <p className="text-xs text-foreground-subtle">
-        필드를 선택한 뒤 방향키로 이동, Shift+방향키로 크기 조절, Delete로 삭제할 수 있어요.
-      </p>
+      <p className="text-xs text-foreground-subtle">{t('wizard.keyboardHint')}</p>
     </div>
   );
 }
 
 /** A draggable + clickable palette tool. */
 function FieldTool({ type, onAdd }: { type: SignFieldType; onAdd: () => void }) {
-  const meta = FIELD_TYPE_META[type];
+  const t = useTranslation();
+  const label = fieldTypeLabel(t, type);
   return (
     <button
       type="button"
@@ -210,7 +210,7 @@ function FieldTool({ type, onAdd }: { type: SignFieldType; onAdd: () => void }) 
         e.dataTransfer.effectAllowed = 'copy';
       }}
       onClick={onAdd}
-      aria-label={`${meta.label} 필드 추가 (끌어다 놓거나 클릭)`}
+      aria-label={t('wizard.fieldToolLabel', { field: label })}
       className={cn(
         'inline-flex cursor-grab items-center gap-xs rounded-md border border-border bg-surface px-sm py-2xs',
         'text-sm font-semibold text-foreground shadow-xs',
@@ -222,21 +222,22 @@ function FieldTool({ type, onAdd }: { type: SignFieldType; onAdd: () => void }) 
       <span className="flex h-6 w-6 items-center justify-center rounded-sm bg-primary-subtle text-primary">
         <ToolGlyph type={type} />
       </span>
-      {meta.label}
+      {label}
     </button>
   );
 }
 
 function DesktopOnlyFallback() {
+  const t = useTranslation();
   return (
     <div className="flex flex-col items-center justify-center gap-sm rounded-lg border border-dashed border-border-strong bg-surface-muted px-md py-3xl text-center">
       <span className="flex h-14 w-14 items-center justify-center rounded-full bg-primary-subtle text-primary">
         <DesktopIcon />
       </span>
       <div className="flex flex-col gap-2xs">
-        <h2 className="text-lg font-bold text-foreground">데스크톱에서 필드를 배치해 주세요</h2>
+        <h2 className="text-lg font-bold text-foreground">{t('wizard.desktopOnlyTitle')}</h2>
         <p className="max-w-[420px] text-sm text-foreground-subtle">
-          서명 필드 배치는 마우스가 있는 큰 화면에 맞춰져 있어요. 데스크톱에서 이어서 진행해 주세요.
+          {t('wizard.desktopOnlyBody')}
         </p>
       </div>
     </div>

@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Wizard step 3 — recipients ("받는 분").
+ * Wizard step 3 — recipients.
  *
  * The sender lists the people who will sign, *in signing order*, and assigns each
  * placed field to one of them. Order is the list order: dragging a row up makes
@@ -10,17 +10,17 @@
  * assignments through the pure helpers — the component never touches index math
  * by hand.
  *
- * Validation is inline and forgiving in tone (해요체, "다시 확인해 주세요"): an
- * email error shows once its field has been touched, or once the user tries to
- * advance with an invalid list. The shell's "다음" button stays locked until
- * `recipientsComplete` passes (wired through `canProceed`).
+ * Validation is inline and forgiving in tone — it names the fix, never the
+ * reader's mistake. An email error shows once its field has been touched, or
+ * once the user tries to advance with an invalid list. The shell's Next button
+ * stays locked until `recipientsComplete` passes (wired through `canProceed`).
  *
  * Sending itself is grain-9 — this step only owns input + wizard state.
  */
 
 import * as React from 'react';
 import { Button, Field, Input, cn } from '@repo/ui';
-import { FIELD_TYPE_META } from '@/lib/field-geometry';
+import { fieldTypeLabel } from '@/lib/field-geometry';
 import {
   MAX_NAME_LENGTH,
   MAX_RECIPIENTS,
@@ -33,14 +33,17 @@ import {
   removeIndexMap,
   validateRecipients,
 } from '@/lib/recipients';
+import { useTranslation } from '@/components/locale-provider';
+import type { WebTranslate, WebTranslationKey } from '@/lib/web-translations';
 import { useWizard, type RecipientDraft, type SignFieldDraft } from './wizard-context';
 
 export function RecipientsStep() {
+  const t = useTranslation();
   const { state, dispatch } = useWizard();
   const { recipients, fields } = state;
 
   // Show an email error once its field loses focus. Until then a freshly added,
-  // never-touched row stays quiet — the shell's "다음" gate already blocks
+  // never-touched row stays quiet — the shell's Next gate already blocks
   // advancing while the list is invalid, so we don't nag pre-emptively.
   const [touched, setTouched] = React.useState<Set<string>>(() => new Set());
   // Ids mid leave-animation; removed from state only when the collapse ends.
@@ -120,19 +123,18 @@ export function RecipientsStep() {
   return (
     <div className="flex flex-col gap-lg">
       <div className="flex flex-col gap-2xs">
-        <h2 className="text-xl font-bold text-foreground">받는 분을 입력해 주세요</h2>
-        <p className="text-sm text-foreground-subtle">
-          서명할 분의 이름과 이메일을 서명 받을 순서대로 추가하세요.
-        </p>
+        <h2 className="text-xl font-bold text-foreground">{t('wizard.recipientsTitle')}</h2>
+        <p className="text-sm text-foreground-subtle">{t('wizard.recipientsSubtitle')}</p>
       </div>
 
       {recipients.length === 0 ? (
-        <EmptyRecipients onAdd={addRecipient} />
+        <EmptyRecipients t={t} onAdd={addRecipient} />
       ) : (
         <ul className="flex flex-col gap-sm">
           {recipients.map((recipient, index) => (
             <RecipientRow
               key={recipient.id}
+              t={t}
               recipient={recipient}
               index={index}
               total={recipients.length}
@@ -160,11 +162,11 @@ export function RecipientsStep() {
             className="self-start"
           >
             <PlusIcon />
-            받는 분 추가
+            {t('wizard.addRecipient')}
           </Button>
           {atMax ? (
             <p className="text-xs text-foreground-subtle">
-              받는 분은 최대 {MAX_RECIPIENTS}명까지 추가할 수 있어요.
+              {t('wizard.maxRecipients', { count: MAX_RECIPIENTS })}
             </p>
           ) : null}
         </div>
@@ -172,6 +174,7 @@ export function RecipientsStep() {
 
       {recipients.length > 0 && fields.length > 0 ? (
         <FieldAssignments
+          t={t}
           fields={fields}
           recipients={recipients}
           onAssign={assignField}
@@ -182,10 +185,12 @@ export function RecipientsStep() {
 }
 
 interface RecipientRowProps {
+  t: WebTranslate;
   recipient: RecipientDraft;
   index: number;
   total: number;
-  error?: string;
+  /** Catalog key of the inline email error, resolved at the render site. */
+  error?: WebTranslationKey;
   leaving: boolean;
   onChange: (id: string, patch: Partial<Pick<RecipientDraft, 'email' | 'name'>>) => void;
   onBlurEmail: () => void;
@@ -196,6 +201,7 @@ interface RecipientRowProps {
 }
 
 function RecipientRow({
+  t,
   recipient,
   index,
   total,
@@ -249,14 +255,14 @@ function RecipientRow({
           {/* Signing-order badge */}
           <span
             className="mt-1.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-subtle text-sm font-bold text-primary tabular-nums"
-            aria-label={`서명 순서 ${index + 1}번째`}
+            aria-label={t('wizard.signingOrderLabel', { index: index + 1 })}
           >
             {index + 1}
           </span>
 
           <div className="flex min-w-0 flex-1 flex-col gap-xs sm:flex-row">
             <Field
-              label="이름"
+              label={t('wizard.nameLabel')}
               htmlFor={nameId}
               className="sm:w-[36%]"
             >
@@ -264,15 +270,15 @@ function RecipientRow({
                 id={nameId}
                 value={recipient.name}
                 maxLength={MAX_NAME_LENGTH}
-                placeholder="홍길동"
+                placeholder={t('wizard.namePlaceholder')}
                 autoComplete="name"
                 onChange={(e) => onChange(recipient.id, { name: e.target.value })}
               />
             </Field>
             <Field
-              label="이메일"
+              label={t('wizard.emailLabel')}
               htmlFor={emailId}
-              error={error}
+              error={error ? t(error) : undefined}
               required
               className="flex-1"
             >
@@ -294,21 +300,21 @@ function RecipientRow({
           {/* Reorder + remove controls */}
           <div className="mt-1 flex shrink-0 items-center gap-2xs">
             <IconButton
-              label={`${recipientLabel(recipient, index)} 위로 이동`}
+              label={t('wizard.moveUpLabel', { name: recipientLabel(t, recipient, index) })}
               disabled={index === 0}
               onClick={onMoveUp}
             >
               <ArrowIcon dir="up" />
             </IconButton>
             <IconButton
-              label={`${recipientLabel(recipient, index)} 아래로 이동`}
+              label={t('wizard.moveDownLabel', { name: recipientLabel(t, recipient, index) })}
               disabled={index === total - 1}
               onClick={onMoveDown}
             >
               <ArrowIcon dir="down" />
             </IconButton>
             <IconButton
-              label={`${recipientLabel(recipient, index)} 삭제`}
+              label={t('wizard.removeLabel', { name: recipientLabel(t, recipient, index) })}
               onClick={onRemove}
               tone="danger"
             >
@@ -322,10 +328,12 @@ function RecipientRow({
 }
 
 function FieldAssignments({
+  t,
   fields,
   recipients,
   onAssign,
 }: {
+  t: WebTranslate;
   fields: SignFieldDraft[];
   recipients: RecipientDraft[];
   onAssign: (fieldId: string, recipientIndex: number) => void;
@@ -343,15 +351,13 @@ function FieldAssignments({
   return (
     <section className="flex flex-col gap-sm rounded-lg border border-border bg-surface-muted p-md">
       <div className="flex flex-col gap-2xs">
-        <h3 className="text-base font-bold text-foreground">필드 담당자</h3>
-        <p className="text-sm text-foreground-subtle">
-          각 서명 필드를 어떤 받는 분이 작성할지 지정하세요.
-        </p>
+        <h3 className="text-base font-bold text-foreground">{t('wizard.assignTitle')}</h3>
+        <p className="text-sm text-foreground-subtle">{t('wizard.assignSubtitle')}</p>
       </div>
 
       <ul className="flex flex-col gap-xs">
         {ordered.map((field) => {
-          const meta = FIELD_TYPE_META[field.type];
+          const label = fieldTypeLabel(t, field.type);
           const selectId = `assign-${field.id}`;
           return (
             <li
@@ -362,11 +368,11 @@ function FieldAssignments({
                 <span className="flex h-6 w-6 items-center justify-center rounded-sm bg-primary-subtle text-primary">
                   <FieldGlyph type={field.type} />
                 </span>
-                {meta.label} 필드 · {field.page}페이지
+                {t('wizard.assignFieldMeta', { field: label, page: field.page })}
               </span>
               <select
                 id={selectId}
-                aria-label={`${meta.label} 필드 담당자 선택`}
+                aria-label={t('wizard.assignSelectLabel', { field: label })}
                 value={field.recipientIndex ?? 0}
                 onChange={(e) => onAssign(field.id, Number(e.target.value))}
                 className={cn(
@@ -377,7 +383,7 @@ function FieldAssignments({
               >
                 {recipients.map((r, i) => (
                   <option key={r.id} value={i}>
-                    {i + 1}. {recipientLabel(r, i)}
+                    {i + 1}. {recipientLabel(t, r, i)}
                   </option>
                 ))}
               </select>
@@ -389,21 +395,21 @@ function FieldAssignments({
   );
 }
 
-function EmptyRecipients({ onAdd }: { onAdd: () => void }) {
+function EmptyRecipients({ t, onAdd }: { t: WebTranslate; onAdd: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center gap-md rounded-lg border border-dashed border-border-strong bg-surface-muted px-md py-3xl text-center">
       <span className="flex h-14 w-14 items-center justify-center rounded-full bg-primary-subtle text-primary">
         <PeopleIcon />
       </span>
       <div className="flex flex-col gap-2xs">
-        <h3 className="text-lg font-bold text-foreground">아직 받는 분이 없어요</h3>
+        <h3 className="text-lg font-bold text-foreground">{t('wizard.recipientsEmptyTitle')}</h3>
         <p className="max-w-[420px] text-sm text-foreground-subtle">
-          서명을 받을 분을 추가해 주세요. 추가한 순서대로 서명 요청이 전달돼요.
+          {t('wizard.recipientsEmptyBody')}
         </p>
       </div>
       <Button type="button" size="md" onClick={onAdd}>
         <PlusIcon />
-        받는 분 추가
+        {t('wizard.addRecipient')}
       </Button>
     </div>
   );

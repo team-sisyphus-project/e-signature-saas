@@ -2,8 +2,7 @@
 
 /**
  * SaveTemplateDialog — name-and-save the wizard's current PDF + field layout as
- * a reusable template (design-spec `components/save-template-dialog/base.md`,
- * copy `messaging/save-template.md`).
+ * a reusable template (design-spec `components/save-template-dialog/base.md`).
  *
  * One modal, one task: the sender types a name and saves. The dialog reads the
  * wizard's placement state (storageKey · pageCount · fields) but never mutates
@@ -12,9 +11,9 @@
  *
  * State machine: idle → saving → (success | error). On success the form is
  * replaced by a confirmation so the sender gets unambiguous feedback before the
- * modal closes; on failure the server's Korean copy surfaces verbatim (e.g. the
- * plan's template limit — '저장할 수 있는 템플릿 수를 …') and the sender can retry.
- * A 401 means the session lapsed, so we bounce to /login like the send flow.
+ * modal closes; on failure the server's own message surfaces verbatim (e.g. the
+ * plan's template limit) and the sender can retry. A 401 means the session
+ * lapsed, so we bounce to /login like the send flow.
  */
 
 import * as React from 'react';
@@ -31,24 +30,10 @@ import {
   Input,
   SuccessCheck,
 } from '@repo/ui';
-import { ApiError, GENERIC_ERROR } from '@/lib/api';
+import { ApiError } from '@/lib/api';
 import { createTemplate } from '@/lib/templates';
+import { useTranslation } from '@/components/locale-provider';
 import type { SignFieldDraft } from './wizard-context';
-
-const COPY = {
-  title: '템플릿으로 저장',
-  description: '지금 배치한 필드 그대로 저장해 두면, 다음에 같은 양식을 바로 불러올 수 있어요.',
-  nameLabel: '템플릿 이름',
-  namePlaceholder: '예: 표준 근로계약서',
-  nameHint: '나중에 목록에서 찾기 쉬운 이름을 붙여 주세요.',
-  cancel: '취소',
-  save: '저장',
-  saving: '저장 중',
-  retry: '다시 시도',
-  successTitle: '템플릿을 저장했어요',
-  successBody: "다음에 '내 템플릿'에서 바로 불러올 수 있어요.",
-  successClose: '확인',
-} as const;
 
 type SaveState = 'idle' | 'saving' | 'success' | 'error';
 
@@ -71,6 +56,7 @@ export function SaveTemplateDialog({
   fields,
 }: SaveTemplateDialogProps) {
   const router = useRouter();
+  const t = useTranslation();
   const [name, setName] = React.useState('');
   const [status, setStatus] = React.useState<SaveState>('idle');
   const [error, setError] = React.useState<string | null>(null);
@@ -100,10 +86,10 @@ export function SaveTemplateDialog({
         router.replace('/login');
         return;
       }
-      setError(err instanceof ApiError ? err.message : GENERIC_ERROR);
+      setError(err instanceof ApiError ? err.message : t('wizard.genericError'));
       setStatus('error');
     }
-  }, [trimmed, storageKey, pageCount, fields, router]);
+  }, [trimmed, storageKey, pageCount, fields, router, t]);
 
   const inputId = 'save-template-name';
 
@@ -112,13 +98,13 @@ export function SaveTemplateDialog({
       <DialogContent>
         {status === 'success' ? (
           <div className="flex flex-col items-center gap-md py-sm text-center">
-            <SuccessCheck size={72} aria-label={COPY.successTitle} />
+            <SuccessCheck size={72} aria-label={t('wizard.saveTemplateSuccessTitle')} />
             <DialogHeader className="items-center pb-0">
-              <DialogTitle>{COPY.successTitle}</DialogTitle>
-              <DialogDescription>{COPY.successBody}</DialogDescription>
+              <DialogTitle>{t('wizard.saveTemplateSuccessTitle')}</DialogTitle>
+              <DialogDescription>{t('wizard.saveTemplateSuccessBody')}</DialogDescription>
             </DialogHeader>
             <Button size="md" fullWidth onClick={() => onOpenChange(false)}>
-              {COPY.successClose}
+              {t('wizard.confirm')}
             </Button>
           </div>
         ) : (
@@ -129,16 +115,20 @@ export function SaveTemplateDialog({
             }}
           >
             <DialogHeader>
-              <DialogTitle>{COPY.title}</DialogTitle>
-              <DialogDescription>{COPY.description}</DialogDescription>
+              <DialogTitle>{t('wizard.saveTemplate')}</DialogTitle>
+              <DialogDescription>{t('wizard.saveTemplateDescription')}</DialogDescription>
             </DialogHeader>
 
-            <Field label={COPY.nameLabel} htmlFor={inputId} hint={COPY.nameHint}>
+            <Field
+              label={t('wizard.templateNameLabel')}
+              htmlFor={inputId}
+              hint={t('wizard.templateNameHint')}
+            >
               <Input
                 id={inputId}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder={COPY.namePlaceholder}
+                placeholder={t('wizard.templateNamePlaceholder')}
                 maxLength={80}
                 autoFocus
                 disabled={status === 'saving'}
@@ -161,14 +151,16 @@ export function SaveTemplateDialog({
                 onClick={() => onOpenChange(false)}
                 disabled={status === 'saving'}
               >
-                {COPY.cancel}
+                {t('wizard.cancel')}
               </Button>
               <Button type="submit" disabled={!canSave} isLoading={status === 'saving'}>
-                {status === 'saving'
-                  ? COPY.saving
-                  : status === 'error'
-                    ? COPY.retry
-                    : COPY.save}
+                {t(
+                  status === 'saving'
+                    ? 'wizard.saving'
+                    : status === 'error'
+                      ? 'wizard.retry'
+                      : 'wizard.save',
+                )}
               </Button>
             </DialogFooter>
           </form>

@@ -24,7 +24,6 @@ import {
   openPdf,
   renderPageToCanvas,
   isRenderCancelled,
-  PdfRenderError,
   type PdfDocument,
 } from '@/lib/pdf';
 import {
@@ -35,6 +34,7 @@ import {
   defaultPxRectAt,
   resizePxRect,
   snapMove,
+  fieldTypeLabel,
   FIELD_TYPE_META,
   RESIZE_HANDLES,
   type PageSize,
@@ -43,6 +43,8 @@ import {
   type ResizeHandle,
   type SnapLine,
 } from '@/lib/field-geometry';
+import { useTranslation } from '@/components/locale-provider';
+import type { WebTranslate } from '@/lib/web-translations';
 import type { SignFieldDraft } from './wizard-context';
 
 const SNAP_THRESHOLD = 6; // px
@@ -100,6 +102,7 @@ export function FieldCanvas({
   onPageCount,
   className,
 }: FieldCanvasProps) {
+  const t = useTranslation();
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const overlayRef = React.useRef<HTMLDivElement>(null);
   const docRef = React.useRef<PdfDocument | null>(null);
@@ -118,6 +121,13 @@ export function FieldCanvas({
   React.useEffect(() => {
     onPageCountRef.current = onPageCount;
   }, [onPageCount]);
+
+  // Read through a ref so a locale change never re-enters the render effect —
+  // re-rasterizing the page would only redraw the identical image.
+  const tRef = React.useRef(t);
+  React.useEffect(() => {
+    tRef.current = t;
+  }, [t]);
 
   // Open the document once; dispose on unmount. `docReady` gates the render
   // effect so the first page draws as soon as the handle is available.
@@ -165,11 +175,10 @@ export function FieldCanvas({
         setError(null);
       } catch (err) {
         if (cancelled || isRenderCancelled(err)) return;
-        setError(
-          err instanceof PdfRenderError
-            ? err.message
-            : 'PDF를 읽을 수 없어요. 파일이 손상되지 않았는지 확인해 주세요.',
-        );
+        // Every failure reads the same to the sender: the file could not be
+        // opened. A `PdfRenderError`'s message carries the pdfjs diagnosis,
+        // which belongs in logs, never on screen.
+        setError(tRef.current('wizard.pdfReadError'));
         setStatus('error');
       }
     };
@@ -344,7 +353,7 @@ export function FieldCanvas({
         <canvas
           ref={canvasRef}
           role="img"
-          aria-label={`계약 PDF ${page}페이지`}
+          aria-label={t('wizard.pageCanvasLabel', { page })}
           className="pointer-events-none absolute inset-0 rounded-sm border border-border bg-surface shadow-sm"
         />
 
@@ -399,6 +408,7 @@ export function FieldCanvas({
             return (
               <FieldBox
                 key={field.id}
+                t={t}
                 field={field}
                 rect={rect}
                 selected={selected}
@@ -422,6 +432,7 @@ export function FieldCanvas({
 }
 
 interface FieldBoxProps {
+  t: WebTranslate;
   field: SignFieldDraft;
   rect: PxRect;
   selected: boolean;
@@ -438,6 +449,7 @@ interface FieldBoxProps {
 }
 
 function FieldBox({
+  t,
   field,
   rect,
   selected,
@@ -452,12 +464,12 @@ function FieldBox({
   onKeyDown,
   onDelete,
 }: FieldBoxProps) {
-  const meta = FIELD_TYPE_META[field.type];
+  const label = fieldTypeLabel(t, field.type);
   return (
     <div
       role="button"
       tabIndex={0}
-      aria-label={`${meta.label} 필드. 방향키로 이동, Shift+방향키로 크기 조절, Delete로 삭제`}
+      aria-label={t('wizard.fieldBoxLabel', { field: label })}
       aria-pressed={selected}
       onPointerEnter={onPointerEnter}
       onPointerLeave={onPointerLeave}
@@ -481,14 +493,14 @@ function FieldBox({
     >
       <span className="pointer-events-none flex items-center gap-2xs truncate px-2xs">
         <FieldGlyph type={field.type} />
-        {meta.label}
+        {label}
       </span>
 
       {/* Delete affordance — appears when the field is active. */}
       {selected ? (
         <button
           type="button"
-          aria-label={`${meta.label} 필드 삭제`}
+          aria-label={t('wizard.fieldDeleteLabel', { field: label })}
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => {
             e.stopPropagation();

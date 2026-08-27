@@ -27,8 +27,15 @@ import {
   PdfRenderError,
   type PdfDocument,
 } from '@/lib/pdf';
-import { normToPx, FIELD_TYPE_META, type PageSize, type SignFieldType } from '@/lib/field-geometry';
+import {
+  normToPx,
+  fieldTypeLabel,
+  FIELD_TYPE_META,
+  type PageSize,
+  type SignFieldType,
+} from '@/lib/field-geometry';
 import { TEMPLATE_FIELD_PREVIEW_COPY as COPY } from '@/lib/templates-copy';
+import { useTranslation } from '@/components/locale-provider';
 
 /**
  * The minimal field shape this surface needs: a type, its 1-based page, its
@@ -64,6 +71,7 @@ export function TemplateFieldPreview({
   maxWidth = 480,
   className,
 }: TemplateFieldPreviewProps) {
+  const t = useTranslation();
   const containerRef = React.useRef<HTMLDivElement>(null);
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const docRef = React.useRef<PdfDocument | null>(null);
@@ -251,7 +259,7 @@ export function TemplateFieldPreview({
                 <span className="flex h-4 w-4 items-center justify-center rounded-sm border border-primary/60 bg-primary-subtle text-primary">
                   <FieldGlyph type={type} />
                 </span>
-                {FIELD_TYPE_META[type].label}
+                {fieldTypeLabel(t, type)}
               </span>
             ))}
           </div>
@@ -273,8 +281,8 @@ interface ReadonlyFieldBoxProps {
 /** One placed field, drawn read-only over the page: type glyph + label, and an
  *  optional recipient-order badge. No handles, no pointer target. */
 function ReadonlyFieldBox({ field, pageSize, showRecipient }: ReadonlyFieldBoxProps) {
+  const t = useTranslation();
   const rect = normToPx(field, pageSize);
-  const meta = FIELD_TYPE_META[field.type];
   const recipient = (field.recipientIndex ?? 0) + 1;
   return (
     <div
@@ -291,7 +299,7 @@ function ReadonlyFieldBox({ field, pageSize, showRecipient }: ReadonlyFieldBoxPr
       ) : null}
       <span className="flex items-center gap-2xs truncate px-2xs">
         <FieldGlyph type={field.type} />
-        {meta.label}
+        {fieldTypeLabel(t, field.type)}
       </span>
     </div>
   );

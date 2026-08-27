@@ -14,13 +14,14 @@
  * read the active branch rather than a fixed step list.
  *
  * Navigation is centralized: a step never advances itself. It writes to wizard
- * state, and `canProceed()` decides whether "다음" unlocks — so as later grains
+ * state, and `canProceed()` decides whether Next unlocks — so as later grains
  * add their data, the gate lights up without touching this shell.
  */
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, StepIndicator } from '@repo/ui';
+import { useTranslation } from '@/components/locale-provider';
 import {
   WizardProvider,
   useWizard,
@@ -28,7 +29,7 @@ import {
   currentStepKey,
   isLastStep,
   stepSequence,
-  STEP_LABELS,
+  STEP_LABEL_KEYS,
   type StepKey,
   type WizardPreload,
 } from './wizard-context';
@@ -49,6 +50,7 @@ export function ContractWizard({ preload }: { preload?: WizardPreload }) {
 
 function WizardShell() {
   const router = useRouter();
+  const t = useTranslation();
   const { state, goNext, goBack } = useWizard();
   const proceed = canProceed(state);
   // Labels/slot are driven by the branch the chosen delivery method carves out,
@@ -63,15 +65,17 @@ function WizardShell() {
     <div className="flex min-h-[100dvh] flex-col bg-background">
       <header className="sticky top-0 z-30 border-b border-border bg-surface">
         <div className="mx-auto flex w-full max-w-[760px] items-center justify-between px-md py-sm">
-          <span className="text-base font-bold tracking-tight text-primary">전자계약</span>
-          <Button variant="ghost" size="sm" onClick={exit} aria-label="계약 생성 나가기">
-            나가기
+          <span className="text-base font-bold tracking-tight text-primary">
+            {t('wizard.product')}
+          </span>
+          <Button variant="ghost" size="sm" onClick={exit} aria-label={t('wizard.exitLabel')}>
+            {t('wizard.exit')}
           </Button>
         </div>
       </header>
 
       <div className="mx-auto w-full max-w-[760px] px-md pt-lg">
-        <StepIndicator steps={steps.map((key) => STEP_LABELS[key])} current={state.step} />
+        <StepIndicator steps={steps.map((key) => t(STEP_LABEL_KEYS[key]))} current={state.step} />
       </div>
 
       <main className="mx-auto w-full max-w-[760px] flex-1 px-md py-xl">
@@ -91,16 +95,16 @@ function WizardShell() {
             size="md"
             onClick={state.step === 0 ? exit : goBack}
           >
-            {state.step === 0 ? '취소' : '이전'}
+            {t(state.step === 0 ? 'wizard.cancel' : 'wizard.back')}
           </Button>
 
           {!lastStep ? (
             <Button size="md" onClick={goNext} disabled={!proceed} className="min-w-[120px]">
-              다음
+              {t('wizard.next')}
             </Button>
           ) : (
-            // Terminal steps ('발송 검토' / '링크 공유') render their own CTA in
-            // their slot, so the shell leaves its footer-right empty here.
+            // Terminal steps (review / share link) render their own CTA in their
+            // slot, so the shell leaves its footer-right empty here.
             <span aria-hidden="true" />
           )}
         </div>

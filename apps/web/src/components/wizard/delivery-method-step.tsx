@@ -1,64 +1,54 @@
 'use client';
 
 /**
- * Wizard step — delivery method ("전달 방법").
+ * Wizard step — delivery method.
  *
  * The fork between the two ways a finished contract reaches its signer:
  * emailing a signature request, or sharing a link anyone can open. The step
  * presents two selection cards; picking one dispatches SET_DELIVERY_METHOD,
  * which extends the step sequence with the matching tail (see wizard-context)
- * and unlocks the shell's "다음" through canProceed. Routing to the next step
+ * and unlocks the shell's Next through canProceed. Routing to the next step
  * stays with the shell — this step only records the choice.
  *
  * The cards are a `role="radiogroup"` of two `role="radio"` options with roving
  * tabindex + arrow-key navigation, so the choice is reachable by keyboard alone.
- * All copy lives in the COPY constant (해요체, Toss-tone) so the voice stays in
- * one place.
  */
 
 import * as React from 'react';
 import { Card, cn } from '@repo/ui';
+import { useTranslation } from '@/components/locale-provider';
+import type { WebTranslationKey } from '@/lib/web-translations';
 import { useWizard, type DeliveryMethod } from './wizard-context';
-
-/** Single source of truth for this step's user-facing copy (해요체, Toss-tone). */
-const COPY = {
-  title: '어떻게 전달할까요?',
-  description: '완성한 계약서를 받는 분에게 전달할 방법을 선택하세요.',
-  options: {
-    email: {
-      label: '이메일로 보내기',
-      description: '받는 분에게 서명 요청을 보내요.',
-    },
-    link: {
-      label: '링크로 공유하기',
-      description: '링크를 받은 누구나 열람하고 작성할 수 있어요.',
-    },
-  },
-} as const;
 
 interface DeliveryOption {
   method: DeliveryMethod;
-  label: string;
-  description: string;
+  labelKey: WebTranslationKey;
+  descriptionKey: WebTranslationKey;
   icon: React.ReactNode;
 }
 
+/**
+ * The two branches, in presentation order. The list carries catalog keys rather
+ * than resolved words so it stays a module constant — the roving-tabindex logic
+ * below indexes into it and must not be rebuilt on every render.
+ */
 const OPTIONS: readonly DeliveryOption[] = [
   {
     method: 'email',
-    label: COPY.options.email.label,
-    description: COPY.options.email.description,
+    labelKey: 'wizard.deliveryEmail',
+    descriptionKey: 'wizard.deliveryEmailBody',
     icon: <MailIcon />,
   },
   {
     method: 'link',
-    label: COPY.options.link.label,
-    description: COPY.options.link.description,
+    labelKey: 'wizard.deliveryLink',
+    descriptionKey: 'wizard.deliveryLinkBody',
     icon: <LinkIcon />,
   },
 ];
 
 export function DeliveryMethodStep() {
+  const t = useTranslation();
   const { state, dispatch } = useWizard();
   const selected = state.deliveryMethod;
 
@@ -109,13 +99,13 @@ export function DeliveryMethodStep() {
   return (
     <div className="flex flex-col gap-lg">
       <div className="flex flex-col gap-2xs">
-        <h2 className="text-xl font-bold text-foreground">{COPY.title}</h2>
-        <p className="text-sm text-foreground-subtle">{COPY.description}</p>
+        <h2 className="text-xl font-bold text-foreground">{t('wizard.deliveryTitle')}</h2>
+        <p className="text-sm text-foreground-subtle">{t('wizard.deliveryDescription')}</p>
       </div>
 
       <div
         role="radiogroup"
-        aria-label={COPY.title}
+        aria-label={t('wizard.deliveryTitle')}
         className="grid gap-sm sm:grid-cols-2"
       >
         {OPTIONS.map((option, index) => {
@@ -149,8 +139,10 @@ export function DeliveryMethodStep() {
                 {option.icon}
               </span>
               <div className="flex flex-col gap-2xs">
-                <span className="text-base font-bold text-foreground">{option.label}</span>
-                <span className="text-sm text-foreground-subtle">{option.description}</span>
+                <span className="text-base font-bold text-foreground">{t(option.labelKey)}</span>
+                <span className="text-sm text-foreground-subtle">
+                  {t(option.descriptionKey)}
+                </span>
               </div>
             </Card>
           );

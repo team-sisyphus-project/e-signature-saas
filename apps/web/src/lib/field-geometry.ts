@@ -17,6 +17,8 @@
  * and what makes the conversion unit-testable in isolation.
  */
 
+import type { WebTranslate, WebTranslationKey } from './web-translations';
+
 export type SignFieldType = 'SIGNATURE' | 'DATE' | 'TEXT';
 
 /** A rect in canvas space: top-left origin, pixels relative to the page raster. */
@@ -53,18 +55,39 @@ export const FIELD_TYPES: readonly SignFieldType[] = ['SIGNATURE', 'DATE', 'TEXT
 
 export interface FieldTypeMeta {
   type: SignFieldType;
-  /** Korean label shown on the tool + the placed field. */
-  label: string;
+  /**
+   * Catalog key of the word shown on the tool and the placed field. Geometry
+   * carries the key rather than the label so this module stays copy-free and a
+   * field type reads identically wherever it is rendered.
+   */
+  labelKey: WebTranslationKey;
   /** Default normalized size when first dropped. */
   defaultSize: { width: number; height: number };
 }
 
 /** Per-type display + default footprint. Sizes are page-relative (0..1). */
 export const FIELD_TYPE_META: Record<SignFieldType, FieldTypeMeta> = {
-  SIGNATURE: { type: 'SIGNATURE', label: '서명', defaultSize: { width: 0.26, height: 0.08 } },
-  DATE: { type: 'DATE', label: '날짜', defaultSize: { width: 0.18, height: 0.05 } },
-  TEXT: { type: 'TEXT', label: '텍스트', defaultSize: { width: 0.28, height: 0.06 } },
+  SIGNATURE: {
+    type: 'SIGNATURE',
+    labelKey: 'common.fieldSignature',
+    defaultSize: { width: 0.26, height: 0.08 },
+  },
+  DATE: {
+    type: 'DATE',
+    labelKey: 'common.fieldDate',
+    defaultSize: { width: 0.18, height: 0.05 },
+  },
+  TEXT: {
+    type: 'TEXT',
+    labelKey: 'common.fieldText',
+    defaultSize: { width: 0.28, height: 0.06 },
+  },
 };
+
+/** The word for a field type, resolved through the locale-bound translator. */
+export function fieldTypeLabel(t: WebTranslate, type: SignFieldType): string {
+  return t(FIELD_TYPE_META[type].labelKey);
+}
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));

@@ -22,13 +22,14 @@
  * cursor, but it indexes into `stepSequence(deliveryMethod)`.
  *
  * Steps never advance themselves: they populate state, and `canProceed()`
- * derives whether the shell's "다음" button unlocks. This keeps the gating in
+ * derives whether the shell's Next button unlocks. This keeps the gating in
  * one declarative place as later grains fill in their slots.
  */
 
 import * as React from 'react';
 import type { DocumentSummary } from '@/lib/documents';
 import { recipientsComplete } from '@/lib/recipients';
+import type { WebTranslationKey } from '@/lib/web-translations';
 
 export type SignFieldType = 'SIGNATURE' | 'DATE' | 'TEXT';
 
@@ -61,14 +62,18 @@ export type DeliveryMethod = 'email' | 'link';
  */
 export type StepKey = 'upload' | 'fields' | 'delivery' | 'recipients' | 'review' | 'link';
 
-/** Human labels for each step. These surface in the StepIndicator. */
-export const STEP_LABELS: Record<StepKey, string> = {
-  upload: '업로드',
-  fields: '필드 배치',
-  delivery: '전달 방법',
-  recipients: '받는 분',
-  review: '발송 검토',
-  link: '링크 공유',
+/**
+ * Catalog key of each step's StepIndicator label. The map holds keys rather
+ * than words so this module — imported by the reducer and by pure helpers that
+ * run outside React — never needs a translator to describe the sequence.
+ */
+export const STEP_LABEL_KEYS: Record<StepKey, WebTranslationKey> = {
+  upload: 'wizard.stepUpload',
+  fields: 'wizard.stepFields',
+  delivery: 'wizard.stepDelivery',
+  recipients: 'wizard.stepRecipients',
+  review: 'wizard.stepReview',
+  link: 'wizard.stepLink',
 };
 
 /** Steps every contract passes through, up to the delivery-method fork. */
@@ -80,7 +85,7 @@ const LINK_STEPS: readonly StepKey[] = ['link'];
 
 /**
  * The ordered step keys for the current delivery choice. Until a method is
- * picked the sequence stops at 'delivery'; `canProceed()` keeps "다음" locked
+ * picked the sequence stops at 'delivery'; `canProceed()` keeps Next locked
  * there so the flow can't run past an unmade branch decision.
  */
 export function stepSequence(deliveryMethod: DeliveryMethod | null): readonly StepKey[] {
@@ -190,10 +195,10 @@ export function currentStepKey(state: WizardState): StepKey {
 
 /**
  * Whether the active step is the terminal step of a chosen delivery branch.
- * Terminal steps ('발송 검토' / '링크 공유') render their own CTA, so the shell
- * hides its footer "다음" there. The 'delivery' fork is never terminal — even
- * though it is transiently the last entry while no method is chosen, it still
- * needs "다음" to move into the selected branch.
+ * Terminal steps (review / share link) render their own CTA, so the shell hides
+ * its footer Next there. The 'delivery' fork is never terminal — even though it
+ * is transiently the last entry while no method is chosen, it still needs Next
+ * to move into the selected branch.
  */
 export function isLastStep(state: WizardState): boolean {
   if (state.deliveryMethod === null) return false;
@@ -245,7 +250,7 @@ export function canProceed(state: WizardState): boolean {
     case 'fields':
       return state.fields.length > 0;
     case 'delivery':
-      // Locks "다음" until the user picks how the contract is delivered.
+      // Locks Next until the user picks how the contract is delivered.
       return state.deliveryMethod !== null;
     case 'recipients':
       // Need ≥1 recipient and every recipient passing inline validation

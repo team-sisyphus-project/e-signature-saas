@@ -11,7 +11,7 @@ import {
 } from './wizard-context';
 import type { DocumentSummary } from '@/lib/documents';
 
-const doc = { id: 'doc_1', title: '근로계약서' } as unknown as DocumentSummary;
+const doc = { id: 'doc_1', title: 'Employment agreement' } as unknown as DocumentSummary;
 const file = new File(['%PDF-1.4'], 'template.pdf', { type: 'application/pdf' });
 const fields: SignFieldDraft[] = [
   { id: 'f1', type: 'SIGNATURE', page: 1, x: 0.1, y: 0.2, width: 0.2, height: 0.05, recipientIndex: 0 },
@@ -28,7 +28,7 @@ describe('preloadedWizardState', () => {
     expect(state.deliveryMethod).toBeNull();
     expect(state.step).toBe(stepIndexOf(null, 'delivery'));
     expect(currentStepKey(state)).toBe('delivery');
-    // "다음" stays locked until the user picks how the contract is delivered.
+    // Next stays locked until the user picks how the contract is delivered.
     expect(canProceed(state)).toBe(false);
   });
 
@@ -68,11 +68,11 @@ describe('preloadedWizardState', () => {
 
   it('runs the email tail recipients → review exactly like the from-scratch path', () => {
     let state = preloadedWizardState(preload());
-    // Pick email at the (now shared) delivery step and step into 받는 분.
+    // Pick email at the (now shared) delivery step and step into recipients.
     state = wizardReducer(state, { type: 'SET_DELIVERY_METHOD', method: 'email' });
     state = wizardReducer(state, { type: 'GO_NEXT' });
     expect(currentStepKey(state)).toBe('recipients');
-    // 받는 분 is not terminal and "다음" stays locked until a valid recipient exists.
+    // Recipients is not terminal and Next stays locked until a valid recipient exists.
     expect(isLastStep(state)).toBe(false);
     expect(canProceed(state)).toBe(false);
 
@@ -82,7 +82,7 @@ describe('preloadedWizardState', () => {
     expect(canProceed(state)).toBe(false);
 
     // …a well-formed recipient unlocks it.
-    const valid: RecipientDraft = { id: 'r1', email: 'signer@example.com', name: '홍길동' };
+    const valid: RecipientDraft = { id: 'r1', email: 'signer@example.com', name: 'Jane Doe' };
     state = wizardReducer(state, { type: 'SET_RECIPIENTS', recipients: [valid] });
     expect(canProceed(state)).toBe(true);
 
@@ -101,11 +101,11 @@ describe('preloadedWizardState', () => {
   it('honors an explicit email override by opening on the shared delivery step', () => {
     const state = preloadedWizardState(preload({ deliveryMethod: 'email' }));
     // A pre-selected email branch still opens on the delivery step (present in
-    // every branch) rather than skipping ahead to 받는 분.
+    // every branch) rather than skipping ahead to recipients.
     expect(state.deliveryMethod).toBe('email');
     expect(state.step).toBe(stepIndexOf('email', 'delivery'));
     expect(currentStepKey(state)).toBe('delivery');
-    // "다음" is already unlocked because the branch is chosen.
+    // Next is already unlocked because the branch is chosen.
     expect(canProceed(state)).toBe(true);
   });
 
@@ -122,7 +122,7 @@ describe('preloadedWizardState', () => {
 
   it('drops the template fields when the source PDF is re-uploaded', () => {
     let state = preloadedWizardState(preload());
-    const newDoc = { id: 'doc_2', title: '재업로드' } as unknown as DocumentSummary;
+    const newDoc = { id: 'doc_2', title: 'Re-uploaded' } as unknown as DocumentSummary;
     const newFile = new File(['%PDF-1.4 v2'], 'reupload.pdf', { type: 'application/pdf' });
     state = wizardReducer(state, { type: 'SET_DOCUMENT', document: newDoc, file: newFile });
     expect(state.document).toBe(newDoc);

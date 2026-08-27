@@ -1,5 +1,5 @@
 /**
- * Recipient list logic — pure, DOM-free helpers for the wizard's "받는 분" step.
+ * Recipient list logic — pure, DOM-free helpers for the wizard's recipients step.
  *
  * The recipients step lets the sender add/remove/reorder signers and assign each
  * placed field to one of them. Two invariants make the rest of the UI simple:
@@ -17,6 +17,7 @@
  */
 
 import type { RecipientDraft, SignFieldDraft } from '@/components/wizard/wizard-context';
+import type { WebTranslate, WebTranslationKey } from './web-translations';
 
 /** Backend caps a single contract at 20 recipients (SendContractDto). */
 export const MAX_RECIPIENTS = 20;
@@ -51,23 +52,44 @@ export function createRecipient(): RecipientDraft {
   return { id: nextRecipientId(), email: '', name: '' };
 }
 
-/** Display name for a recipient, falling back to an order-based label. */
-export function recipientLabel(recipient: RecipientDraft, index: number): string {
+/**
+ * Display name for a recipient, falling back to an order-based label.
+ *
+ * Takes the locale-bound translator rather than a ready-made fallback string so
+ * the caller cannot accidentally supply one locale's wording on another's
+ * screen; the fallback is a catalog sentence with the position interpolated,
+ * never a concatenation.
+ */
+export function recipientLabel(
+  t: WebTranslate,
+  recipient: RecipientDraft,
+  index: number,
+): string {
   const name = recipient.name.trim();
-  return name.length > 0 ? name : `받는 분 ${index + 1}`;
+  return name.length > 0 ? name : t('wizard.recipientFallback', { index: index + 1 });
 }
 
 export type RecipientFieldKey = 'email';
 
 export interface RecipientError {
-  email?: string;
+  /** Catalog key of the message to render, not the message itself. */
+  email?: WebTranslationKey;
 }
 
+/**
+ * Validation outcomes as catalog keys.
+ *
+ * Validation is pure and locale-free: it decides *what is wrong*, and the step
+ * that renders the row decides what that reads like in the reader's language.
+ * Returning a key instead of a sentence is what keeps this module callable from
+ * `canProceed()` — a reducer-side gate that has no translator and no business
+ * holding one.
+ */
 export const RECIPIENT_MESSAGES = {
-  emailRequired: '이메일을 입력해 주세요.',
-  emailInvalid: '이메일 형식을 다시 확인해 주세요.',
-  emailDuplicate: '이미 추가된 이메일이에요.',
-} as const;
+  emailRequired: 'wizard.emailRequired',
+  emailInvalid: 'wizard.emailInvalid',
+  emailDuplicate: 'wizard.emailDuplicate',
+} as const satisfies Record<string, WebTranslationKey>;
 
 /**
  * Per-recipient validation, keyed by recipient id. Email is required and

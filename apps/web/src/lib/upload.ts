@@ -13,6 +13,7 @@
 
 import { ApiError, GENERIC_ERROR } from './api';
 import type { DocumentSummary } from './documents';
+import type { WebTranslationKey } from './web-translations';
 
 const API_ORIGIN = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 const API_BASE = `${API_ORIGIN}/api`;
@@ -98,4 +99,43 @@ export function uploadPdf(file: File, options: UploadPdfOptions = {}): Promise<D
     form.append('file', file);
     xhr.send(form);
   });
+}
+
+// --- client-side guards -----------------------------------------------------
+
+/**
+ * Size cap, in whole megabytes. Exported because the same number appears in the
+ * upload step's helper line and in the too-large message, and a cap that says
+ * one thing and enforces another is worse than no cap at all.
+ */
+export const MAX_UPLOAD_MB = 20;
+export const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024;
+
+/**
+ * Pre-flight check on a picked file, returning the catalog key of the guard it
+ * trips or `null` when the file is acceptable.
+ *
+ * The server enforces the same three rules; this exists so the sender learns
+ * about a wrong file instantly instead of after uploading it. Returning a key
+ * rather than a sentence keeps the rule pure and lets the step render it in the
+ * reader's language.
+ */
+export function validatePdfFile(file: File): WebTranslationKey | null {
+  const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+  if (!isPdf) return 'wizard.guardInvalidType';
+  if (file.size === 0) return 'wizard.guardEmpty';
+  if (file.size > MAX_UPLOAD_BYTES) return 'wizard.guardTooLarge';
+  return null;
+}
+
+/**
+ * Byte count as a short human size. Units stay in ASCII (B / KB / MB), which
+ * read the same in both locales — locale-aware number formatting is outside the
+ * i18n scope, and inventing a translated unit here would only fragment it.
+ */
+export function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  const kb = bytes / 1024;
+  if (kb < 1024) return `${Math.round(kb)} KB`;
+  return `${(kb / 1024).toFixed(1)} MB`;
 }

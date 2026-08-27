@@ -6,9 +6,9 @@
  * `components/start-choice-card/base.md`).
  *
  * Two ways to start:
- * - **새로 업로드**: the classic from-scratch path — mount `<ContractWizard />`
+ * - **Upload a PDF**: the classic from-scratch path — mount `<ContractWizard />`
  *   with no preload (upload → fields → delivery → …). Unchanged behavior.
- * - **내 템플릿에서 시작**: pick a saved template; we re-register its PDF as a
+ * - **Start from a template**: pick a saved template; we re-register its PDF as a
  *   fresh DRAFT (`createDocumentFromStorageKey`), reload its bytes
  *   (`fetchTemplateFile`), and hydrate its saved field layout, then mount
  *   `<ContractWizard preload={…} />` straight at the delivery-method step. The
@@ -16,16 +16,15 @@
  *   email or link exactly as on the from-scratch path.
  *
  * A `?template=<id>` query jumps past the chooser and prepares that template
- * immediately (e.g. a "이 템플릿으로 보내기" deep link). Loading / error copy is
- * 해요체; server-sent errors (not-found / forbidden) surface verbatim, transport
- * failures fall back to the neutral generic line, and a 401 bounces to /login
- * like the send flow.
+ * immediately (e.g. a "send with this template" deep link). Server-sent errors
+ * (not-found / forbidden) surface verbatim, transport failures fall back to the
+ * neutral generic line, and a 401 bounces to /login like the send flow.
  */
 
 import * as React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button, Card, Skeleton } from '@repo/ui';
-import { ApiError, GENERIC_ERROR } from '@/lib/api';
+import { ApiError } from '@/lib/api';
 import { clearSession } from '@/lib/auth';
 import { createDocumentFromStorageKey } from '@/lib/documents';
 import {
@@ -35,8 +34,8 @@ import {
   type TemplateField,
   type TemplateSummary,
 } from '@/lib/templates';
-import { NEW_CONTRACT_COPY as COPY } from '@/lib/new-contract-copy';
 import { useTranslation } from '@/components/locale-provider';
+import type { WebTranslate } from '@/lib/web-translations';
 import { TemplateCard } from '@/components/template-card';
 import { ContractWizard } from './contract-wizard';
 import { nextFieldId } from './field-canvas';
@@ -63,7 +62,7 @@ function toFieldDrafts(fields: TemplateField[]): SignFieldDraft[] {
 /**
  * Prepare a template for the wizard: load its detail, re-register its PDF as a
  * fresh DRAFT and reload the source bytes (in parallel), and hydrate the field
- * layout. Rejects with the server's Korean copy on failure.
+ * layout. Rejects with the server's own message on failure.
  */
 async function prepareTemplate(id: string): Promise<WizardPreload> {
   const template = await getTemplate(id);
@@ -88,6 +87,7 @@ type View =
 
 export function NewContractStart() {
   const router = useRouter();
+  const t = useTranslation();
   const searchParams = useSearchParams();
   const deepLinkId = searchParams.get('template');
 
@@ -95,7 +95,7 @@ export function NewContractStart() {
   const [view, setView] = React.useState<View>(
     deepLinkId ? { kind: 'preparing' } : { kind: 'choose' },
   );
-  // The template id currently being prepared — kept so "다시 시도" can re-run it.
+  // The template id currently being prepared — kept so a retry can re-run it.
   const preparingIdRef = React.useRef<string | null>(deepLinkId);
 
   const goChoose = React.useCallback(() => {
@@ -118,11 +118,11 @@ export function NewContractStart() {
         }
         setView({
           kind: 'prepareError',
-          message: err instanceof ApiError ? err.message : GENERIC_ERROR,
+          message: err instanceof ApiError ? err.message : t('wizard.genericError'),
         });
       }
     },
-    [router],
+    [router, t],
   );
 
   // Kick off the deep-link prepare exactly once.
@@ -163,8 +163,9 @@ export function NewContractStart() {
       return (
         <StartShell>
           <TemplatePicker
+            t={t}
             onBack={goChoose}
-            onSelect={(t) => void prepare(t.id)}
+            onSelect={(template) => void prepare(template.id)}
             onUpload={() => setView({ kind: 'upload' })}
           />
         </StartShell>
@@ -276,10 +277,12 @@ function ChoiceCard({
 
 /** Template-selection view: title + back, then the picker list / states. */
 function TemplatePicker({
+  t,
   onBack,
   onSelect,
   onUpload,
 }: {
+  t: WebTranslate;
   onBack: () => void;
   onSelect: (template: TemplateSummary) => void;
   onUpload: () => void;
@@ -298,9 +301,9 @@ function TemplatePicker({
         router.replace('/login');
         return;
       }
-      setError(err instanceof ApiError ? err.message : GENERIC_ERROR);
+      setError(err instanceof ApiError ? err.message : t('wizard.genericError'));
     }
-  }, [router]);
+  }, [router, t]);
 
   React.useEffect(() => {
     void load();
@@ -309,12 +312,13 @@ function TemplatePicker({
   return (
     <div className="flex flex-col gap-xl">
       <div className="flex flex-col gap-2xs">
-        <h1 className="text-2xl font-bold text-foreground">{COPY.pickTitle}</h1>
-        <p className="text-base text-foreground-subtle">{COPY.pickSubtitle}</p>
+        <h1 className="text-2xl font-bold text-foreground">{t('wizard.pickTitle')}</h1>
+        <p className="text-base text-foreground-subtle">{t('wizard.pickSubtitle')}</p>
       </div>
 
-      <section aria-label={COPY.listLabel}>
+      <section aria-label={t('wizard.listLabel')}>
         <PickerBody
+          t={t}
           templates={templates}
           error={error}
           onRetry={() => void load()}
@@ -325,7 +329,7 @@ function TemplatePicker({
 
       <div>
         <Button variant="ghost" size="md" onClick={onBack}>
-          {COPY.pickBack}
+          {t('wizard.pickBack')}
         </Button>
       </div>
     </div>
@@ -333,12 +337,14 @@ function TemplatePicker({
 }
 
 function PickerBody({
+  t,
   templates,
   error,
   onRetry,
   onSelect,
   onUpload,
 }: {
+  t: WebTranslate;
   templates: TemplateSummary[] | null;
   error: string | null;
   onRetry: () => void;
@@ -350,7 +356,7 @@ function PickerBody({
       <Card className="flex flex-col items-center gap-md px-lg py-3xl text-center">
         <p className="text-base text-foreground-muted">{error}</p>
         <Button variant="secondary" onClick={onRetry}>
-          {COPY.retry}
+          {t('wizard.retry')}
         </Button>
       </Card>
     );
@@ -376,11 +382,13 @@ function PickerBody({
     return (
       <Card className="flex flex-col items-center gap-md px-lg py-3xl text-center">
         <div className="flex flex-col gap-2xs">
-          <h2 className="text-lg font-bold text-foreground">{COPY.emptyTitle}</h2>
-          <p className="max-w-[380px] text-base text-foreground-subtle">{COPY.emptyBody}</p>
+          <h2 className="text-lg font-bold text-foreground">{t('wizard.emptyTitle')}</h2>
+          <p className="max-w-[380px] text-base text-foreground-subtle">
+            {t('wizard.emptyBody')}
+          </p>
         </div>
         <Button size="lg" onClick={onUpload}>
-          {COPY.emptyCta}
+          {t('wizard.emptyCta')}
         </Button>
       </Card>
     );
@@ -395,7 +403,7 @@ function PickerBody({
           <TemplateCard
             template={template}
             onSelect={onSelect}
-            selectLabel={COPY.selectLabel(template.name)}
+            selectLabel={t('wizard.selectLabel', { name: template.name })}
           />
         </li>
       ))}
@@ -405,12 +413,15 @@ function PickerBody({
 
 /** Spinner + copy while the chosen template is re-registered and reloaded. */
 function PreparingState() {
+  const t = useTranslation();
   return (
     <Card className="flex flex-col items-center gap-md px-lg py-3xl text-center">
       <Spinner />
       <div className="flex flex-col gap-2xs">
-        <h1 className="text-lg font-bold text-foreground">{COPY.preparingTitle}</h1>
-        <p className="max-w-[380px] text-base text-foreground-subtle">{COPY.preparingBody}</p>
+        <h1 className="text-lg font-bold text-foreground">{t('wizard.preparingTitle')}</h1>
+        <p className="max-w-[380px] text-base text-foreground-subtle">
+          {t('wizard.preparingBody')}
+        </p>
       </div>
     </Card>
   );
@@ -425,6 +436,7 @@ function PrepareErrorState({
   onRetry: () => void;
   onStartOver: () => void;
 }) {
+  const t = useTranslation();
   return (
     <Card className="flex flex-col items-center gap-md px-lg py-3xl text-center">
       <p className="max-w-[420px] text-base text-foreground-muted" role="alert">
@@ -432,9 +444,9 @@ function PrepareErrorState({
       </p>
       <div className="flex items-center gap-xs">
         <Button variant="secondary" onClick={onStartOver}>
-          {COPY.startOver}
+          {t('wizard.startOver')}
         </Button>
-        <Button onClick={onRetry}>{COPY.retry}</Button>
+        <Button onClick={onRetry}>{t('wizard.retry')}</Button>
       </div>
     </Card>
   );

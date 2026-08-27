@@ -5,12 +5,13 @@
  *
  * Renders page 1 into a <canvas> via `pdfjs-dist` (lib/pdf.ts), showing a
  * shimmering skeleton while the document parses and a guard message if it can't
- * be read. The page count is reported up so the wizard can show "{n}페이지".
+ * be read. The page count is reported up so the wizard can show it.
  */
 
 import * as React from 'react';
 import { Skeleton, cn } from '@repo/ui';
-import { renderFirstPage, PdfRenderError } from '@/lib/pdf';
+import { renderFirstPage } from '@/lib/pdf';
+import { useTranslation } from '@/components/locale-provider';
 
 interface PdfPreviewProps {
   file: File;
@@ -21,6 +22,7 @@ interface PdfPreviewProps {
 type Status = 'loading' | 'ready' | 'error';
 
 export function PdfPreview({ file, onPageCount, className }: PdfPreviewProps) {
+  const t = useTranslation();
   const containerRef = React.useRef<HTMLDivElement>(null);
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const [status, setStatus] = React.useState<Status>('loading');
@@ -31,6 +33,14 @@ export function PdfPreview({ file, onPageCount, className }: PdfPreviewProps) {
   React.useEffect(() => {
     onPageCountRef.current = onPageCount;
   }, [onPageCount]);
+
+  // The translator is read through a ref so a locale change does not re-enter
+  // the render effect; a re-render of the page would only redraw the same
+  // raster.
+  const tRef = React.useRef(t);
+  React.useEffect(() => {
+    tRef.current = t;
+  }, [t]);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -48,13 +58,12 @@ export function PdfPreview({ file, onPageCount, className }: PdfPreviewProps) {
         onPageCountRef.current?.(size.pageCount);
         setStatus('ready');
       })
-      .catch((err: unknown) => {
+      .catch(() => {
         if (cancelled) return;
-        setError(
-          err instanceof PdfRenderError
-            ? err.message
-            : 'PDF를 읽을 수 없어요. 파일이 손상되지 않았는지 확인해 주세요.',
-        );
+        // Every failure reads the same to the sender: the file could not be
+        // opened. A `PdfRenderError`'s message carries the pdfjs diagnosis,
+        // which belongs in logs, never on screen.
+        setError(tRef.current('wizard.pdfReadError'));
         setStatus('error');
       });
 
@@ -79,7 +88,7 @@ export function PdfPreview({ file, onPageCount, className }: PdfPreviewProps) {
       <canvas
         ref={canvasRef}
         role="img"
-        aria-label="업로드한 PDF 첫 페이지 미리보기"
+        aria-label={t('wizard.previewLabel')}
         className={cn(
           'mx-auto block rounded-md border border-border shadow-sm',
           status === 'ready' ? 'animate-fade-in' : 'hidden',

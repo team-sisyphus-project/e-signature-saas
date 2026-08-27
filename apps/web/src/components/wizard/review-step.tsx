@@ -1,23 +1,23 @@
 'use client';
 
 /**
- * Wizard step 4 — review & send ("발송 검토").
+ * Wizard step 4 — review & send.
  *
  * The last step has two faces:
  *
  *   1. Review summary — a read-back of what's about to go out (document, placed
- *      fields, recipients in signing order) plus this step's own 발송 CTA. The
+ *      fields, recipients in signing order) plus this step's own send CTA. The
  *      shell deliberately leaves its footer-right empty here so the send button
  *      lives with the content it confirms.
- *   2. Success — the celebratory takeover shown once the dispatch lands:
- *      "계약 발송이 완료되었습니다!" with the SuccessCheck stroke-draw + a Confetti
- *      burst (pure-CSS, reduced-motion-safe) and a staggered text fade-in.
+ *   2. Success — the celebratory takeover shown once the dispatch lands, with
+ *      the SuccessCheck stroke-draw + a Confetti burst (pure-CSS,
+ *      reduced-motion-safe) and a staggered text fade-in.
  *
  * Sending is two ordered calls (save fields → send); see `lib/send.ts`. On
- * failure we surface the server's Korean message and let the user retry; a 401
- * means the session lapsed, so we bounce to /login. On success we stash the
- * just-sent summary via `writeSentSignal` so the dashboard shows it as '진행 중'
- * the instant we route back.
+ * failure we surface the server's message and let the user retry; a 401 means
+ * the session lapsed, so we bounce to /login. On success we stash the just-sent
+ * summary via `writeSentSignal` so the dashboard shows the contract as in
+ * progress the instant we route back.
  */
 
 import * as React from 'react';
@@ -27,43 +27,24 @@ import { Button, Confetti, SuccessCheck } from '@repo/ui';
 import { ApiError } from '@/lib/api';
 import { getToken } from '@/lib/auth';
 import { writeSentSignal, type DocumentSummary } from '@/lib/documents';
-import { FIELD_TYPE_META, FIELD_TYPES, type SignFieldType } from '@/lib/field-geometry';
+import { FIELD_TYPES, fieldTypeLabel, type SignFieldType } from '@/lib/field-geometry';
 import { recipientLabel } from '@/lib/recipients';
 import { saveFields, sendContract } from '@/lib/send';
+import { useTranslation } from '@/components/locale-provider';
+import type { WebTranslate, WebTranslationKey } from '@/lib/web-translations';
 import { useWizard, type RecipientDraft, type SignFieldDraft } from './wizard-context';
-
-const COPY = {
-  title: '발송 전 확인해 주세요',
-  subhead: '아래 내용으로 서명 요청을 보낼게요. 맞는지 확인해 주세요.',
-  docSection: '계약 문서',
-  fieldsSection: '서명 필드',
-  recipientsSection: '받는 분',
-  send: '발송',
-  schedule: '예약 발송',
-  scheduleDescription: '원하는 날짜와 시간에 서명 요청을 보냅니다.',
-  scheduleDateTime: '발송 날짜와 시간',
-  scheduleHint: '현재 시각 이후로 설정해 주세요.',
-  scheduleRequired: '예약 발송 날짜와 시간을 설정해 주세요.',
-  scheduleFuture: '현재 시각 이후로 설정해 주세요.',
-  scheduledSend: '예약 발송',
-  sending: '발송 중',
-  scheduling: '예약 중',
-  retry: '다시 시도',
-  successTitle: '계약 발송이 완료되었습니다!',
-  successBody: '받는 분에게 서명 요청을 보냈어요. 진행 상황은 대시보드에서 확인할 수 있어요.',
-  scheduledSuccessTitle: '계약 발송을 예약했어요!',
-  scheduledSuccessBody: '설정한 시간에 받는 분에게 서명 요청을 보낼게요. 진행 상황은 대시보드에서 확인할 수 있어요.',
-  successCta: '대시보드로 가기',
-} as const;
 
 type SendState = 'idle' | 'sending' | 'error';
 
 export function ReviewStep() {
   const router = useRouter();
+  const t = useTranslation();
   const { state } = useWizard();
   const { document, fields, recipients } = state;
 
   const [status, setStatus] = React.useState<SendState>('idle');
+  // Already-resolved copy: either one of our own catalog sentences, or the
+  // server's message passed through verbatim.
   const [error, setError] = React.useState<string | null>(null);
   const [sent, setSent] = React.useState<DocumentSummary | null>(null);
   const [isScheduled, setIsScheduled] = React.useState(false);
@@ -77,12 +58,12 @@ export function ReviewStep() {
     if (!document) return;
     const scheduledFor = isScheduled ? new Date(scheduledSendAt) : null;
     if (isScheduled && !scheduledSendAt) {
-      setError(COPY.scheduleRequired);
+      setError(t('wizard.scheduleRequired'));
       setStatus('error');
       return;
     }
     if (scheduledFor && (Number.isNaN(scheduledFor.getTime()) || scheduledFor.getTime() <= Date.now())) {
-      setError(COPY.scheduleFuture);
+      setError(t('wizard.scheduleFuture'));
       setStatus('error');
       return;
     }
@@ -107,31 +88,32 @@ export function ReviewStep() {
         router.replace('/login');
         return;
       }
-      setError(
-        err instanceof ApiError ? err.message : '문제가 생겼어요. 잠시 후 다시 시도해 주세요.',
-      );
+      setError(err instanceof ApiError ? err.message : t('wizard.genericError'));
       setStatus('error');
     }
-  }, [document, fields, isScheduled, recipients, router, scheduledSendAt]);
+  }, [document, fields, isScheduled, recipients, router, scheduledSendAt, t]);
 
   const goToDashboard = React.useCallback(() => router.push('/dashboard'), [router]);
 
   if (sent) {
-    return <SendSuccess scheduled={sent.status === 'SCHEDULED'} onContinue={goToDashboard} />;
+    return (
+      <SendSuccess t={t} scheduled={sent.status === 'SCHEDULED'} onContinue={goToDashboard} />
+    );
   }
 
   return (
     <div className="flex flex-col gap-lg">
       <header className="flex flex-col gap-2xs">
-        <h2 className="text-xl font-bold text-foreground">{COPY.title}</h2>
-        <p className="text-sm text-foreground-subtle">{COPY.subhead}</p>
+        <h2 className="text-xl font-bold text-foreground">{t('wizard.reviewTitle')}</h2>
+        <p className="text-sm text-foreground-subtle">{t('wizard.reviewSubhead')}</p>
       </header>
 
-      <DocumentSummaryCard document={document} fieldCount={fields.length} />
-      <FieldsSummaryCard fields={fields} />
-      <RecipientsSummaryCard recipients={recipients} />
+      <DocumentSummaryCard t={t} document={document} fieldCount={fields.length} />
+      <FieldsSummaryCard t={t} fields={fields} />
+      <RecipientsSummaryCard t={t} recipients={recipients} />
 
       <ScheduleSendCard
+        t={t}
         checked={isScheduled}
         min={minimumScheduleTime}
         value={scheduledSendAt}
@@ -163,27 +145,28 @@ export function ReviewStep() {
         isLoading={status === 'sending'}
         className="w-full"
       >
-        {status === 'sending'
-          ? isScheduled
-            ? COPY.scheduling
-            : COPY.sending
-          : status === 'error'
-            ? COPY.retry
-            : isScheduled
-              ? COPY.scheduledSend
-              : COPY.send}
+        {t(sendButtonKey(status, isScheduled))}
       </Button>
     </div>
   );
 }
 
+/** The send button's label: in-flight state first, then failure, then intent. */
+function sendButtonKey(status: SendState, scheduled: boolean): WebTranslationKey {
+  if (status === 'sending') return scheduled ? 'wizard.scheduling' : 'wizard.sending';
+  if (status === 'error') return 'wizard.retry';
+  return scheduled ? 'wizard.scheduledSend' : 'wizard.send';
+}
+
 function ScheduleSendCard({
+  t,
   checked,
   min,
   value,
   onCheckedChange,
   onValueChange,
 }: {
+  t: WebTranslate;
   checked: boolean;
   min: string;
   value: string;
@@ -194,8 +177,8 @@ function ScheduleSendCard({
     <section className="flex flex-col gap-md rounded-lg border border-border bg-surface p-lg">
       <div className="flex items-center justify-between gap-md">
         <div className="flex flex-col gap-2xs">
-          <h3 className="text-base font-bold text-foreground">{COPY.schedule}</h3>
-          <p className="text-sm text-foreground-subtle">{COPY.scheduleDescription}</p>
+          <h3 className="text-base font-bold text-foreground">{t('wizard.schedule')}</h3>
+          <p className="text-sm text-foreground-subtle">{t('wizard.scheduleDescription')}</p>
         </div>
         <label className="relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center">
           <input
@@ -204,7 +187,7 @@ function ScheduleSendCard({
             checked={checked}
             onChange={(event) => onCheckedChange(event.target.checked)}
             className="peer sr-only"
-            aria-label={COPY.schedule}
+            aria-label={t('wizard.schedule')}
           />
           <span className="h-7 w-12 rounded-full bg-border transition-colors peer-checked:bg-primary peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary" />
           <span className="pointer-events-none absolute left-1 h-5 w-5 rounded-full bg-white shadow-sm transition-transform peer-checked:translate-x-5" />
@@ -214,7 +197,7 @@ function ScheduleSendCard({
       {checked ? (
         <div className="flex flex-col gap-xs">
           <label htmlFor="scheduled-send-at" className="text-sm font-semibold text-foreground">
-            {COPY.scheduleDateTime}
+            {t('wizard.scheduleDateTime')}
           </label>
           <input
             id="scheduled-send-at"
@@ -225,7 +208,7 @@ function ScheduleSendCard({
             required
             className="h-11 w-full rounded-md border border-border bg-background px-sm text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
           />
-          <p className="text-xs text-foreground-subtle">{COPY.scheduleHint}</p>
+          <p className="text-xs text-foreground-subtle">{t('wizard.scheduleHint')}</p>
         </div>
       ) : null}
     </section>
@@ -264,37 +247,46 @@ function SummaryCard({
 }
 
 function DocumentSummaryCard({
+  t,
   document,
   fieldCount,
 }: {
+  t: WebTranslate;
   document: DocumentSummary | null;
   fieldCount: number;
 }) {
   return (
-    <SummaryCard title={COPY.docSection}>
+    <SummaryCard title={t('wizard.sectionDocument')}>
       <div className="flex items-center gap-md">
         <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-primary-subtle text-primary">
           <DocumentIcon />
         </span>
         <div className="flex min-w-0 flex-1 flex-col gap-2xs">
           <p className="truncate text-base font-bold text-foreground">
-            {document?.title ?? '제목 없는 계약'}
+            {document?.title ?? t('wizard.untitledDocument')}
           </p>
-          <p className="text-sm text-foreground-subtle">{docMeta(document, fieldCount)}</p>
+          <p className="text-sm text-foreground-subtle">{docMeta(t, document, fieldCount)}</p>
         </div>
       </div>
     </SummaryCard>
   );
 }
 
-function docMeta(document: DocumentSummary | null, fieldCount: number): string {
+/**
+ * The document card's meta line. Each segment is a whole catalog sentence and
+ * the middle dot is punctuation, not grammar — so neither locale inherits the
+ * other's word order.
+ */
+function docMeta(t: WebTranslate, document: DocumentSummary | null, fieldCount: number): string {
   const parts: string[] = [];
-  if (document && document.pageCount > 0) parts.push(`${document.pageCount}페이지`);
-  parts.push(`서명 필드 ${fieldCount}개`);
+  if (document && document.pageCount > 0) {
+    parts.push(t('wizard.pageCount', { count: document.pageCount }));
+  }
+  parts.push(t('wizard.docFieldCount', { count: fieldCount }));
   return parts.join(' · ');
 }
 
-function FieldsSummaryCard({ fields }: { fields: SignFieldDraft[] }) {
+function FieldsSummaryCard({ t, fields }: { t: WebTranslate; fields: SignFieldDraft[] }) {
   // Count per type, in the canonical type order, dropping zero-count types.
   const counts = React.useMemo(() => {
     const acc: Record<SignFieldType, number> = { SIGNATURE: 0, DATE: 0, TEXT: 0 };
@@ -304,19 +296,26 @@ function FieldsSummaryCard({ fields }: { fields: SignFieldDraft[] }) {
 
   return (
     <SummaryCard
-      title={COPY.fieldsSection}
-      trailing={<span className="text-sm font-semibold text-foreground-subtle">전체 {fields.length}개</span>}
+      title={t('wizard.sectionFields')}
+      trailing={
+        <span className="text-sm font-semibold text-foreground-subtle">
+          {t('wizard.fieldsTotal', { count: fields.length })}
+        </span>
+      }
     >
       <ul className="flex flex-wrap gap-xs">
-        {FIELD_TYPES.filter((t) => counts[t] > 0).map((t) => (
+        {FIELD_TYPES.filter((type) => counts[type] > 0).map((type) => (
           <li
-            key={t}
+            key={type}
             className="flex items-center gap-2xs rounded-full bg-primary-subtle px-sm py-2xs text-sm font-medium text-primary"
           >
             <span className="flex h-4 w-4 items-center justify-center">
-              <FieldGlyph type={t} />
+              <FieldGlyph type={type} />
             </span>
-            {FIELD_TYPE_META[t].label} {counts[t]}개
+            {t('wizard.fieldTypeCount', {
+              field: fieldTypeLabel(t, type),
+              count: counts[type],
+            })}
           </li>
         ))}
       </ul>
@@ -324,24 +323,34 @@ function FieldsSummaryCard({ fields }: { fields: SignFieldDraft[] }) {
   );
 }
 
-function RecipientsSummaryCard({ recipients }: { recipients: RecipientDraft[] }) {
+function RecipientsSummaryCard({
+  t,
+  recipients,
+}: {
+  t: WebTranslate;
+  recipients: RecipientDraft[];
+}) {
   return (
     <SummaryCard
-      title={COPY.recipientsSection}
-      trailing={<span className="text-sm font-semibold text-foreground-subtle">{recipients.length}명</span>}
+      title={t('wizard.sectionRecipients')}
+      trailing={
+        <span className="text-sm font-semibold text-foreground-subtle">
+          {t('wizard.recipientCount', { count: recipients.length })}
+        </span>
+      }
     >
       <ol className="flex flex-col gap-xs">
         {recipients.map((r, i) => (
           <li key={r.id} className="flex items-center gap-sm">
             <span
               className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-subtle text-sm font-bold text-primary"
-              aria-label={`서명 순서 ${i + 1}번째`}
+              aria-label={t('wizard.signingOrderLabel', { index: i + 1 })}
             >
               {i + 1}
             </span>
             <div className="flex min-w-0 flex-1 flex-col">
               <span className="truncate text-sm font-medium text-foreground">
-                {recipientLabel(r, i)}
+                {recipientLabel(t, r, i)}
               </span>
               <span className="truncate text-sm text-foreground-subtle">{r.email.trim()}</span>
             </div>
@@ -367,13 +376,21 @@ function RecipientsSummaryCard({ recipients }: { recipients: RecipientDraft[] })
  * the 760px column. The portal escapes that ancestor so the takeover is truly
  * full-viewport.
  */
-function SendSuccess({ scheduled, onContinue }: { scheduled: boolean; onContinue: () => void }) {
+function SendSuccess({
+  t,
+  scheduled,
+  onContinue,
+}: {
+  t: WebTranslate;
+  scheduled: boolean;
+  onContinue: () => void;
+}) {
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => setMounted(true), []);
   if (!mounted) return null;
 
-  const title = scheduled ? COPY.scheduledSuccessTitle : COPY.successTitle;
-  const body = scheduled ? COPY.scheduledSuccessBody : COPY.successBody;
+  const title = t(scheduled ? 'wizard.scheduledSuccessTitle' : 'wizard.sendSuccessTitle');
+  const body = t(scheduled ? 'wizard.scheduledSuccessBody' : 'wizard.sendSuccessBody');
 
   return createPortal(
     <div
@@ -406,7 +423,7 @@ function SendSuccess({ scheduled, onContinue }: { scheduled: boolean; onContinue
           className="animate-fade-in-up mt-sm w-full sm:w-auto"
           style={{ animationDelay: '600ms' }}
         >
-          {COPY.successCta}
+          {t('wizard.toDashboard')}
         </Button>
       </div>
     </div>,

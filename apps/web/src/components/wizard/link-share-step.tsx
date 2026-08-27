@@ -1,11 +1,11 @@
 'use client';
 
 /**
- * Wizard step — share link ("링크 공유").
+ * Wizard step — share link.
  *
  * Terminal step of the 'link' delivery branch: generate a shareable contract
  * link (validity window, optional password) and copy it. Like the review step,
- * it owns its own CTA, so the shell hides its footer "다음" here.
+ * it owns its own CTA, so the shell hides its footer Next here.
  *
  * The link path skips the recipients step, so the placed fields carry no
  * recipient assignment. We persist them first (`saveFields`) — they land with
@@ -16,8 +16,8 @@
  * The settings/generate/result body is the same `ShareLinkBody` the detail
  * screen's modal uses, so the two link-sharing entry points stay in lockstep.
  * This step adds only the wizard framing: a header and, once the link exists, a
- * "대시보드로 가기" hand-off — mirroring the review step's success tone, but kept
- * inline so the just-made link stays visible to copy.
+ * hand-off back to the dashboard — mirroring the review step's success tone, but
+ * kept inline so the just-made link stays visible to copy.
  */
 
 import * as React from 'react';
@@ -25,14 +25,13 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@repo/ui';
 import { getToken } from '@/lib/auth';
 import { saveFields } from '@/lib/send';
-import { SHARE_COPY } from '@/lib/sharing';
 import { ShareLinkBody } from '@/components/contracts/share-link-body';
+import { useTranslation } from '@/components/locale-provider';
 import { useWizard } from './wizard-context';
-
-const COPY = SHARE_COPY.wizard;
 
 export function LinkShareStep() {
   const router = useRouter();
+  const t = useTranslation();
   const { state } = useWizard();
   const { document, fields } = state;
 
@@ -53,8 +52,8 @@ export function LinkShareStep() {
   return (
     <div className="flex flex-col gap-lg">
       <header className="flex flex-col gap-2xs">
-        <h2 className="text-xl font-bold text-foreground">{COPY.title}</h2>
-        <p className="text-sm text-foreground-subtle">{COPY.intro}</p>
+        <h2 className="text-xl font-bold text-foreground">{t('wizard.linkTitle')}</h2>
+        <p className="text-sm text-foreground-subtle">{t('wizard.linkIntro')}</p>
       </header>
 
       <ShareLinkBody
@@ -62,9 +61,9 @@ export function LinkShareStep() {
         beforeCreate={persistFields}
         resultFooter={
           <div className="flex flex-col gap-sm">
-            <p className="text-sm font-medium text-success">{COPY.done}</p>
+            <p className="text-sm font-medium text-success">{t('wizard.linkDone')}</p>
             <Button size="lg" onClick={goToDashboard} className="w-full">
-              {COPY.toDashboard}
+              {t('wizard.toDashboard')}
             </Button>
           </div>
         }

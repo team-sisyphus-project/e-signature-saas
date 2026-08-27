@@ -4,49 +4,35 @@
  * Wizard step 1 — upload the contract PDF.
  *
  * Drag-and-drop or file-pick a PDF, with client-side guards (type / size /
- * empty) that mirror the server's Korean copy (apps/api/src/common/messages.ts)
- * so the user gets the same wording instantly, before any round-trip. On a valid
+ * empty) that mirror the server's own rules (apps/api/src/common/messages.ts)
+ * so the user gets the same answer instantly, before any round-trip. On a valid
  * pick the file uploads with a live progress bar; the resulting DRAFT document +
  * the local File land in wizard state, and the first page renders as a preview.
+ *
+ * The guards themselves live in `lib/upload.ts` and return catalog keys, so the
+ * rule is testable without a browser and reads in the sender's language here.
  */
 
 import * as React from 'react';
 import { Button, cn } from '@repo/ui';
 import { ApiError } from '@/lib/api';
 import { getToken } from '@/lib/auth';
-import { uploadPdf, type UploadProgress } from '@/lib/upload';
+import {
+  MAX_UPLOAD_MB,
+  formatFileSize,
+  uploadPdf,
+  validatePdfFile,
+  type UploadProgress,
+} from '@/lib/upload';
+import { useTranslation } from '@/components/locale-provider';
+import type { WebTranslate } from '@/lib/web-translations';
 import { useWizard } from './wizard-context';
 import { PdfPreview } from './pdf-preview';
-
-const MAX_BYTES = 20 * 1024 * 1024;
-
-/** Client-side guard copy — kept in lockstep with the server messages. */
-const GUARD = {
-  invalidType: 'PDF 파일만 업로드할 수 있어요.',
-  tooLarge: '파일이 너무 커요. 20MB 이하의 PDF로 올려 주세요.',
-  empty: '파일이 비어 있어요. 다른 PDF로 다시 시도해 주세요.',
-} as const;
-
-/** Validate a picked file; returns a Korean guard message, or null if OK. */
-function validatePdf(file: File): string | null {
-  const isPdf =
-    file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
-  if (!isPdf) return GUARD.invalidType;
-  if (file.size === 0) return GUARD.empty;
-  if (file.size > MAX_BYTES) return GUARD.tooLarge;
-  return null;
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  const kb = bytes / 1024;
-  if (kb < 1024) return `${Math.round(kb)} KB`;
-  return `${(kb / 1024).toFixed(1)} MB`;
-}
 
 type Phase = 'idle' | 'uploading' | 'done';
 
 export function UploadStep() {
+  const t = useTranslation();
   const { state, dispatch } = useWizard();
   const inputRef = React.useRef<HTMLInputElement>(null);
   const abortRef = React.useRef<AbortController | null>(null);
@@ -64,9 +50,9 @@ export function UploadStep() {
 
   const startUpload = React.useCallback(
     async (file: File) => {
-      const guard = validatePdf(file);
+      const guard = validatePdfFile(file);
       if (guard) {
-        setError(guard);
+        setError(t(guard, { limit: MAX_UPLOAD_MB }));
         return;
       }
       setError(null);
@@ -84,14 +70,14 @@ export function UploadStep() {
         dispatch({ type: 'SET_DOCUMENT', document, file });
       } catch (err) {
         if (err instanceof DOMException && err.name === 'AbortError') return;
-        setError(err instanceof ApiError ? err.message : '문제가 생겼어요. 잠시 후 다시 시도해 주세요.');
+        setError(err instanceof ApiError ? err.message : t('wizard.genericError'));
       } finally {
         abortRef.current = null;
         setProgress(null);
         setPendingName(null);
       }
     },
-    [dispatch],
+    [dispatch, t],
   );
 
   const onFiles = React.useCallback(
@@ -122,14 +108,15 @@ export function UploadStep() {
   return (
     <div className="flex flex-col gap-md">
       <div className="flex flex-col gap-2xs">
-        <h2 className="text-xl font-bold text-foreground">계약 PDF를 올려 주세요</h2>
+        <h2 className="text-xl font-bold text-foreground">{t('wizard.uploadStepTitle')}</h2>
         <p className="text-sm text-foreground-subtle">
-          서명을 받을 PDF 문서를 끌어다 놓거나 직접 선택하세요. 최대 20MB까지 올릴 수 있어요.
+          {t('wizard.uploadStepSubtitle', { limit: MAX_UPLOAD_MB })}
         </p>
       </div>
 
       {phase === 'done' && state.file ? (
         <UploadedView
+          t={t}
           fileName={state.document?.title ?? state.file.name}
           fileSize={state.file.size}
           pageCount={state.document?.pageCount ?? 0}
@@ -144,12 +131,14 @@ export function UploadStep() {
         />
       ) : phase === 'uploading' ? (
         <UploadingView
+          t={t}
           fileName={pendingName ?? ''}
           progress={progress}
           onCancel={reset}
         />
       ) : (
         <DropZone
+          t={t}
           dragActive={dragActive}
           inputRef={inputRef}
           onDragOver={(e) => {
@@ -172,6 +161,7 @@ export function UploadStep() {
 }
 
 function DropZone({
+  t,
   dragActive,
   inputRef,
   onDragOver,
@@ -179,6 +169,7 @@ function DropZone({
   onDrop,
   onChange,
 }: {
+  t: WebTranslate;
   dragActive: boolean;
   inputRef: React.RefObject<HTMLInputElement | null>;
   onDragOver: (e: React.DragEvent) => void;
@@ -218,22 +209,24 @@ function DropZone({
       </span>
       <div className="flex flex-col gap-2xs">
         <span className="text-base font-bold text-foreground">
-          {dragActive ? '여기에 놓으면 업로드돼요' : 'PDF를 끌어다 놓으세요'}
+          {t(dragActive ? 'wizard.dropActive' : 'wizard.dropIdle')}
         </span>
-        <span className="text-sm text-foreground-subtle">또는 클릭해서 파일을 선택하세요</span>
+        <span className="text-sm text-foreground-subtle">{t('wizard.dropOr')}</span>
       </div>
       <span className="pointer-events-none mt-2xs inline-flex h-9 items-center rounded-md bg-surface px-md text-sm font-semibold text-primary shadow-sm">
-        파일 선택
+        {t('wizard.dropPick')}
       </span>
     </label>
   );
 }
 
 function UploadingView({
+  t,
   fileName,
   progress,
   onCancel,
 }: {
+  t: WebTranslate;
   fileName: string;
   progress: UploadProgress | null;
   onCancel: () => void;
@@ -252,11 +245,13 @@ function UploadingView({
         <div className="flex min-w-0 flex-1 flex-col gap-2xs">
           <span className="truncate text-sm font-semibold text-foreground">{fileName}</span>
           <span className="text-xs text-foreground-subtle">
-            {preparing ? '문서를 준비하고 있어요' : `업로드 중 ${pct}%`}
+            {preparing
+              ? t('wizard.uploadPreparing')
+              : t('wizard.uploadProgress', { percent: pct })}
           </span>
         </div>
         <Button variant="ghost" size="sm" onClick={onCancel}>
-          취소
+          {t('wizard.cancel')}
         </Button>
       </div>
       <div
@@ -265,7 +260,7 @@ function UploadingView({
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={preparing ? undefined : pct}
-        aria-label="업로드 진행률"
+        aria-label={t('wizard.uploadProgressLabel')}
       >
         <div
           className={cn(
@@ -280,6 +275,7 @@ function UploadingView({
 }
 
 function UploadedView({
+  t,
   fileName,
   fileSize,
   pageCount,
@@ -287,6 +283,7 @@ function UploadedView({
   onReplace,
   onPageCount,
 }: {
+  t: WebTranslate;
   fileName: string;
   fileSize: number;
   pageCount: number;
@@ -303,13 +300,16 @@ function UploadedView({
         <div className="flex min-w-0 flex-1 flex-col gap-2xs">
           <span className="truncate text-sm font-semibold text-foreground">{fileName}</span>
           <span className="text-xs text-foreground-subtle">
-            {[formatBytes(fileSize), pageCount > 0 ? `${pageCount}페이지` : null]
+            {[
+              formatFileSize(fileSize),
+              pageCount > 0 ? t('wizard.pageCount', { count: pageCount }) : null,
+            ]
               .filter(Boolean)
               .join(' · ')}
           </span>
         </div>
         <Button variant="ghost" size="sm" onClick={onReplace}>
-          다른 파일
+          {t('wizard.replaceFile')}
         </Button>
       </div>
 
