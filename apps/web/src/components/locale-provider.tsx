@@ -10,7 +10,11 @@ import {
   type SupportedLocale,
   type TranslationResources,
 } from '@/lib/locale';
-import { translateWeb, type WebTranslationKey } from '@/lib/web-translations';
+import {
+  translateWeb,
+  type WebTranslationKey,
+  type WebTranslationParams,
+} from '@/lib/web-translations';
 
 interface LocaleContextValue {
   /** Target locale resolved with the product-wide precedence contract. */
@@ -21,7 +25,14 @@ interface LocaleContextValue {
   setSenderLocale: (locale: string | null | undefined) => void;
   /** Public-link UI must never inherit a signed-in user's saved preference. */
   setPublicLinkActive: (active: boolean) => void;
-  t: (key: WebTranslationKey) => string;
+  /**
+   * Localized copy for `key`, with `{name}` slots filled from `params`.
+   *
+   * Interpolation lives here rather than at call sites so a sentence stays one
+   * catalog entry: splitting it into fragments to concatenate a value would
+   * fix Korean word order onto every other language.
+   */
+  t: (key: WebTranslationKey, params?: WebTranslationParams) => string;
 }
 
 const LocaleContext = React.createContext<LocaleContextValue | null>(null);
@@ -84,7 +95,13 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
   }, [locale]);
 
   const value = React.useMemo<LocaleContextValue>(
-    () => ({ locale, resources, setSenderLocale: setPublicSenderLocale, setPublicLinkActive, t: (key) => translateWeb(locale, key) }),
+    () => ({
+      locale,
+      resources,
+      setSenderLocale: setPublicSenderLocale,
+      setPublicLinkActive,
+      t: (key, params) => translateWeb(locale, key, params),
+    }),
     [locale, resources, setPublicSenderLocale],
   );
 

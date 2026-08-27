@@ -1,45 +1,45 @@
 import type { SupportedLocale } from './locale';
+import { WEB_TRANSLATIONS } from './i18n';
+import type {
+  TranslationLeaf,
+  WebTranslationCatalog,
+  WebTranslationCatalogs,
+  WebTranslationParams,
+} from './i18n/types';
 
-/** Browser UI catalog. Missing English copy always falls back to Korean. */
-export const WEB_TRANSLATIONS = {
-  ko: {
-    auth: { product: '전자계약', loginTitle: '다시 오셨네요', loginHint: '이메일과 비밀번호로 로그인해 주세요.', email: '이메일', password: '비밀번호', login: '로그인', loggingIn: '로그인 중', googleLogin: 'Google로 로그인', noAccount: '아직 계정이 없으신가요?', signup: '회원가입', emailRequired: '이메일을 입력해 주세요.', emailInvalid: '이메일 형식을 다시 확인해 주세요.', passwordRequired: '비밀번호를 입력해 주세요.' },
-    dashboard: { title: '계약', description: '보낸 계약의 진행 상황을 한눈에 확인하세요.', templates: '내 템플릿', newContract: '새 계약 생성', listLabel: '계약 목록', loadError: '문제가 생겼어요. 잠시 후 다시 시도해 주세요.' },
-    settings: { title: '설정', navLabel: '설정 메뉴', branding: '브랜딩', language: '언어', languageTitle: '언어 설정', languageDescription: '서비스에서 사용할 언어를 선택하세요. 모든 화면에 적용됩니다.', preference: '선호 언어', korean: '한국어 (Korean)', english: 'English', previewTitle: '실시간 미리보기', previewDashboard: '대시보드', previewEmail: '완료 알림 이메일', previewStatus: '서명 대기 중', previewAction: '새 계약 보내기', previewEmailSubject: '[계약 완료] 계약서 서명이 완료되었습니다', cancel: '취소', save: '변경사항 저장', saving: '저장 중…', saved: '언어 설정이 저장되었습니다.', saveFailed: '언어 설정을 저장하지 못했습니다. 다시 시도해 주세요.', retry: '다시 시도' },
-    wizard: { chooseTitle: '새 계약을 만들어요', chooseSubtitle: '어떻게 시작할지 골라 주세요.', uploadTitle: '새로 업로드', uploadBody: 'PDF를 올리고 서명 필드를 직접 배치해요.', templateTitle: '내 템플릿에서 시작', templateBody: '저장해 둔 양식을 불러와 수신자만 입력하면 돼요.', product: '전자계약', exit: '나가기', exitLabel: '계약 생성 나가기' },
-    signer: { verifyTitle: '본인확인', verifyHint: '문자로 받은 6자리 인증 코드를 입력해 주세요.', codeLabel: '인증 코드', verify: '본인확인', verifying: '확인 중', genericError: '문제가 생겼어요. 잠시 후 다시 시도해 주세요.' },
-  },
-  en: {
-    auth: { product: 'eSign', loginTitle: 'Welcome back', loginHint: 'Sign in with your email and password.', email: 'Email', password: 'Password', login: 'Sign in', loggingIn: 'Signing in', googleLogin: 'Continue with Google', noAccount: 'New here?', signup: 'Create an account', emailRequired: 'Enter your email address.', emailInvalid: 'Check your email address.', passwordRequired: 'Enter your password.' },
-    dashboard: { title: 'Contracts', description: 'Track the progress of contracts you have sent.', templates: 'My templates', newContract: 'Create contract', listLabel: 'Contract list', loadError: 'Something went wrong. Please try again shortly.' },
-    settings: { title: 'Settings', navLabel: 'Settings menu', branding: 'Branding', language: 'Language', languageTitle: 'Language settings', languageDescription: 'Choose the language used throughout the service.', preference: 'Preferred language', korean: '한국어 (Korean)', english: 'English', previewTitle: 'Live preview', previewDashboard: 'Dashboard', previewEmail: 'Completion email', previewStatus: 'Awaiting signature', previewAction: 'Send new contract', previewEmailSubject: '[Contract completed] Your contract has been signed', cancel: 'Cancel', save: 'Save changes', saving: 'Saving…', saved: 'Language setting saved.', saveFailed: 'We could not save your language setting. Please try again.', retry: 'Try again' },
-    wizard: { chooseTitle: 'Create a new contract', chooseSubtitle: 'Choose how you would like to begin.', uploadTitle: 'Upload a PDF', uploadBody: 'Upload a PDF and place signature fields yourself.', templateTitle: 'Start from a template', templateBody: 'Load a saved layout and add recipients to send it right away.', product: 'eSign', exit: 'Exit', exitLabel: 'Exit contract creation' },
-    signer: { verifyTitle: 'Verify your identity', verifyHint: 'Enter the 6-digit verification code sent by text message.', codeLabel: 'Verification code', verify: 'Verify identity', verifying: 'Verifying', genericError: 'Something went wrong. Please try again shortly.' },
-  },
-} as const;
+// Re-exported so callers keep one import site for the lookup API and the
+// catalog it reads. The authoring surface (domain modules, entry types) is
+// deliberately not re-exported: copy is added in `lib/i18n/`, not here.
+export { WEB_TRANSLATIONS } from './i18n';
+export type {
+  TranslationLeaf,
+  WebTranslationCatalog,
+  WebTranslationCatalogs,
+  WebTranslationParams,
+} from './i18n/types';
 
 /** A key is open-ended so newly added UI copy is safe before its catalog ships. */
 export type WebTranslationKey = `${string}.${string}`;
 
-type TranslationLeaf = string | null | undefined;
-export type WebTranslationCatalog = Readonly<Record<string, Readonly<Record<string, TranslationLeaf>>>>;
-export type WebTranslationCatalogs = Readonly<Record<SupportedLocale, WebTranslationCatalog>>;
-
-export type MissingWebTranslationReason = 'missing' | 'empty';
+export type MissingWebTranslationReason = 'missing' | 'empty' | 'placeholder';
 
 /** This report retains keys and counters only, never user data or rendered copy. */
 export interface MissingWebTranslationEntry {
   key: WebTranslationKey;
   /** Locale requested by the UI at the point the lookup failed. */
   requestedLocale: SupportedLocale;
-  /** Catalog used to safely replace the missing value. */
+  /** Catalog whose copy was actually rendered. */
   fallbackLocale: SupportedLocale;
   reason: MissingWebTranslationReason;
   count: number;
 }
 
 export interface WebTranslationFallbackReport {
-  /** De-duplicated keys, suitable for a coverage report. */
+  /**
+   * De-duplicated keys with no usable copy in the requested locale, suitable for
+   * a coverage report. Unresolved placeholders are excluded: their copy exists
+   * and needs no translator, so counting them here would overstate the gap.
+   */
   missingKeys: readonly WebTranslationKey[];
   /** Per-locale detail and occurrence counts for runtime diagnostics. */
   entries: readonly MissingWebTranslationEntry[];
@@ -47,6 +47,14 @@ export interface WebTranslationFallbackReport {
 
 /** Last-resort Korean text when even the Korean base catalog is incomplete. */
 export const UNKNOWN_WEB_TRANSLATION_FALLBACK = '내용을 준비하고 있습니다.';
+
+/**
+ * Substitution slot inside a catalog value, e.g. `{count}`.
+ *
+ * Deliberately narrow: only word characters form a placeholder, so prose that
+ * legitimately contains braces is left untouched rather than silently mangled.
+ */
+const PLACEHOLDER_PATTERN = /\{(\w+)\}/g;
 
 function lookup(catalog: WebTranslationCatalog | undefined, key: WebTranslationKey): TranslationLeaf {
   const separator = key.indexOf('.');
@@ -65,23 +73,63 @@ function isUsableTranslation(value: TranslationLeaf): value is string {
 }
 
 /**
+ * Replace `{name}` slots with `params.name`.
+ *
+ * An unsupplied slot keeps its literal `{name}` text and calls `onUnresolved`.
+ * Keeping the token is the only option that neither invents copy nor leaves a
+ * hole in the sentence, and the callback is what stops the defect from staying
+ * invisible: it lands in the same report a missing translation does.
+ *
+ * Only own properties are read, so a slot named `constructor` or `toString`
+ * cannot pull an inherited object member into rendered copy.
+ */
+function interpolate(
+  template: string,
+  params: WebTranslationParams | undefined,
+  onUnresolved: () => void,
+): string {
+  if (!template.includes('{')) return template;
+
+  return template.replace(PLACEHOLDER_PATTERN, (token, name: string) => {
+    if (!params || !Object.prototype.hasOwnProperty.call(params, name)) {
+      onUnresolved();
+      return token;
+    }
+
+    const value = params[name];
+    if (value == null) {
+      onUnresolved();
+      return token;
+    }
+
+    return String(value);
+  });
+}
+
+/**
  * Creates an isolated lookup runtime. Isolated instances keep tests, previews,
  * and coverage jobs independent of the shared browser report.
  */
 export function createWebTranslationRuntime(catalogs: WebTranslationCatalogs = WEB_TRANSLATIONS): {
-  translate: (locale: SupportedLocale, key: WebTranslationKey) => string;
+  translate: (
+    locale: SupportedLocale,
+    key: WebTranslationKey,
+    params?: WebTranslationParams,
+  ) => string;
   getFallbackReport: () => WebTranslationFallbackReport;
   resetFallbackReport: () => void;
 } {
   const missing = new Map<string, MissingWebTranslationEntry>();
 
-  const recordMissing = (
+  const record = (
     requestedLocale: SupportedLocale,
+    fallbackLocale: SupportedLocale,
     key: WebTranslationKey,
     reason: MissingWebTranslationReason,
   ) => {
-    const fallbackLocale: SupportedLocale = 'ko';
-    const id = `${requestedLocale}\u0000${fallbackLocale}\u0000${key}\u0000${reason}`;
+    // A NUL separator cannot occur inside a key, so two distinct tuples can
+    // never collapse into one entry.
+    const id = [requestedLocale, fallbackLocale, key, reason].join('\u0000');
     const previous = missing.get(id);
     if (previous) {
       previous.count += 1;
@@ -90,19 +138,34 @@ export function createWebTranslationRuntime(catalogs: WebTranslationCatalogs = W
     missing.set(id, { key, requestedLocale, fallbackLocale, reason, count: 1 });
   };
 
-  return {
-    translate(locale, key) {
-      const localized = lookup(catalogs[locale], key);
-      if (isUsableTranslation(localized)) return localized;
+  /** Interpolate the chosen copy, attributing placeholder gaps to its source catalog. */
+  const render = (
+    requestedLocale: SupportedLocale,
+    sourceLocale: SupportedLocale,
+    key: WebTranslationKey,
+    template: string,
+    params: WebTranslationParams | undefined,
+  ) => interpolate(template, params, () => record(requestedLocale, sourceLocale, key, 'placeholder'));
 
-      recordMissing(locale, key, missingReason(localized)!);
+  return {
+    translate(locale, key, params) {
+      const localized = lookup(catalogs[locale], key);
+      if (isUsableTranslation(localized)) return render(locale, locale, key, localized, params);
+
+      record(locale, 'ko', key, missingReason(localized)!);
       const korean = lookup(catalogs.ko, key);
-      return isUsableTranslation(korean) ? korean : UNKNOWN_WEB_TRANSLATION_FALLBACK;
+      return isUsableTranslation(korean)
+        ? render(locale, 'ko', key, korean, params)
+        : UNKNOWN_WEB_TRANSLATION_FALLBACK;
     },
     getFallbackReport() {
       const entries = [...missing.values()].map((entry) => ({ ...entry }));
       return {
-        missingKeys: [...new Set(entries.map((entry) => entry.key))],
+        missingKeys: [
+          ...new Set(
+            entries.filter((entry) => entry.reason !== 'placeholder').map((entry) => entry.key),
+          ),
+        ],
         entries,
       };
     },
@@ -115,9 +178,13 @@ export function createWebTranslationRuntime(catalogs: WebTranslationCatalogs = W
 /** Shared browser runtime used by hooks and direct UI translation calls. */
 export const webTranslationRuntime = createWebTranslationRuntime();
 
-/** Returns localized copy, Korean base copy, or a safe Korean placeholder—never a key or blank string. */
-export function translateWeb(locale: SupportedLocale, key: WebTranslationKey): string {
-  return webTranslationRuntime.translate(locale, key);
+/** Returns localized copy, Korean base copy, or a safe Korean placeholder, never a key or blank string. */
+export function translateWeb(
+  locale: SupportedLocale,
+  key: WebTranslationKey,
+  params?: WebTranslationParams,
+): string {
+  return webTranslationRuntime.translate(locale, key, params);
 }
 
 /** Snapshot the missing/empty localized keys replaced by Korean at runtime. */
