@@ -1,6 +1,6 @@
 import type { SupportedLocale } from './locale';
 
-/** Browser UI catalog. English is the base catalog; missing localized copy falls back to English. */
+/** Browser UI catalog. Korean is the base catalog and safe fallback. */
 export const WEB_TRANSLATIONS = {
   ko: {
     auth: { product: '전자계약', loginTitle: '다시 오셨네요', loginHint: '이메일과 비밀번호로 로그인해 주세요.', email: '이메일', password: '비밀번호', login: '로그인', loggingIn: '로그인 중', googleLogin: 'Google로 로그인', noAccount: '아직 계정이 없으신가요?', signup: '회원가입', emailRequired: '이메일을 입력해 주세요.', emailInvalid: '이메일 형식을 다시 확인해 주세요.', passwordRequired: '비밀번호를 입력해 주세요.' },
@@ -46,7 +46,7 @@ export interface WebTranslationFallbackReport {
 }
 
 /** Last-resort text when even the base catalog is incomplete. */
-export const UNKNOWN_WEB_TRANSLATION_FALLBACK = 'This content is being prepared.';
+export const UNKNOWN_WEB_TRANSLATION_FALLBACK = '콘텐츠를 준비하고 있어요.';
 
 function lookup(catalog: WebTranslationCatalog | undefined, key: WebTranslationKey): TranslationLeaf {
   const separator = key.indexOf('.');
@@ -80,7 +80,7 @@ export function createWebTranslationRuntime(catalogs: WebTranslationCatalogs = W
     key: WebTranslationKey,
     reason: MissingWebTranslationReason,
   ) => {
-    const fallbackLocale: SupportedLocale = 'en';
+    const fallbackLocale: SupportedLocale = 'ko';
     const id = `${requestedLocale}\u0000${fallbackLocale}\u0000${key}\u0000${reason}`;
     const previous = missing.get(id);
     if (previous) {
@@ -96,8 +96,8 @@ export function createWebTranslationRuntime(catalogs: WebTranslationCatalogs = W
       if (isUsableTranslation(localized)) return localized;
 
       recordMissing(locale, key, missingReason(localized)!);
-      const english = lookup(catalogs.en, key);
-      return isUsableTranslation(english) ? english : UNKNOWN_WEB_TRANSLATION_FALLBACK;
+      const korean = lookup(catalogs.ko, key);
+      return isUsableTranslation(korean) ? korean : UNKNOWN_WEB_TRANSLATION_FALLBACK;
     },
     getFallbackReport() {
       const entries = [...missing.values()].map((entry) => ({ ...entry }));
@@ -115,7 +115,7 @@ export function createWebTranslationRuntime(catalogs: WebTranslationCatalogs = W
 /** Shared browser runtime used by hooks and direct UI translation calls. */
 export const webTranslationRuntime = createWebTranslationRuntime();
 
-/** Returns localized copy, English base copy, or a safe placeholder—never a key or blank string. */
+/** Returns localized copy, Korean base copy, or a safe placeholder—never a key or blank string. */
 export function translateWeb(locale: SupportedLocale, key: WebTranslationKey): string {
   return webTranslationRuntime.translate(locale, key);
 }

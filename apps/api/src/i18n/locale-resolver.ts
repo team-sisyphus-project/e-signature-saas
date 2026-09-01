@@ -35,12 +35,16 @@ export function localeFromAcceptLanguage(header?: string | null): SupportedLocal
 }
 
 /**
- * Resolve locale: authenticated user → sender → English default.
+ * Resolve locale: authenticated user → sender → browser preference → Korean.
  *
- * Accept-Language auto-detection is intentionally NOT part of the chain:
- * the demo must render in English until a user explicitly switches
- * languages in the app.
+ * Unsupported or malformed values are skipped, allowing this function to be
+ * used directly with persisted preferences and request headers.
  */
 export function resolveLocale(input: LocaleResolutionInput = {}): SupportedLocale {
-  return parseLocale(input.userLocale) ?? parseLocale(input.senderLocale) ?? 'en';
+  return (
+    parseLocale(input.userLocale) ??
+    parseLocale(input.senderLocale) ??
+    localeFromAcceptLanguage(input.acceptLanguage) ??
+    'ko'
+  );
 }

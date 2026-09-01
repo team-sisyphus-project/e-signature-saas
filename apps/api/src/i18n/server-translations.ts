@@ -195,10 +195,62 @@ export type TranslationKey =
   | 'auditCertificate.actionDocumentCompleted'
   | 'auditCertificate.actionFallback';
 
-/** Returns a translated string, with English as the guaranteed safe fallback. */
+/** Last-resort text when a catalog is incomplete, never expose a raw key. */
+export const UNKNOWN_TRANSLATION_FALLBACK = '콘텐츠를 준비하고 있어요.';
+
+export type TranslationFallbackReason = 'missing' | 'empty';
+
+export interface TranslationFallbackEntry {
+  key: string;
+  requestedLocale: SupportedLocale;
+  fallbackLocale: 'ko';
+  reason: TranslationFallbackReason;
+  count: number;
+}
+
+const fallbackEntries = new Map<string, TranslationFallbackEntry>();
+
+function recordFallback(
+  requestedLocale: SupportedLocale,
+  key: string,
+  reason: TranslationFallbackReason,
+): void {
+  const id = `${requestedLocale}\u0000${key}\u0000${reason}`;
+  const existing = fallbackEntries.get(id);
+  if (existing) {
+    existing.count += 1;
+    return;
+  }
+  fallbackEntries.set(id, {
+    key,
+    requestedLocale,
+    fallbackLocale: 'ko',
+    reason,
+    count: 1,
+  });
+}
+
+/** Returns a translated string, with Korean as the guaranteed safe fallback. */
 export function translate(locale: SupportedLocale, key: TranslationKey): string {
   const [scope, name] = key.split('.') as [keyof (typeof SERVER_TRANSLATIONS)['en'], string];
-  const localized = SERVER_TRANSLATIONS[locale][scope] as Record<string, string>;
-  const fallback = SERVER_TRANSLATIONS.en[scope] as Record<string, string>;
-  return localized[name] ?? fallback[name];
+  const localized = SERVER_TRANSLATIONS[locale][scope] as Record<string, string> | undefined;
+  const fallback = SERVER_TRANSLATIONS.ko[scope] as Record<string, string> | undefined;
+  const localizedValue = localized?.[name];
+  if (typeof localizedValue !== 'string' || !localizedValue.trim()) {
+    recordFallback(locale, key, localizedValue === undefined ? 'missing' : 'empty');
+  }
+  const value = typeof localizedValue === 'string' && localizedValue.trim()
+    ? localizedValue
+    : fallback?.[name];
+  return typeof value === 'string' && value.trim() ? value : UNKNOWN_TRANSLATION_FALLBACK;
+}
+
+/** Snapshot missing/empty server-resource lookups for coverage diagnostics. */
+export function getServerTranslationFallbackReport(): readonly TranslationFallbackEntry[] {
+  return [...fallbackEntries.values()].map((entry) => ({ ...entry }));
+}
+
+/** Clear the process-local diagnostics after they have been collected. */
+export function resetServerTranslationFallbackReport(): void {
+  fallbackEntries.clear();
 }

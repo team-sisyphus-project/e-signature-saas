@@ -21,9 +21,10 @@ describe('web locale resolver', () => {
     expect(resolveLocale({ senderLocale: 'en', browserLanguages: ['ko-KR'] })).toBe('en');
   });
 
-  it('ignores browser languages and defaults to English without an explicit preference', () => {
+  it('uses the first supported browser language, then defaults to Korean', () => {
     expect(localeFromBrowserLanguages(['fr-FR', 'en-GB', 'ko-KR'])).toBe('en');
-    expect(resolveLocale({ browserLanguages: ['ko-KR'] })).toBe('en');
-    expect(resolveLocale({ browserLanguages: ['fr-FR', 'ja-JP'] })).toBe('en');
+    expect(resolveLocale({ browserLanguages: ['ko-KR'] })).toBe('ko');
+    expect(resolveLocale({ browserLanguages: ['fr-FR', 'ja-JP'] })).toBe('ko');
+    expect(resolveLocale()).toBe('ko');
   });
 });

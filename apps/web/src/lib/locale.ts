@@ -40,14 +40,18 @@ export function localeFromBrowserLanguages(
 }
 
 /**
- * Resolve: signed-in user → public-link sender → English.
+ * Resolve: signed-in user → public-link sender → browser preference → Korean.
  *
- * Browser-language auto-detection is intentionally NOT part of the chain:
- * this is a demo product that must render in English until someone
- * explicitly switches languages in the app.
+ * Invalid and unsupported values are ignored at every step so callers can pass
+ * persisted values and HTTP/browser language tags without validating them first.
  */
 export function resolveLocale(input: LocaleResolutionInput = {}): SupportedLocale {
-  return parseLocale(input.userLocale) ?? parseLocale(input.senderLocale) ?? 'en';
+  return (
+    parseLocale(input.userLocale) ??
+    parseLocale(input.senderLocale) ??
+    localeFromBrowserLanguages(input.browserLanguages) ??
+    'ko'
+  );
 }
 
 /** Browser-facing lookup for the API's read-only translation resources. */
