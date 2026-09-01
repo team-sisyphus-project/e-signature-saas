@@ -129,15 +129,9 @@ interface ShareContextValue {
 
 const ShareContext = React.createContext<ShareContextValue | null>(null);
 
-export function ShareProvider({
-  token,
-  children,
-}: {
-  token: string;
-  children: React.ReactNode;
-}) {
+export function ShareProvider({ token, children }: { token: string; children: React.ReactNode }) {
   const [state, dispatch] = React.useReducer(reducer, initialState);
-  const { setSenderLocale, setPublicLinkActive, locale } = useLocale();
+  const { setSenderLocale, setPublicResolvedLocale, setPublicLinkActive, locale } = useLocale();
   const recipientCopy = React.useMemo(() => shareRecipientCopyFor(locale), [locale]);
 
   const unlock = React.useCallback(
@@ -174,6 +168,7 @@ export function ShareProvider({
       .then((meta) => {
         if (!active) return;
         setSenderLocale(meta.sender.locale);
+        setPublicResolvedLocale(meta.locale);
         dispatch({ type: 'META', meta });
         // An open link (no password) unlocks immediately behind the skeleton.
         if (!meta.alreadySubmitted && !meta.requiresPassword) {
@@ -185,15 +180,17 @@ export function ShareProvider({
       .catch((error) => {
         if (active) {
           setSenderLocale(null);
+          setPublicResolvedLocale(null);
           dispatch({ type: 'BLOCK', reason: metaBlockReason(error) });
         }
       });
     return () => {
       active = false;
       setSenderLocale(null);
+      setPublicResolvedLocale(null);
       setPublicLinkActive(false);
     };
-  }, [token, unlock, setSenderLocale, setPublicLinkActive]);
+  }, [token, unlock, setSenderLocale, setPublicResolvedLocale, setPublicLinkActive]);
 
   const openField = React.useCallback(
     (fieldId: string) => dispatch({ type: 'OPEN_FIELD', fieldId }),
@@ -234,7 +231,12 @@ export function ShareProvider({
   const fillValue = React.useMemo<FillContextValue>(() => {
     const documentTitle = state.payload?.documentTitle ?? state.meta?.documentTitle ?? '';
     return {
-      sender: state.meta?.sender ?? { name: null, brandColor: null, brandLogoUrl: null, locale: 'en' },
+      sender: state.meta?.sender ?? {
+        name: null,
+        brandColor: null,
+        brandLogoUrl: null,
+        locale: 'en',
+      },
       brandColor: state.meta?.sender.brandColor ?? null,
       documentTitle,
       payload: state.payload
@@ -257,7 +259,17 @@ export function ShareProvider({
       copy: shareFillCopy(recipientCopy, locale),
       // No download: a fill link has no completed artifact to hand back.
     };
-  }, [state, token, persistFields, openField, closeField, setFieldValue, complete, recipientCopy, locale]);
+  }, [
+    state,
+    token,
+    persistFields,
+    openField,
+    closeField,
+    setFieldValue,
+    complete,
+    recipientCopy,
+    locale,
+  ]);
 
   return (
     <ShareContext.Provider value={value}>
@@ -273,34 +285,37 @@ export function useShare(): ShareContextValue {
 }
 
 /** The recipient flow's copy for the shared fill surface (speaks "fill out / submit"). */
-function shareFillCopy(recipient: ReturnType<typeof shareRecipientCopyFor>, locale: 'ko' | 'en'): FillCopy {
+function shareFillCopy(
+  recipient: ReturnType<typeof shareRecipientCopyFor>,
+  locale: 'ko' | 'en',
+): FillCopy {
   const signer = signerCopyFor(locale);
   return {
-  ctaContinue: recipient.viewer.ctaContinue,
-  ctaComplete: recipient.viewer.ctaComplete,
-  loadError: recipient.viewer.loadError,
-  pageError: recipient.viewer.pageError,
-  progress: recipient.viewer.progress,
-  progressNone: recipient.viewer.progressNone,
-  progressAllDone: recipient.viewer.progressAllDone,
-  // The capture affordance + sheet chrome are identical to the signer flow.
-  fieldAffordance: signer.fieldAffordance,
-  completeError: recipient.viewer.completeError,
-  sheet: {
-    ...signer.sheet,
-    hint: (type) => {
-      if (type === 'DATE') return recipient.viewer.dateHint;
-      if (type === 'TEXT') return recipient.viewer.textHint;
-      return signer.sheet.drawHint;
+    ctaContinue: recipient.viewer.ctaContinue,
+    ctaComplete: recipient.viewer.ctaComplete,
+    loadError: recipient.viewer.loadError,
+    pageError: recipient.viewer.pageError,
+    progress: recipient.viewer.progress,
+    progressNone: recipient.viewer.progressNone,
+    progressAllDone: recipient.viewer.progressAllDone,
+    // The capture affordance + sheet chrome are identical to the signer flow.
+    fieldAffordance: signer.fieldAffordance,
+    completeError: recipient.viewer.completeError,
+    sheet: {
+      ...signer.sheet,
+      hint: (type) => {
+        if (type === 'DATE') return recipient.viewer.dateHint;
+        if (type === 'TEXT') return recipient.viewer.textHint;
+        return signer.sheet.drawHint;
+      },
     },
-  },
-  done: {
-    title: recipient.done.title,
-    body: recipient.done.body,
-    documentLabel: recipient.done.documentLabel,
-    // A share submission shows one next-step line regardless of other participants.
-    nextAllDone: recipient.done.next,
-    nextWaiting: recipient.done.next,
-  },
+    done: {
+      title: recipient.done.title,
+      body: recipient.done.body,
+      documentLabel: recipient.done.documentLabel,
+      // A share submission shows one next-step line regardless of other participants.
+      nextAllDone: recipient.done.next,
+      nextWaiting: recipient.done.next,
+    },
   };
 }

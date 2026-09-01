@@ -52,13 +52,7 @@ import {
  */
 export type SignerFieldValue = FillFieldValue;
 
-export type SignerPhase =
-  | 'loading'
-  | 'verify'
-  | 'viewing'
-  | 'signing'
-  | 'done'
-  | 'blocked';
+export type SignerPhase = 'loading' | 'verify' | 'viewing' | 'signing' | 'done' | 'blocked';
 
 export type BlockReason = 'invalidLink' | 'alreadySigned' | 'unavailable';
 
@@ -166,15 +160,9 @@ interface SignerContextValue {
 
 const SignerContext = React.createContext<SignerContextValue | null>(null);
 
-export function SignerProvider({
-  token,
-  children,
-}: {
-  token: string;
-  children: React.ReactNode;
-}) {
+export function SignerProvider({ token, children }: { token: string; children: React.ReactNode }) {
   const [state, dispatch] = React.useReducer(reducer, initialState);
-  const { setSenderLocale, setPublicLinkActive, locale } = useLocale();
+  const { setSenderLocale, setPublicResolvedLocale, setPublicLinkActive, locale } = useLocale();
   const signerCopy = React.useMemo(() => signerCopyFor(locale), [locale]);
 
   // Load pre-auth metadata once per link, then route to verify / blocked.
@@ -185,6 +173,7 @@ export function SignerProvider({
       .then((meta) => {
         if (!active) return;
         setSenderLocale(meta.sender.locale);
+        setPublicResolvedLocale(meta.locale);
         const reason = blockReasonFor(meta);
         if (reason) dispatch({ type: 'BLOCK', reason, meta });
         else dispatch({ type: 'META_OK', meta });
@@ -192,19 +181,19 @@ export function SignerProvider({
       .catch((error) => {
         if (!active) return;
         setSenderLocale(null);
+        setPublicResolvedLocale(null);
         // A 404 (or any meta failure) means the link itself isn't usable.
         const reason: BlockReason =
-          error instanceof ApiError && error.status === 404
-            ? 'invalidLink'
-            : 'invalidLink';
+          error instanceof ApiError && error.status === 404 ? 'invalidLink' : 'invalidLink';
         dispatch({ type: 'BLOCK', reason, meta: null });
       });
     return () => {
       active = false;
       setSenderLocale(null);
+      setPublicResolvedLocale(null);
       setPublicLinkActive(false);
     };
-  }, [token, setSenderLocale, setPublicLinkActive]);
+  }, [token, setSenderLocale, setPublicResolvedLocale, setPublicLinkActive]);
 
   const verify = React.useCallback(
     async (code: string) => {
@@ -260,7 +249,12 @@ export function SignerProvider({
   const fillValue = React.useMemo<FillContextValue>(() => {
     const documentTitle = state.payload?.documentTitle ?? state.meta?.documentTitle ?? '';
     return {
-      sender: state.meta?.sender ?? { name: null, brandColor: null, brandLogoUrl: null, locale: 'en' },
+      sender: state.meta?.sender ?? {
+        name: null,
+        brandColor: null,
+        brandLogoUrl: null,
+        locale: 'en',
+      },
       brandColor: state.meta?.sender.brandColor ?? null,
       documentTitle,
       payload: state.payload
@@ -285,7 +279,17 @@ export function SignerProvider({
         onDownload: (kind) => downloadSignerArtifact(token, kind, documentTitle, locale),
       },
     };
-  }, [state, token, persistFields, openField, closeField, setFieldValue, complete, signerCopy, locale]);
+  }, [
+    state,
+    token,
+    persistFields,
+    openField,
+    closeField,
+    setFieldValue,
+    complete,
+    signerCopy,
+    locale,
+  ]);
 
   return (
     <SignerContext.Provider value={value}>
@@ -297,25 +301,25 @@ export function SignerProvider({
 /** The OTP signer flow's copy for the shared fill surface (speaks "sign"). */
 function signerFillCopy(copy: SignerCopy): FillCopy {
   return {
-  ctaContinue: copy.viewerCtaContinue,
-  ctaComplete: copy.viewerCtaComplete,
-  loadError: copy.viewerLoadError,
-  pageError: copy.pageError,
-  progress: copy.progress,
-  progressNone: copy.progressNone,
-  progressAllDone: copy.progressAllDone,
-  fieldAffordance: copy.fieldAffordance,
-  completeError: copy.completeError,
-  sheet: {
-    ...copy.sheet,
-    hint: (type) => {
-      if (type === 'DATE') return copy.dateHint;
-      if (type === 'TEXT') return copy.textHint;
-      return copy.sheet.drawHint;
+    ctaContinue: copy.viewerCtaContinue,
+    ctaComplete: copy.viewerCtaComplete,
+    loadError: copy.viewerLoadError,
+    pageError: copy.pageError,
+    progress: copy.progress,
+    progressNone: copy.progressNone,
+    progressAllDone: copy.progressAllDone,
+    fieldAffordance: copy.fieldAffordance,
+    completeError: copy.completeError,
+    sheet: {
+      ...copy.sheet,
+      hint: (type) => {
+        if (type === 'DATE') return copy.dateHint;
+        if (type === 'TEXT') return copy.textHint;
+        return copy.sheet.drawHint;
+      },
     },
-  },
-  done: copy.done,
-};
+    done: copy.done,
+  };
 }
 
 export function useSigner(): SignerContextValue {

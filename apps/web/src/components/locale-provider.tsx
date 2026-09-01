@@ -20,6 +20,8 @@ interface LocaleContextValue {
   resources: TranslationResources['resources'] | undefined;
   /** Public-link flows call this after their metadata has revealed the sender locale. */
   setSenderLocale: (locale: string | null | undefined) => void;
+  /** Public-link metadata can provide the server's authoritative resolution. */
+  setPublicResolvedLocale: (locale: SupportedLocale | null | undefined) => void;
   /** Public-link UI must never inherit a signed-in user's saved preference. */
   setPublicLinkActive: (active: boolean) => void;
   t: (key: WebTranslationKey) => string;
@@ -34,12 +36,19 @@ const LocaleContext = React.createContext<LocaleContextValue | null>(null);
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
   const [userLocale, setUserLocale] = React.useState<string | null>(null);
   const [senderLocale, setSenderLocale] = React.useState<string | null>(null);
+  const [publicResolvedLocale, setPublicResolvedLocale] = React.useState<SupportedLocale | null>(
+    null,
+  );
   const [linkLocale, setLinkLocale] = React.useState<string | null>(null);
   const [publicLinkActive, setPublicLinkActive] = React.useState(false);
   const [browserLanguages, setBrowserLanguages] = React.useState<readonly string[]>([]);
   const [resources, setResources] = React.useState<TranslationResources['resources']>();
 
   const refreshUserLocale = React.useCallback(() => setUserLocale(getUser()?.locale ?? null), []);
+  const setResolvedPublicLocale = React.useCallback(
+    (locale: SupportedLocale | null | undefined) => setPublicResolvedLocale(locale ?? null),
+    [],
+  );
   const setPublicSenderLocale = React.useCallback(
     (locale: string | null | undefined) => setSenderLocale(locale ?? null),
     [],
@@ -54,7 +63,8 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
   }, [refreshUserLocale]);
 
   const locale = publicLinkActive
-    ? resolvePublicEntryLocale({ linkLocale, senderLocale, browserLanguages })
+    ? (publicResolvedLocale ??
+      resolvePublicEntryLocale({ linkLocale, senderLocale, browserLanguages }))
     : resolveLocale({ userLocale, senderLocale, browserLanguages });
 
   React.useEffect(() => {
@@ -77,8 +87,15 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
   }, [locale]);
 
   const value = React.useMemo<LocaleContextValue>(
-    () => ({ locale, resources, setSenderLocale: setPublicSenderLocale, setPublicLinkActive, t: (key) => translateWeb(locale, key) }),
-    [locale, resources, setPublicSenderLocale],
+    () => ({
+      locale,
+      resources,
+      setSenderLocale: setPublicSenderLocale,
+      setPublicResolvedLocale: setResolvedPublicLocale,
+      setPublicLinkActive,
+      t: (key) => translateWeb(locale, key),
+    }),
+    [locale, resources, setPublicSenderLocale, setResolvedPublicLocale],
   );
 
   return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>;
