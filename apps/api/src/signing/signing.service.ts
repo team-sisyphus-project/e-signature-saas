@@ -24,7 +24,7 @@ import { SignerSessionService } from './signer-session.service';
 import { CompletionQueue } from '../completion/completion.queue';
 import { artifactFilename, type CompletionArtifact } from '../completion/artifact';
 import type { SaveFieldValuesDto } from './dto/signing.dto';
-import { resolveLocale, type SupportedLocale } from '../i18n/locale-resolver';
+import { resolveLocale, resolvePublicEntryLocale, type SupportedLocale } from '../i18n/locale-resolver';
 
 /** Audit-log action names for the signer flow. */
 const AUDIT_ACTION = {
@@ -53,7 +53,7 @@ export class SigningService {
    * exposes the PDF, fields, or full recipient identity before the 6-digit
    * code is verified.
    */
-  async meta(accessToken: string, acceptLanguage?: string): Promise<SigningMeta> {
+  async meta(accessToken: string, acceptLanguage?: string, linkLocale?: string): Promise<SigningMeta> {
     const signRequest = await this.prisma.signRequest.findUnique({
       where: { accessToken },
       include: {
@@ -77,7 +77,7 @@ export class SigningService {
         brandLogoUrl: document.owner.brandLogoUrl,
         locale: document.owner.locale,
       },
-      locale: resolveLocale({ senderLocale: document.owner.locale, acceptLanguage }),
+      locale: resolvePublicEntryLocale({ senderLocale: document.owner.locale, acceptLanguage, linkLocale }),
       recipientNameMasked: maskName(signRequest.recipientName),
       status: signRequest.status,
       alreadySigned: signRequest.status === SignRequestStatus.SIGNED,

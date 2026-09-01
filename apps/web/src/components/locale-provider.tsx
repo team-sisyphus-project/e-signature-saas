@@ -5,6 +5,8 @@ import { getUser } from '@/lib/auth';
 import {
   fetchTranslationResources,
   getBrowserLanguages,
+  getLinkLocale,
+  resolvePublicEntryLocale,
   resolveLocale,
   type SupportedLocale,
   type TranslationResources,
@@ -32,6 +34,7 @@ const LocaleContext = React.createContext<LocaleContextValue | null>(null);
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
   const [userLocale, setUserLocale] = React.useState<string | null>(null);
   const [senderLocale, setSenderLocale] = React.useState<string | null>(null);
+  const [linkLocale, setLinkLocale] = React.useState<string | null>(null);
   const [publicLinkActive, setPublicLinkActive] = React.useState(false);
   const [browserLanguages, setBrowserLanguages] = React.useState<readonly string[]>([]);
   const [resources, setResources] = React.useState<TranslationResources['resources']>();
@@ -44,13 +47,14 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => {
     setBrowserLanguages(getBrowserLanguages());
+    setLinkLocale(getLinkLocale());
     refreshUserLocale();
     window.addEventListener('esign:session-change', refreshUserLocale);
     return () => window.removeEventListener('esign:session-change', refreshUserLocale);
   }, [refreshUserLocale]);
 
   const locale = publicLinkActive
-    ? resolveLocale({ senderLocale, browserLanguages })
+    ? resolvePublicEntryLocale({ linkLocale, senderLocale, browserLanguages })
     : resolveLocale({ userLocale, senderLocale, browserLanguages });
 
   React.useEffect(() => {

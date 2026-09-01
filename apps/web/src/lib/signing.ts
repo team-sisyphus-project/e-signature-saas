@@ -18,6 +18,7 @@
  */
 
 import { ApiError, apiDownload, apiFetch, apiUrl } from './api';
+import { getLinkLocale } from './locale';
 import {
   completionDownloadCopyFor,
   saveBlob,
@@ -242,7 +243,10 @@ const base = (accessToken: string) => `/signing/${encodeURIComponent(accessToken
 
 /** ① Pre-auth metadata for the landing screen. */
 export function fetchMeta(accessToken: string): Promise<SigningMeta> {
-  return apiFetch<SigningMeta>(base(accessToken));
+  const linkLocale = getLinkLocale();
+  return apiFetch<SigningMeta>(
+    `${base(accessToken)}${linkLocale ? `?lang=${encodeURIComponent(linkLocale)}` : ''}`,
+  );
 }
 
 /** ② Verify the 6-digit code → receive a short-lived session token. */

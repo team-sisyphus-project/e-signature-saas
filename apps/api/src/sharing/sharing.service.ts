@@ -33,7 +33,7 @@ import { LinkPasswordCipher } from './link-password-cipher';
 import { SendQuotaService } from '../common/send-quota.service';
 import type { SaveFieldValuesDto } from '../signing/dto/signing.dto';
 import type { CreateShareLinkDto, UpdateShareLinkPasswordDto } from './dto/sharing.dto';
-import { resolveLocale, type SupportedLocale } from '../i18n/locale-resolver';
+import { resolvePublicEntryLocale, type SupportedLocale } from '../i18n/locale-resolver';
 
 /** Audit-log action names for the share-link flow. */
 const AUDIT_ACTION = {
@@ -294,7 +294,7 @@ export class SharingService {
    * expiry — never the PDF or fields. Throws the matching status code for an
    * expired/revoked/invalid link so the recipient sees the right notice.
    */
-  async meta(accessToken: string, acceptLanguage?: string): Promise<ShareMeta> {
+  async meta(accessToken: string, acceptLanguage?: string, linkLocale?: string): Promise<ShareMeta> {
     const link = await this.prisma.signRequest.findUnique({
       where: { accessToken },
       select: {
@@ -322,7 +322,7 @@ export class SharingService {
         brandLogoUrl: link!.document.owner.brandLogoUrl,
         locale: link!.document.owner.locale,
       },
-      locale: resolveLocale({ senderLocale: link!.document.owner.locale, acceptLanguage }),
+      locale: resolvePublicEntryLocale({ senderLocale: link!.document.owner.locale, acceptLanguage, linkLocale }),
       requiresPassword: link!.linkPasswordCipher != null,
       expiresAt: link!.linkExpiresAt ? link!.linkExpiresAt.toISOString() : null,
       alreadySubmitted: link!.status === SignRequestStatus.SIGNED,

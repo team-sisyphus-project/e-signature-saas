@@ -5,6 +5,8 @@ export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
 export interface LocaleResolutionInput {
   /** Persisted preference of an authenticated user. */
   userLocale?: string | null;
+  /** Explicit locale carried by the current link (when present). */
+  linkLocale?: string | null;
   /** Locale of the sender who created a public signing/share link. */
   senderLocale?: string | null;
   /** Raw HTTP Accept-Language header. */
@@ -26,16 +28,17 @@ export function localeFromAcceptLanguage(header?: string | null): SupportedLocal
     .split(',')
     .map((entry, index) => {
       const [tag, ...params] = entry.trim().split(';');
-      const quality = params.find((param) => param.trim().startsWith('q='));
-      const q = quality ? Number(quality.trim().slice(2)) : 1;
+      const qualityParam = params.find((param) => /^q\s*=/i.test(param.trim()));
+      const quality = qualityParam?.trim().match(/^q\s*=\s*(\d(?:\.\d+)?)$/i);
+      const q = qualityParam ? Number(quality?.[1]) : 1;
       return { locale: parseLocale(tag), q: Number.isFinite(q) ? q : 0, index };
     })
-    .filter((candidate) => candidate.locale && candidate.q > 0)
+    .filter((candidate) => candidate.locale && candidate.q > 0 && candidate.q <= 1)
     .sort((a, b) => b.q - a.q || a.index - b.index)[0]?.locale;
 }
 
 /**
- * Resolve locale: authenticated user → sender → browser preference → Korean.
+ * Resolve locale: authenticated user → explicit link → sender → browser → Korean.
  *
  * Unsupported or malformed values are skipped, allowing this function to be
  * used directly with persisted preferences and request headers.
@@ -43,6 +46,28 @@ export function localeFromAcceptLanguage(header?: string | null): SupportedLocal
 export function resolveLocale(input: LocaleResolutionInput = {}): SupportedLocale {
   return (
     parseLocale(input.userLocale) ??
+    parseLocale(input.linkLocale) ??
+    parseLocale(input.senderLocale) ??
+    localeFromAcceptLanguage(input.acceptLanguage) ??
+    'ko'
+  );
+}
+
+/**
+ * Resolve an anonymous public entry. There is deliberately no user tier here:
+ * a recipient's authenticated session must not affect a link they opened.
+ */
+export interface PublicEntryLocaleInput {
+  linkLocale?: string | null;
+  senderLocale?: string | null;
+  acceptLanguage?: string | null;
+}
+
+export function resolvePublicEntryLocale(
+  input: PublicEntryLocaleInput = {},
+): SupportedLocale {
+  return (
+    parseLocale(input.linkLocale) ??
     parseLocale(input.senderLocale) ??
     localeFromAcceptLanguage(input.acceptLanguage) ??
     'ko'

@@ -9,6 +9,7 @@ import {
   Ip,
   Param,
   Post,
+  Query,
   Res,
   UseGuards,
 } from '@nestjs/common';
@@ -35,8 +36,12 @@ export class SigningController {
 
   /** ① Pre-auth minimal metadata (no PDF / fields). */
   @Get(':token')
-  meta(@Param('token') token: string, @Headers('accept-language') acceptLanguage?: string) {
-    return this.signing.meta(token, acceptLanguage);
+  meta(
+    @Param('token') token: string,
+    @Headers('accept-language') acceptLanguage?: string,
+    @Query('lang') linkLocale?: string,
+  ) {
+    return this.signing.meta(token, acceptLanguage, linkLocale);
   }
 
   /** ② Verify the 6-digit code → issue a short-lived signer session token. */

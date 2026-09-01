@@ -22,6 +22,7 @@
  */
 
 import { ApiError, apiFetch, apiUrl } from './api';
+import { getLinkLocale } from './locale';
 import { SHARE_PASSWORD_MIN_LENGTH } from './sharing';
 import type { SignFieldType, SignerSender, SignRequestStatus } from './signing';
 
@@ -118,7 +119,10 @@ const base = (accessToken: string) => `/share/${encodeURIComponent(accessToken)}
 
 /** ① Pre-auth metadata for the landing/gate screen. */
 export function fetchShareMeta(accessToken: string): Promise<ShareMeta> {
-  return apiFetch<ShareMeta>(base(accessToken));
+  const linkLocale = getLinkLocale();
+  return apiFetch<ShareMeta>(
+    `${base(accessToken)}${linkLocale ? `?lang=${encodeURIComponent(linkLocale)}` : ''}`,
+  );
 }
 
 /**

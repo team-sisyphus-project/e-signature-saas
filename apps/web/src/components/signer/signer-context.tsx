@@ -184,7 +184,7 @@ export function SignerProvider({
     fetchMeta(token)
       .then((meta) => {
         if (!active) return;
-        setSenderLocale(meta.locale);
+        setSenderLocale(meta.sender.locale);
         const reason = blockReasonFor(meta);
         if (reason) dispatch({ type: 'BLOCK', reason, meta });
         else dispatch({ type: 'META_OK', meta });

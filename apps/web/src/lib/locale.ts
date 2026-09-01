@@ -14,6 +14,8 @@ export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
 export interface LocaleResolutionInput {
   /** Persisted preference of the currently authenticated user. */
   userLocale?: string | null;
+  /** Explicit locale carried by the current public link. */
+  linkLocale?: string | null;
   /** Persisted preference of the sender of a public link. */
   senderLocale?: string | null;
   /** Browser language tags, in browser preference order. */
@@ -40,7 +42,7 @@ export function localeFromBrowserLanguages(
 }
 
 /**
- * Resolve: signed-in user → public-link sender → browser preference → Korean.
+ * Resolve: signed-in user → explicit link → sender → browser preference → Korean.
  *
  * Invalid and unsupported values are ignored at every step so callers can pass
  * persisted values and HTTP/browser language tags without validating them first.
@@ -48,6 +50,25 @@ export function localeFromBrowserLanguages(
 export function resolveLocale(input: LocaleResolutionInput = {}): SupportedLocale {
   return (
     parseLocale(input.userLocale) ??
+    parseLocale(input.linkLocale) ??
+    parseLocale(input.senderLocale) ??
+    localeFromBrowserLanguages(input.browserLanguages) ??
+    'ko'
+  );
+}
+
+export interface PublicEntryLocaleInput {
+  linkLocale?: string | null;
+  senderLocale?: string | null;
+  browserLanguages?: readonly string[] | null;
+}
+
+/** Resolve a logged-out entry without consulting any signed-in preference. */
+export function resolvePublicEntryLocale(
+  input: PublicEntryLocaleInput = {},
+): SupportedLocale {
+  return (
+    parseLocale(input.linkLocale) ??
     parseLocale(input.senderLocale) ??
     localeFromBrowserLanguages(input.browserLanguages) ??
     'ko'
@@ -63,4 +84,10 @@ export function fetchTranslationResources(locale: SupportedLocale): Promise<Tran
 export function getBrowserLanguages(): readonly string[] {
   if (typeof navigator === 'undefined') return [];
   return navigator.languages?.length ? navigator.languages : [navigator.language];
+}
+
+/** Read the explicit `?lang=` override from the current public URL. */
+export function getLinkLocale(): string | null {
+  if (typeof window === 'undefined') return null;
+  return new URLSearchParams(window.location.search).get('lang');
 }

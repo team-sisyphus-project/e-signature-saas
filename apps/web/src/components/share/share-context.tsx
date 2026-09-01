@@ -173,7 +173,7 @@ export function ShareProvider({
     fetchShareMeta(token)
       .then((meta) => {
         if (!active) return;
-        setSenderLocale(meta.locale);
+        setSenderLocale(meta.sender.locale);
         dispatch({ type: 'META', meta });
         // An open link (no password) unlocks immediately behind the skeleton.
         if (!meta.alreadySubmitted && !meta.requiresPassword) {
