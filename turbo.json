@@ -4,6 +4,7 @@
   "globalDependencies": [".env"],
   "globalEnv": [
     "NODE_ENV",
+    "PORT",
     "DATABASE_URL",
     "REDIS_URL",
     "API_PORT",

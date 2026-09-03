@@ -4,7 +4,7 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 
-async function bootstrap(): Promise<void> {
+export async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   // Captured signature values arrive as base64 image dataURLs, which exceed
@@ -32,9 +32,12 @@ async function bootstrap(): Promise<void> {
   );
   app.enableShutdownHooks();
 
-  const port = Number(process.env.API_PORT ?? 3001);
-  await app.listen(port);
-  Logger.log(`API listening on http://localhost:${port}`, 'Bootstrap');
+  const port = Number(process.env.PORT ?? process.env.API_PORT ?? 3001);
+  const host = '0.0.0.0';
+  await app.listen(port, host);
+  Logger.log(`API listening on ${host}:${port}`, 'Bootstrap');
 }
 
-void bootstrap();
+if (require.main === module) {
+  void bootstrap();
+}
