@@ -32,9 +32,10 @@ async function bootstrap(): Promise<void> {
   );
   app.enableShutdownHooks();
 
-  const port = Number(process.env.API_PORT ?? 3001);
-  await app.listen(port);
-  Logger.log(`API listening on http://localhost:${port}`, 'Bootstrap');
+  const port = Number(process.env.PORT ?? process.env.API_PORT ?? 3001);
+  const host = '0.0.0.0';
+  await app.listen(port, host);
+  Logger.log(`API listening on ${host}:${port}`, 'Bootstrap');
 }
 
 void bootstrap();

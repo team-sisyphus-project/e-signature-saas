@@ -35,7 +35,7 @@ export class StorageService {
   constructor(private readonly config: ConfigService) {
     this.bucket = this.config.get<string>('S3_BUCKET') || undefined;
     this.region = this.config.get<string>('AWS_REGION') || undefined;
-    const dir = this.config.get<string>('STORAGE_DIR') ?? '.storage';
+    const dir = this.config.get<string>('STORAGE_DIR') ?? '/tmp/esign-storage';
     this.localDir = isAbsolute(dir) ? dir : resolve(process.cwd(), dir);
   }
 

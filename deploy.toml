@@ -1,0 +1,11 @@
+[[services]]
+name = "web"
+public = true
+healthcheck = "/"
+
+[[services]]
+name = "api"
+routes = ["/api"]
+database = true
+migrate = "pnpm --filter @repo/db db:deploy"
+healthcheck = "/health"
