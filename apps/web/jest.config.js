@@ -20,9 +20,8 @@ module.exports = {
     '^.+\\.ts$': [
       'ts-jest',
       {
-        // Standalone TS transform; isolatedModules keeps it fast and avoids
-        // pulling Next-specific type wiring into the test compile.
-        isolatedModules: true,
+        // Standalone TS transform avoids pulling Next-specific type wiring
+        // into the test compile.
         tsconfig: { jsx: 'react-jsx', esModuleInterop: true },
       },
     ],

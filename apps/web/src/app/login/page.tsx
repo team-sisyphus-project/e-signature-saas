@@ -11,6 +11,7 @@ import { AuthDivider } from '@/components/auth-divider';
 import { ApiError, GENERIC_ERROR } from '@/lib/api';
 import { isAuthenticated, login, loginWithGoogle } from '@/lib/auth';
 import { GoogleAuthError, useGoogleAuthCode } from '@/lib/google-oauth';
+import type { WebTranslationKey } from '@/lib/web-translations';
 import { useTranslation } from '@/components/locale-provider';
 
 /** Pragmatic email shape check — the server is the real authority. */
@@ -18,7 +19,11 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type FieldErrors = { email?: string; password?: string };
 
-function validate(email: string, password: string, t: (key: any) => string): FieldErrors {
+function validate(
+  email: string,
+  password: string,
+  t: (key: WebTranslationKey) => string,
+): FieldErrors {
   const errors: FieldErrors = {};
   const trimmed = email.trim();
   if (!trimmed) {
