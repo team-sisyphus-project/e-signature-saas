@@ -2,6 +2,9 @@
 # 모노레포는 autodetect 대상이 아니다: 서비스별 Dockerfile을 명시한다.
 # 컨텍스트 규칙(빌드 컨텍스트 = Dockerfile의 디렉터리) 때문에 Dockerfile은
 # 워크스페이스 전체가 보이는 레포 루트에 둔다.
+# database는 top-level 키다 — 서비스 블록 안에 두면 파서가 조용히 무시해
+# DATABASE_URL이 주입되지 않는다(migrate 잡 P1012로 실패).
+database = true
 
 [[services]]
 name = "web"
@@ -13,7 +16,6 @@ healthcheck = "/"
 name = "api"
 routes = ["/api"]
 dockerfile = "./Dockerfile.api"
-database = true
 # pnpm/corepack을 잡 런타임에 부르지 않는다 — prisma CLI를 직접 실행.
 migrate = "cd packages/db && ./node_modules/.bin/prisma migrate deploy"
 healthcheck = "/health"
