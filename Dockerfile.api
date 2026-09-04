@@ -3,6 +3,10 @@
 # prisma CLI는 devDependency로 이미지에 남긴다(런타임 설치 불가).
 
 FROM node:20.18-bookworm-slim AS build
+# 빌드 스테이지에도 openssl — 없으면 prisma generate가 플랫폼을 openssl-1.1.x로
+# 오탐해서 런타임(openssl 3)과 engine이 어긋난다(migrate가 재다운로드 시도 → EROFS).
+RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
 RUN npm i -g pnpm@9.12.0
 WORKDIR /app
 COPY . .
