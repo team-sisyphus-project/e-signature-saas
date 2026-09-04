@@ -11,7 +11,9 @@ RUN npm i -g pnpm@9.12.0
 WORKDIR /app
 COPY . .
 RUN pnpm install --frozen-lockfile
-RUN pnpm --filter @repo/db db:generate && pnpm --filter @repo/api build
+# db는 dist(CJS)까지 빌드한다 — @repo/db exports의 require 조건이 dist/index.js를
+# 가리키므로, 소스(src/index.ts)만 있으면 api 런타임 require가 TS를 읽다 죽는다.
+RUN pnpm --filter @repo/db build && pnpm --filter @repo/api build
 
 FROM node:20.18-bookworm-slim
 # Prisma 런타임 libssl.
