@@ -1,0 +1,22 @@
+# syntax=docker/dockerfile:1
+# Hestia 배포용 — 컨텍스트는 레포 루트. 마이그레이션 잡도 이 이미지로 돈다:
+# prisma CLI는 devDependency로 이미지에 남긴다(런타임 설치 불가).
+
+FROM node:20.18-bookworm-slim AS build
+RUN corepack enable
+WORKDIR /app
+COPY . .
+RUN pnpm install --frozen-lockfile
+RUN pnpm --filter @repo/db db:generate && pnpm --filter @repo/api build
+
+FROM node:20.18-bookworm-slim
+# Prisma 런타임 libssl.
+RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+ENV NODE_ENV=production
+ENV HOME=/tmp
+WORKDIR /app
+COPY --from=build /app ./
+USER node
+EXPOSE 3001
+CMD ["sh", "-c", "cd apps/api && node dist/main.js"]

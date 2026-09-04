@@ -1,0 +1,27 @@
+# syntax=docker/dockerfile:1
+# Hestia 배포용 — 컨텍스트는 레포 루트(모노레포 워크스페이스 전체가 필요).
+# 런타임 rootfs는 읽기 전용(/tmp만 쓰기 가능): pnpm/corepack을 런타임에 부르지 않고,
+# Next 런타임 캐시는 /tmp로 심링크한다.
+
+FROM node:20.18-bookworm-slim AS build
+RUN corepack enable
+WORKDIR /app
+COPY . .
+RUN pnpm install --frozen-lockfile
+# web은 @repo/db를 transpile하므로 Prisma client 생성이 빌드 전제다.
+RUN pnpm --filter @repo/db db:generate && pnpm --filter @repo/web build
+# 읽기 전용 rootfs: Next 런타임 캐시(ISR/이미지)는 /tmp에서 산다.
+RUN rm -rf apps/web/.next/cache && ln -s /tmp/next-cache apps/web/.next/cache
+
+FROM node:20.18-bookworm-slim
+# Prisma가 런타임에 libssl을 탐지한다 — 이미지에 베이크(런타임 설치 불가).
+RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+ENV NODE_ENV=production
+ENV HOME=/tmp
+WORKDIR /app
+COPY --from=build /app ./
+USER node
+EXPOSE 3000
+# pnpm 없이 직접 실행 — corepack이 런타임에 pnpm을 내려받으려다 읽기 전용에서 죽는 것 방지.
+CMD ["sh", "-c", "mkdir -p /tmp/next-cache && cd apps/web && ./node_modules/.bin/next start --hostname 0.0.0.0 --port ${PORT:-3000}"]
