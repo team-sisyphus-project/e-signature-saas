@@ -2,8 +2,13 @@
  * Browser-side API client.
  *
  * The NestJS server mounts every route under the `/api` prefix (see
- * `apps/api/src/main.ts`). `NEXT_PUBLIC_API_URL` points at the server origin;
- * we append `/api` here so callers pass clean paths like `/auth/login`.
+ * `apps/api/src/main.ts`) and also serves this Next.js app, so in the default
+ * single-port deployment the API lives at the *same origin* as the page. That
+ * is why {@link API_ORIGIN} defaults to the empty string: every request becomes
+ * a relative `/api/…` URL, which needs no CORS and no build-time host baked in.
+ *
+ * Set `NEXT_PUBLIC_API_URL` only for split deployments (web and API on separate
+ * origins) or when running `next dev` against a separately started API.
  *
  * User-facing error copy comes from the server (`apps/api/src/common/messages.ts`),
  * so we surface the server's message verbatim and only fall back to a neutral
@@ -11,21 +16,29 @@
  */
 
 /**
- * Server origin for the NestJS API. Exported so callers that build an *absolute*
- * asset URL — e.g. the branding logo/favicon served by `GET /branding/asset/*`,
- * whose paths already carry the `/api` prefix — can prefix the origin without
- * double-appending `/api` (which {@link apiUrl} would do).
+ * Origin of the NestJS API, or `''` for same-origin (the default).
+ *
+ * Exported so callers that build an *absolute* asset URL — e.g. the branding
+ * logo/favicon served by `GET /branding/asset/*`, whose paths already carry the
+ * `/api` prefix — can prefix the origin without double-appending `/api` (which
+ * {@link apiUrl} would do). When empty, those callers get a root-relative URL,
+ * which the browser resolves against the current page. A trailing slash is
+ * trimmed so concatenation never produces `//api`.
+ *
+ * `process.env.NEXT_PUBLIC_API_URL` is inlined at build time by Next.js; keep
+ * the property access literal so the replacement actually happens.
  */
-export const API_ORIGIN = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+export const API_ORIGIN = (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/+$/, '');
 const API_BASE = `${API_ORIGIN}/api`;
 
 /** Neutral fallback when we can't read a server-provided message. */
 export const GENERIC_ERROR = 'Something went wrong. Please try again shortly.';
 
 /**
- * Absolute URL for an API path. Use when fetching outside `apiFetch` — e.g. a
- * binary stream (PDF bytes) that isn't JSON — so the `/api` prefix stays in one
- * place.
+ * URL for an API path. Use when fetching outside `apiFetch` — e.g. a binary
+ * stream (PDF bytes) that isn't JSON — so the `/api` prefix stays in one place.
+ *
+ * Root-relative (`/api/…`) by default; absolute when `NEXT_PUBLIC_API_URL` is set.
  */
 export function apiUrl(path: string): string {
   return `${API_BASE}${path}`;

@@ -6,6 +6,7 @@
     "NODE_ENV",
     "DATABASE_URL",
     "REDIS_URL",
+    "PORT",
     "API_PORT",
     "WEB_ORIGIN",
     "NEXT_PUBLIC_API_URL",
@@ -17,6 +18,9 @@
     "AWS_SECRET_ACCESS_KEY",
     "S3_BUCKET",
     "SES_FROM_EMAIL",
+    "SEED_USER_EMAIL",
+    "SEED_USER_PASSWORD",
+    "SEED_USER_NAME",
     "KAKAO_ALIMTALK_API_KEY"
   ],
   "tasks": {

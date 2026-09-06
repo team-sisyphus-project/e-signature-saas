@@ -4,9 +4,11 @@
  *
  * The API (`apps/api/src/branding/branding.controller.ts`) returns asset URLs
  * that are already prefixed with `/api` and versioned (`?v=…`) for cache-busting;
- * they point at the API origin. We resolve them to *absolute* URLs against that
- * origin so they can be used directly as an `<img src>` / `<link rel="icon">`
- * href (fetched by the browser, not through `apiFetch`).
+ * they point at the API origin. We resolve them against {@link API_ORIGIN} so
+ * they can be used directly as an `<img src>` / `<link rel="icon">` href
+ * (fetched by the browser, not through `apiFetch`). In the default single-port
+ * deployment `API_ORIGIN` is empty, so the result is root-relative — which is
+ * exactly what the browser needs when the API serves this app.
  *
  * Two entry points: {@link fetchBranding} for the browser (client provider live
  * refresh) and {@link fetchBrandingServer} for SSR (no-flash initial paint).
@@ -32,8 +34,9 @@ export const EMPTY_BRANDING: Branding = {
 };
 
 /**
- * Resolve an API-relative asset path (already carrying the `/api` prefix) to an
- * absolute URL against the API origin. Pass-through for null or already-absolute.
+ * Resolve an API-relative asset path (already carrying the `/api` prefix)
+ * against the API origin. Pass-through for null or already-absolute URLs;
+ * returns the path unchanged when the API is same-origin.
  */
 export function resolveAssetUrl(url: string | null): string | null {
   if (!url) return null;
@@ -59,13 +62,38 @@ export async function fetchBranding(): Promise<Branding> {
 }
 
 /**
+ * The port-carrying slice of the environment {@link serverApiOrigin} reads.
+ * The index signature keeps `process.env` (and test literals) assignable.
+ */
+export interface ServerPortEnv {
+  PORT?: string;
+  API_PORT?: string;
+  [key: string]: string | undefined;
+}
+
+/**
+ * Absolute origin to reach the API *from the Node server* during SSR.
+ *
+ * `fetch` on the server has no page to resolve a relative URL against, so the
+ * same-origin default ({@link API_ORIGIN} === `''`) is not usable here. In the
+ * single-port deployment the API is the very process serving this render, so we
+ * call back into it over loopback on the port it bound (`PORT` › `API_PORT` ›
+ * `3001` — the same precedence as `apps/api/src/web-host.ts`).
+ */
+export function serverApiOrigin(env: ServerPortEnv = process.env): string {
+  if (API_ORIGIN) return API_ORIGIN;
+  const port = env.PORT?.trim() || env.API_PORT?.trim() || '3001';
+  return `http://127.0.0.1:${port}`;
+}
+
+/**
  * Fetch current branding on the server for the initial paint (no flash). Never
  * throws — a transient API failure falls back to {@link EMPTY_BRANDING} so the
  * app renders with defaults rather than erroring the whole tree.
  */
 export async function fetchBrandingServer(): Promise<Branding> {
   try {
-    const res = await fetch(`${API_ORIGIN}/api/branding`, { cache: 'no-store' });
+    const res = await fetch(`${serverApiOrigin()}/api/branding`, { cache: 'no-store' });
     if (!res.ok) return EMPTY_BRANDING;
     return normalize((await res.json()) as Branding);
   } catch {
