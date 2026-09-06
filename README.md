@@ -35,7 +35,10 @@ docker compose up -d
 pnpm db:generate
 pnpm db:migrate
 
-# 5. Start the dev servers concurrently (web + api)
+# 5. Seed the dummy sender account and sample document
+pnpm db:seed
+
+# 6. Start the dev servers concurrently (web + api)
 pnpm dev
 ```
 
@@ -48,6 +51,46 @@ Leave it **unset** for the single-port build (`pnpm build && pnpm start`), where
 the API also serves the web app: the client then calls `/api/...` on the same
 origin as the page.
 
+## Green-field database setup
+
+Both commands read `DATABASE_URL` from the environment (they do **not** load
+`.env` themselves), so export it first — or let the platform inject it:
+
+```bash
+export DATABASE_URL='postgresql://postgres:postgres@localhost:5432/esign?schema=public'
+
+pnpm db:deploy   # apply every file-based migration in packages/db/prisma/migrations
+pnpm db:seed     # create the dummy sender + sample document
+```
+
+Use `pnpm db:deploy` (not `db:migrate`) anywhere non-interactive — a preview
+release step, CI, a deployment. It applies the committed migration files and
+never prompts or generates new ones.
+
+Both steps are idempotent: running them against an empty database, or twice in a
+row, ends in the same state with no duplicate rows. The seed upserts on stable
+keys — the sender on its email, the sample document on a fixed id — and it
+re-asserts the documented credentials on every run, so a drifted demo password is
+restored rather than duplicated. Unrelated rows are never touched, and the sample
+document's status/timestamps are left as-is once it exists.
+
+### Dummy account
+
+| Field | Default | Override |
+|---|---|---|
+| Email | `demo@example.com` | `SEED_USER_EMAIL` |
+| Password | `demo-password-123` | `SEED_USER_PASSWORD` |
+| Name | `Demo Sender` | `SEED_USER_NAME` |
+
+These defaults are for local and preview environments only. Set
+`SEED_USER_PASSWORD` to a strong value in any shared environment — the seed
+hashes it with bcrypt and never logs or stores the plaintext.
+
+The seed also creates one sample document (`Sample contract (seed data)`, status
+`DRAFT`) owned by that account. Only the database row is seeded — no PDF bytes
+are written to object storage — so the sample shows up in the document list but
+has no file behind it. Upload a real PDF to exercise the full signing flow.
+
 ## Key scripts (repo root)
 
 | Command | Description |
@@ -57,7 +100,9 @@ origin as the page.
 | `pnpm lint` | Lint everything |
 | `pnpm typecheck` | Type-check everything |
 | `pnpm db:generate` | Generate the Prisma client |
-| `pnpm db:migrate` | Run Prisma migrations (dev) |
+| `pnpm db:migrate` | Create + apply a migration (interactive, dev only) |
+| `pnpm db:deploy` | Apply committed migrations (non-interactive: CI, preview, deploy) |
+| `pnpm db:seed` | Seed the dummy sender + sample document (idempotent) |
 
 ## Notes
 
