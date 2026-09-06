@@ -6,6 +6,7 @@
     "NODE_ENV",
     "DATABASE_URL",
     "REDIS_URL",
+    "PORT",
     "API_PORT",
     "WEB_ORIGIN",
     "NEXT_PUBLIC_API_URL",

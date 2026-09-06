@@ -42,6 +42,12 @@ pnpm dev
 - web: http://localhost:3000
 - api: http://localhost:3001 (health: http://localhost:3001/health)
 
+In this two-server dev setup the browser must be told where the API lives, so
+set `NEXT_PUBLIC_API_URL=http://localhost:3001` in `.env` before `pnpm dev`.
+Leave it **unset** for the single-port build (`pnpm build && pnpm start`), where
+the API also serves the web app: the client then calls `/api/...` on the same
+origin as the page.
+
 ## Key scripts (repo root)
 
 | Command | Description |

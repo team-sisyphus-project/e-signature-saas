@@ -3,19 +3,17 @@
  *
  * The shared `apiFetch` helper (lib/api.ts) is great for JSON, but `fetch` can't
  * report upload progress, and the upload step shows a real progress bar. So this
- * uses `XMLHttpRequest`, while mirroring `apiFetch`'s contract: it hits the same
- * `/api` base, sends the bearer token, and surfaces the server's Korean error
+ * uses `XMLHttpRequest`, while mirroring `apiFetch`'s contract: it resolves the
+ * URL through `apiUrl` so it shares the one `/api` base (same-origin unless
+ * `NEXT_PUBLIC_API_URL` is set), sends the bearer token, and surfaces the server's Korean error
  * copy verbatim (falling back to the neutral generic line on a transport error).
  *
  * Endpoint: `POST /api/documents/upload` (field name `file`) →
  * `DocumentSummary` (a DRAFT document). See documents.controller.ts.
  */
 
-import { ApiError, GENERIC_ERROR } from './api';
+import { ApiError, GENERIC_ERROR, apiUrl } from './api';
 import type { DocumentSummary } from './documents';
-
-const API_ORIGIN = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
-const API_BASE = `${API_ORIGIN}/api`;
 
 export interface UploadProgress {
   /** Bytes transferred so far. */
@@ -55,7 +53,7 @@ export function uploadPdf(file: File, options: UploadPdfOptions = {}): Promise<D
     }
 
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', `${API_BASE}/documents/upload`);
+    xhr.open('POST', apiUrl('/documents/upload'));
     if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
 
     const onAbort = () => xhr.abort();

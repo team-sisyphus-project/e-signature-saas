@@ -64,7 +64,8 @@ describe('locale session persistence', () => {
     await expect(updateLocale('en')).resolves.toMatchObject({ id: 'user_1', locale: 'en' });
 
     expect(globals.fetch).toHaveBeenCalledWith(
-      'http://localhost:3001/api/auth/locale',
+      // Same-origin by default (`NEXT_PUBLIC_API_URL` unset) — see lib/api.ts.
+      '/api/auth/locale',
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify({ locale: 'en' }),
