@@ -1,0 +1,23 @@
+# Local-preview contract for the platform's ephemeral environments.
+#
+# Auto-detection cannot resolve this repository on its own: it is a pnpm/turbo
+# monorepo whose build fans out to two workspaces (`apps/api`, `apps/web`) and
+# whose runtime entrypoint is the API process, which also serves the built web
+# app on the same port. So the commands are declared explicitly here.
+#
+# Both commands are the repo-root scripts documented in README.md — this file
+# points at them rather than restating them, so there is one definition to keep
+# correct.
+
+model = "server"
+
+[build]
+# Generates the Prisma client, then builds @repo/api (nest) and @repo/web (next).
+command = "pnpm build"
+
+[serve]
+# Applies committed migrations, runs the idempotent seed, then boots the API,
+# which serves the API under /api (+ /health) and the web app on everything
+# else. Plain HTTP — TLS is terminated upstream.
+command = "pnpm start"
+port_env = "PORT"

@@ -4,11 +4,12 @@
   "private": true,
   "packageManager": "pnpm@9.12.0",
   "engines": {
-    "node": ">=20"
+    "node": ">=22.18"
   },
   "scripts": {
     "dev": "turbo run dev",
-    "build": "turbo run build",
+    "build": "pnpm db:generate && turbo run build --filter=@repo/api --filter=@repo/web",
+    "start": "pnpm db:deploy && pnpm db:seed && node apps/api/dist/main.js",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",

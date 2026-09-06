@@ -15,7 +15,8 @@ An e-signature SaaS MVP. Turborepo-based monorepo.
 
 ## Requirements
 
-- Node.js >= 20
+- Node.js >= 22.18 — the built API loads `@repo/db` from TypeScript source, which
+  relies on Node's built-in type stripping (unflagged since 22.18)
 - pnpm 9 (`corepack enable` or `npm i -g pnpm@9`)
 - Docker (for local Postgres/Redis, optional)
 
@@ -50,6 +51,44 @@ set `NEXT_PUBLIC_API_URL=http://localhost:3001` in `.env` before `pnpm dev`.
 Leave it **unset** for the single-port build (`pnpm build && pnpm start`), where
 the API also serves the web app: the client then calls `/api/...` on the same
 origin as the page.
+
+## Production / preview run (single port)
+
+One process, one port, plain HTTP — TLS is terminated upstream, so nothing here
+redirects to https. The API owns `$PORT` and serves the built web app on every
+path it does not own itself (`/api/*` and `/health` stay with the API).
+
+```bash
+pnpm install
+pnpm build                 # prisma generate → nest build (api) → next build (web)
+
+export DATABASE_URL='postgresql://postgres:postgres@localhost:5432/esign?schema=public'
+export REDIS_URL='redis://localhost:6379'
+PORT=8080 pnpm start       # migrate deploy → seed → node apps/api/dist/main.js
+```
+
+- `PORT` is read from the environment; it falls back to `API_PORT`, then `3001`.
+  No port is hardcoded.
+- `pnpm start` applies migrations and runs the seed before it boots, so a
+  green-field database is ready by the time the server listens. Both steps are
+  idempotent, so a restart against an existing database is a no-op that keeps
+  the dummy account's documented credentials in place.
+- Every setting is an environment variable (see `.env.example`); nothing is
+  read from a committed config file and no secret has a production default.
+- Leave `NEXT_PUBLIC_API_URL` unset for this mode — the browser then calls the
+  API on the same origin as the page.
+
+Verify a running instance:
+
+```bash
+curl -i http://localhost:8080/          # 200, the web app's entry screen
+curl -s http://localhost:8080/health    # {"status":"ok",...}
+```
+
+The platform's preview reads the same two commands from `preview.toml`
+(`model = "server"`, build `pnpm build`, serve `pnpm start`, `port_env = "PORT"`),
+which exists because auto-detection cannot infer a monorepo whose runtime
+entrypoint is the API process rather than either workspace on its own.
 
 ## Green-field database setup
 
@@ -96,7 +135,8 @@ has no file behind it. Upload a real PDF to exercise the full signing flow.
 | Command | Description |
 |---|---|
 | `pnpm dev` | Run web/api concurrently via turbo |
-| `pnpm build` | Build everything |
+| `pnpm build` | Generate the Prisma client, then build the api + web workspaces |
+| `pnpm start` | Migrate, seed, and run the built app on `$PORT` (single port) |
 | `pnpm lint` | Lint everything |
 | `pnpm typecheck` | Type-check everything |
 | `pnpm db:generate` | Generate the Prisma client |
